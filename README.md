@@ -32,7 +32,21 @@ This is the code for 1317's 2025 robot for this years Reefscape FRC game!
 > [!WARNING]
 > Make sure to do these instructions before you start working on the code. (Looking at you Holden and Rebekah 👀)
 
-This project uses [jhipster/prettier-java](https://github.com/jhipster/prettier-java) to format the code. Assuming you already have `bun` installed, you can run the following command to format all the code in the project:
+This project uses [Google Java Format](https://github.com/google/google-java-format) for Java files and [Prettier](https://prettier.io/) for non-Java files. 
+
+To format all files in the project:
+
+```bash
+./gradlew formatAll
+```
+
+For Java files only:
+
+```bash
+./gradlew googleJavaFormat
+```
+
+For non-Java files only (requires bun):
 
 ```bash
 bun format
