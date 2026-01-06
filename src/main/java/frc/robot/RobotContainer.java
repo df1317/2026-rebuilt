@@ -1,11 +1,6 @@
-/* ----------
- * Copywrite 2025 FRC team 1317 under AGPL-3.0
- * ----------- */
-
 package frc.robot;
 
 import com.pathplanner.lib.auto.AutoBuilder;
-import com.pathplanner.lib.auto.NamedCommands;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.GenericHID.RumbleType;
@@ -13,11 +8,9 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.PrintCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Constants.OperatorConstants;
-import frc.robot.libs.FieldConstants;
 import frc.robot.subsystems.TargetingSubsystem;
 import frc.robot.subsystems.TargetingSubsystem.Side;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
@@ -116,9 +109,6 @@ public class RobotContainer {
 	 * ---
 	 */
 	public RobotContainer() {
-		NamedCommands.registerCommand("driveToLeftBranch", driveToLeftBranch);
-		NamedCommands.registerCommand("driveToRightBranch", driveToRightBranch);
-		NamedCommands.registerCommand("driveToSource", driveToSource);
 		configureBindings();
 		DriverStation.silenceJoystickConnectionWarning(true);
 
@@ -226,15 +216,9 @@ public class RobotContainer {
 		driverXbox
 			.leftBumper()
 			.whileTrue(
-				Commands.either(
-					climberSubsystem.playMusicCommand(),
-					Commands.runOnce(drivebase::lock, drivebase).repeatedly(),
-					DriverStation::isTest
-				)
+					Commands.runOnce(drivebase::lock, drivebase).repeatedly()
 			);
-
-		driverXbox.rightTrigger().and(DriverStation::isTeleop).onTrue(climberSubsystem.playMusicCommand());
-	}
+  }
 
 	/** ----------
 	 * Use this to pass the autonomous command to the main {@link Robot} class.

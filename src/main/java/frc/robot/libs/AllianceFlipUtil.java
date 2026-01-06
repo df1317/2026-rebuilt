@@ -1,7 +1,3 @@
-/* ----------
- * Copywrite 2025 FRC team 1317 under AGPL-3.0 adapted from FRC team 6328
- * ----------- */
-
 package frc.robot.libs;
 
 import edu.wpi.first.math.geometry.Pose2d;

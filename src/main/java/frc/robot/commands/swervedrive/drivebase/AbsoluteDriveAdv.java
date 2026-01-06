@@ -1,7 +1,3 @@
-/* ----------
- * Copywrite 2025 FRC team 1317 under AGPL-3.0 adapted from YAGSL Docs
- * ----------- */
-
 package frc.robot.commands.swervedrive.drivebase;
 
 import edu.wpi.first.math.geometry.Rotation2d;

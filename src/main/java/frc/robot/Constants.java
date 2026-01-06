@@ -1,7 +1,3 @@
-/* ----------
- * Copywrite 2025 FRC team 1317 under AGPL-3.0
- * ----------- */
-
 package frc.robot;
 
 import static edu.wpi.first.units.Units.Inches;
