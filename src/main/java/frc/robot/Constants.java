@@ -1,24 +1,21 @@
 package frc.robot;
 
-import static edu.wpi.first.units.Units.Inches;
-import static edu.wpi.first.units.Units.Meters;
-
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
 import swervelib.math.Matter;
 
-/** ----------
- * Constants
- * ---
- * The Constants class provides a convenient place for teams to hold robot-wide numerical or boolean constants. This
- * class should not be used for any other purpose. All constants should be declared globally (i.e. public static). Do
- * not put anything functional in this class.
+import static edu.wpi.first.units.Units.Inches;
+import static edu.wpi.first.units.Units.Meters;
+
+/**
+ * ---------- Constants --- The Constants class provides a convenient place for teams to hold robot-wide numerical or
+ * boolean constants. This class should not be used for any other purpose. All constants should be declared globally
+ * (i.e. public static). Do not put anything functional in this class.
  *
  * <p>It is advised to statically import this class (or one of its inner classes) wherever the
- * constants are needed, to reduce verbosity.
- * ---
+ * constants are needed, to reduce verbosity. ---
  */
 public final class Constants {
 
@@ -74,30 +71,30 @@ public final class Constants {
 		public static class Processor {
 
 			public static final Transform2d offset = new Transform2d(
-				Inches.of(24).in(Meters),
-				Inches.of(0).in(Meters),
-				Rotation2d.fromDegrees(0)
+					Inches.of(24).in(Meters),
+					Inches.of(0).in(Meters),
+					Rotation2d.fromDegrees(0)
 			);
 		}
 
 		public static class Reef {
 
 			public static final Transform2d coralOffsetL = new Transform2d(
-				Inches.of(21.5).in(Meters),
-				Inches.of(2.5).in(Meters),
-				Rotation2d.fromDegrees(180)
+					Inches.of(21.5).in(Meters),
+					Inches.of(2.5).in(Meters),
+					Rotation2d.fromDegrees(180)
 			);
 
 			public static final Transform2d coralOffsetR = new Transform2d(
-				Inches.of(21.5).in(Meters),
-				Inches.of(2.5).in(Meters),
-				Rotation2d.fromDegrees(180)
+					Inches.of(21.5).in(Meters),
+					Inches.of(2.5).in(Meters),
+					Rotation2d.fromDegrees(180)
 			);
 
 			public static final Transform2d algaeOffset = new Transform2d(
-				Inches.of(18).in(Meters),
-				Inches.of(0).in(Meters),
-				Rotation2d.fromDegrees(0)
+					Inches.of(18).in(Meters),
+					Inches.of(0).in(Meters),
+					Rotation2d.fromDegrees(0)
 			);
 		}
 
@@ -106,18 +103,18 @@ public final class Constants {
 			public static class Left {
 
 				public static final Transform2d offset = new Transform2d(
-					Inches.of(24).in(Meters),
-					Inches.of(0).in(Meters),
-					Rotation2d.fromDegrees(0)
+						Inches.of(24).in(Meters),
+						Inches.of(0).in(Meters),
+						Rotation2d.fromDegrees(0)
 				);
 			}
 
 			public static class Right {
 
 				public static final Transform2d offset = new Transform2d(
-					Inches.of(24).in(Meters),
-					Inches.of(0).in(Meters),
-					Rotation2d.fromDegrees(0)
+						Inches.of(24).in(Meters),
+						Inches.of(0).in(Meters),
+						Rotation2d.fromDegrees(0)
 				);
 			}
 		}

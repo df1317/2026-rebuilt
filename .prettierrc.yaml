@@ -10,5 +10,3 @@ bracketSameLine: true
 arrowParens: always
 endOfLine: lf
 embeddedLanguageFormatting: auto
-plugins:
-    - prettier-plugin-java

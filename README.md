@@ -16,32 +16,35 @@ This is the code for 1317's 2026 robot for this years Rebuilt FRC game!
 > [!WARNING]
 > Make sure to do these instructions before you start working on the code. (Looking at you Holden and Rebekah 👀)
 
-This project uses [Google Java Format](https://github.com/google/google-java-format) for Java files and [Prettier](https://prettier.io/) for non-Java files. 
+#### IntelliJ IDEA (Automatic)
 
-To format all files in the project:
+**IntelliJ IDEA automatically configures formatting when you open the project!** 
 
-```bash
-./gradlew formatAll
-```
+The Eclipse formatter profile is auto-imported and format-on-save is enabled. Just open the project and start coding - formatting happens automatically.
 
-For Java files only:
+If for some reason it doesn't work:
+1. **Settings** → **Editor** → **Code Style** → **Java** → ⚙️ → **Import Scheme** → **Eclipse XML Profile**
+2. Select `eclipse-formatter.xml`
+3. **Settings** → **Tools** → **Actions on Save** → Enable "Reformat code" and "Optimize imports"
 
-```bash
-./gradlew googleJavaFormat
-```
+#### Non-Java Files (JSON, YAML, Markdown, etc.)
 
-For non-Java files only (requires bun):
+This project uses [Prettier](https://prettier.io/) for formatting config files, documentation, and other non-Java files.
 
-```bash
-bun format
-```
-
-Pretty please make sure you have prettier properly setup in vscode 🥺 (or your editor of choice; zed will just automatically work). The `.vscode/settings.json` file should automatically configure vscode to use prettier for formatting java files but double check to make sure.
-
-You will also need to install the java extension for prettier by running the following command in this repo:
+Install dependencies:
 
 ```bash
+npm install
+# or
 bun install
+```
+
+Format all non-Java files:
+
+```bash
+npm run format
+# or
+bun format
 ```
 
 ### Commit Messages

@@ -1,7 +1,6 @@
 plugins {
     id "java"
     id "edu.wpi.first.GradleRIO" version "2025.3.2"
-    id "com.github.sherter.google-java-format" version "0.9"
 }
 
 java {
@@ -104,14 +103,6 @@ tasks.withType(JavaCompile) {
     options.compilerArgs.add '-XDstringConcat=inline'
 }
 
-// Google Java Format configuration
-googleJavaFormat {
-    toolVersion = '1.22.0'
-    options style: 'GOOGLE'
-    // Skip verification for now
-    verifyGoogleJavaFormat.enabled = false
-}
-
 // Task to run prettier for non-Java files
 task runPrettier(type: Exec) {
     group = 'Formatting'
@@ -120,32 +111,11 @@ task runPrettier(type: Exec) {
     workingDir project.projectDir
 }
 
-// Task to format all files (Java and non-Java)
+// Task to format all non-Java files
 task formatAll {
     group = 'Formatting'
-    description = 'Format all files (Java with Google Java Format and others with Prettier)'
-    dependsOn 'googleJavaFormat', 'runPrettier'
-}
-
-// Task to check Java formatting
-task checkJavaFormat {
-    group = 'Verification'
-    description = 'Check if Java code is properly formatted'
-    dependsOn verifyGoogleJavaFormat
-}
-
-// Task to check if code compiles
-task checkCompile {
-    group = 'Verification'
-    description = 'Check if code compiles properly'
-    dependsOn compileJava
-}
-
-// Task to check everything (format and compilation)
-task checkAll {
-    group = 'Verification'
-    description = 'Check formatting and compilation'
-    dependsOn checkJavaFormat, checkCompile
+    description = 'Format non-Java files with Prettier'
+    dependsOn 'runPrettier'
 }
 
 // Task to setup Git hooks for automatic formatting

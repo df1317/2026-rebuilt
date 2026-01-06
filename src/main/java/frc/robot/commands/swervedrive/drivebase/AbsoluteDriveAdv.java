@@ -7,11 +7,12 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
+import swervelib.SwerveController;
+import swervelib.math.SwerveMath;
+
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
-import swervelib.SwerveController;
-import swervelib.math.SwerveMath;
 
 /**
  * A more advanced Swerve Control System that has 4 buttons for which direction to face
@@ -30,29 +31,35 @@ public class AbsoluteDriveAdv extends Command {
 	 * multipied by a constant. The look booleans are shortcuts to get the robot to face a certian direction. Based off of
 	 * ideas in https://www.chiefdelphi.com/t/experiments-with-a-swerve-steering-knob/446172
 	 *
-	 * @param swerve        The swerve drivebase subsystem.
-	 * @param vX            DoubleSupplier that supplies the x-translation joystick input.  Should be in the range -1 to 1
-	 *                      with deadband already accounted for.  Positive X is away from the alliance wall.
-	 * @param vY            DoubleSupplier that supplies the y-translation joystick input.  Should be in the range -1 to 1
-	 *                      with deadband already accounted for.  Positive Y is towards the left wall when looking through
-	 *                      the driver station glass.
-	 * @param headingAdjust DoubleSupplier that supplies the component of the robot's heading angle that should be
-	 *                      adjusted. Should range from -1 to 1 with deadband already accounted for.
-	 * @param lookAway      Face the robot towards the opposing alliance's wall in the same direction the driver is
-	 *                      facing
-	 * @param lookTowards   Face the robot towards the driver
-	 * @param lookLeft      Face the robot left
-	 * @param lookRight     Face the robot right
+	 * @param swerve
+	 * 		The swerve drivebase subsystem.
+	 * @param vX
+	 * 		DoubleSupplier that supplies the x-translation joystick input.  Should be in the range -1 to 1 with deadband
+	 * 		already accounted for.  Positive X is away from the alliance wall.
+	 * @param vY
+	 * 		DoubleSupplier that supplies the y-translation joystick input.  Should be in the range -1 to 1 with deadband
+	 * 		already accounted for.  Positive Y is towards the left wall when looking through the driver station glass.
+	 * @param headingAdjust
+	 * 		DoubleSupplier that supplies the component of the robot's heading angle that should be adjusted. Should range
+	 * 		from -1 to 1 with deadband already accounted for.
+	 * @param lookAway
+	 * 		Face the robot towards the opposing alliance's wall in the same direction the driver is facing
+	 * @param lookTowards
+	 * 		Face the robot towards the driver
+	 * @param lookLeft
+	 * 		Face the robot left
+	 * @param lookRight
+	 * 		Face the robot right
 	 */
 	public AbsoluteDriveAdv(
-		SwerveSubsystem swerve,
-		DoubleSupplier vX,
-		DoubleSupplier vY,
-		DoubleSupplier headingAdjust,
-		BooleanSupplier lookAway,
-		BooleanSupplier lookTowards,
-		BooleanSupplier lookLeft,
-		BooleanSupplier lookRight
+			SwerveSubsystem swerve,
+			DoubleSupplier vX,
+			DoubleSupplier vY,
+			DoubleSupplier headingAdjust,
+			BooleanSupplier lookAway,
+			BooleanSupplier lookTowards,
+			BooleanSupplier lookLeft,
+			BooleanSupplier lookRight
 	) {
 		this.swerve = swerve;
 		this.vX = vX;
@@ -114,13 +121,13 @@ public class AbsoluteDriveAdv extends Command {
 		// Limit velocity to prevent tippy
 		Translation2d translation = SwerveController.getTranslation2d(desiredSpeeds);
 		translation = SwerveMath.limitVelocity(
-			translation,
-			swerve.getFieldVelocity(),
-			swerve.getPose(),
-			Constants.LOOP_TIME,
-			Constants.ROBOT_MASS,
-			List.of(Constants.CHASSIS),
-			swerve.getSwerveDriveConfiguration()
+				translation,
+				swerve.getFieldVelocity(),
+				swerve.getPose(),
+				Constants.LOOP_TIME,
+				Constants.ROBOT_MASS,
+				List.of(Constants.CHASSIS),
+				swerve.getSwerveDriveConfiguration()
 		);
 		SmartDashboard.putNumber("LimitedTranslation", translation.getX());
 		SmartDashboard.putString("Translation", translation.toString());
@@ -136,7 +143,8 @@ public class AbsoluteDriveAdv extends Command {
 
 	// Called once the command ends or is interrupted.
 	@Override
-	public void end(boolean interrupted) {}
+	public void end(boolean interrupted) {
+	}
 
 	// Returns true when the command should end.
 	@Override

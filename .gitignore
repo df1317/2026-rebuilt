@@ -162,8 +162,18 @@ bin/
 *.iml
 *.ipr
 *.iws
-.idea/
 out/
+# Keep shared IDEA settings
+.idea/*
+!.idea/codeStyles/
+!.idea/inspectionProfiles/
+!.idea/runConfigurations/
+!.idea/.gitignore
+!.idea/compiler.xml
+!.idea/gradle.xml
+!.idea/misc.xml
+!.idea/vcs.xml
+!.idea/saveactions_settings.xml
 
 # Fleet
 .fleet

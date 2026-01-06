@@ -32,8 +32,8 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-gradle-
     
-    - name: Check Java formatting and compile (parallel)
-      run: ./gradlew checkJavaFormat compileJava --parallel --max-workers=4
+    - name: Compile Java
+      run: ./gradlew compileJava --parallel --max-workers=4
     
     - name: Run tests
       run: ./gradlew test --parallel --max-workers=4
