@@ -3,7 +3,6 @@ package frc.robot;
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
-import edu.wpi.first.wpilibj.GenericHID.RumbleType;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -11,8 +10,6 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Constants.OperatorConstants;
-import frc.robot.subsystems.TargetingSubsystem;
-import frc.robot.subsystems.TargetingSubsystem.Side;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
 import swervelib.SwerveInputStream;
 
@@ -39,7 +36,6 @@ public class RobotContainer {
 	private final SwerveSubsystem drivebase = new SwerveSubsystem(
 			new File(Filesystem.getDeployDirectory(), "swerve/neo")
 	);
-	private final TargetingSubsystem targetingSubsystem = new TargetingSubsystem();
 	public boolean robotRelative = false;
 
 	/** ----------
@@ -74,24 +70,6 @@ public class RobotContainer {
 			.robotRelative(true)
 			.allianceRelativeControl(false);
 
-	SwerveInputStream driveAngularVelocityKeyboard = SwerveInputStream.of(
-					drivebase.getSwerveDrive(),
-					() -> -driverXbox.getLeftY(),
-					() -> -driverXbox.getLeftX()
-			)
-			.withControllerRotationAxis(() -> driverXbox.getRawAxis(2))
-			.deadband(OperatorConstants.DEADBAND)
-			.scaleTranslation(0.9)
-			.allianceRelativeControl(true);
-	// Derive the heading axis with math!
-	SwerveInputStream driveDirectAngleKeyboard = driveAngularVelocityKeyboard
-			.copy()
-			.withControllerHeadingAxis(
-					() -> Math.sin(driverXbox.getRawAxis(2) * Math.PI) * (Math.PI * 2),
-					() -> Math.cos(driverXbox.getRawAxis(2) * Math.PI) * (Math.PI * 2)
-			)
-			.headingWhile(true);
-
 	/**
 	 * ---------- RobotContainer Root Class --- This is the root class for the robot. It is responsible for configuring
 	 * the robot, its subsystems, and bindings. ---
@@ -110,99 +88,32 @@ public class RobotContainer {
 	 * button-press functions on it. ---
 	 */
 	private void configureBindings() {
-		// NOTE: Avoid duplicating button bindings in the same mode (teleop, test, etc.)
-		// Always check for existing bindings before assigning new ones
-		// Use comments to document button assignments for better clarity
-
 		Command driveFieldOrientedAnglularVelocity = drivebase.robotDriveCommand(driveAngularVelocity, () ->
 				robotRelative
 		);
 
 		drivebase.setDefaultCommand(driveFieldOrientedAnglularVelocity);
 
-		/** ------------------------------------- *
-		 * Xbox Swerve and Navigation bindings
-		 * ---
-		 * drivebase locking and fake vision reading
-		 * zero gyro and print mode
-		 * center modules and none
-		 * zero elevator and none
-		 * drive to pose (for sysid) and none
-		 * ---
-		 */
-
-		driverXbox
-				.x()
-				.onTrue(
-						targetingSubsystem
-								.autoTargetPairCommand(drivebase::getPose, Side.LEFT)
-								.andThen(
-										Commands.either(
-												targetingSubsystem.driveToCoralTarget(drivebase, 0.6, 1),
-												Commands.runEnd(
-														() -> driverXbox.getHID().setRumble(RumbleType.kBothRumble, 1),
-														() -> driverXbox.getHID().setRumble(RumbleType.kBothRumble, 0)
-												).withTimeout(.15),
-												() -> targetingSubsystem.areWeAllowedToDrive(drivebase::getPose)
-										)
-								)
-				);
-
-		driverXbox
-				.b()
-				.onTrue(
-						targetingSubsystem
-								.autoTargetPairCommand(drivebase::getPose, Side.RIGHT)
-								.andThen(
-										Commands.either(
-												targetingSubsystem.driveToCoralTarget(drivebase, 0.6, 1),
-												Commands.runEnd(
-														() -> driverXbox.getHID().setRumble(RumbleType.kBothRumble, 1),
-														() -> driverXbox.getHID().setRumble(RumbleType.kBothRumble, 0)
-												).withTimeout(.15),
-												() -> targetingSubsystem.areWeAllowedToDrive(drivebase::getPose)
-										)
-								)
-				);
-
-		// this effectively cancels the auto align
-		driverXbox.y().onTrue(drivebase.driveToPose(drivebase::getPose));
-
+		// Zero gyro
 		driverXbox
 				.a()
-				.onTrue(
-						Commands.runOnce(drivebase::zeroGyro).andThen(
-								Commands.print(DriverStation.isTest() ? "Test Mode: Reset Gyro" : "Other Mode: Reset Gyro")
-						)
-				);
+				.onTrue(Commands.runOnce(drivebase::zeroGyro));
 
+		// Toggle robot relative
+		driverXbox
+				.rightBumper()
+				.onTrue(Commands.runOnce(() -> robotRelative = !robotRelative))
+				.and(DriverStation::isTeleop);
+
+		// Lock drivebase
+		driverXbox
+				.leftBumper()
+				.whileTrue(Commands.runOnce(drivebase::lock, drivebase).repeatedly());
+
+		// Center modules (test mode only)
 		driverXbox
 				.back()
 				.whileTrue(Commands.either(drivebase.centerModulesCommand(), Commands.none(), DriverStation::isTest));
-
-		driverXbox
-				.rightBumper()
-				.onTrue(
-						Commands.runOnce(() -> {
-							robotRelative = !robotRelative;
-						})
-				)
-				.and(DriverStation::isTeleop);
-
-		/** -------------------------------------
-		 * Xbox Scoring and Intake bindings
-		 * ---
-		 * duck song and drivebase locking
-		 * intake and duck song
-		 * eject and none
-		 * ---
-		 */
-
-		driverXbox
-				.leftBumper()
-				.whileTrue(
-						Commands.runOnce(drivebase::lock, drivebase).repeatedly()
-				);
 	}
 
 	/**

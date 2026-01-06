@@ -1,7 +1,5 @@
 package frc.robot;
 
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
 import swervelib.math.Matter;
@@ -37,86 +35,5 @@ public final class Constants {
 
 		// Joystick Deadband
 		public static final double DEADBAND = 0.1;
-		public static final double LEFT_Y_DEADBAND = 0.1;
-		public static final double RIGHT_X_DEADBAND = 0.1;
-		public static final double TURN_CONSTANT = 6;
-	}
-
-	public static class CanConstants {
-
-		// Scoring Motor IDs
-		public static final int scoreMotor1 = 24;
-		public static final int scoreMotor2 = 25;
-		public static final int scoreTiltMotor = 28;
-
-		// Elevator Motor IDs
-		public static final int elevatorMotorL = 26;
-		public static final int elevatorMotorR = 27;
-
-		// Climber Motor IDs
-		public static final int beefyMotor = 29;
-	}
-
-	public static class DIOConstants {
-
-		// Sensor ports
-		public static final int coralSensorPort = 1;
-		public static final int elevatorEncoderL = 2;
-		public static final int elevatorEncoderR = 3;
-		public static final int homingTiltClickySwitch = 4;
-	}
-
-	public static class AutoScoring {
-
-		public static class Processor {
-
-			public static final Transform2d offset = new Transform2d(
-					Inches.of(24).in(Meters),
-					Inches.of(0).in(Meters),
-					Rotation2d.fromDegrees(0)
-			);
-		}
-
-		public static class Reef {
-
-			public static final Transform2d coralOffsetL = new Transform2d(
-					Inches.of(21.5).in(Meters),
-					Inches.of(2.5).in(Meters),
-					Rotation2d.fromDegrees(180)
-			);
-
-			public static final Transform2d coralOffsetR = new Transform2d(
-					Inches.of(21.5).in(Meters),
-					Inches.of(2.5).in(Meters),
-					Rotation2d.fromDegrees(180)
-			);
-
-			public static final Transform2d algaeOffset = new Transform2d(
-					Inches.of(18).in(Meters),
-					Inches.of(0).in(Meters),
-					Rotation2d.fromDegrees(0)
-			);
-		}
-
-		public static class HumanPlayer {
-
-			public static class Left {
-
-				public static final Transform2d offset = new Transform2d(
-						Inches.of(24).in(Meters),
-						Inches.of(0).in(Meters),
-						Rotation2d.fromDegrees(0)
-				);
-			}
-
-			public static class Right {
-
-				public static final Transform2d offset = new Transform2d(
-						Inches.of(24).in(Meters),
-						Inches.of(0).in(Meters),
-						Rotation2d.fromDegrees(0)
-				);
-			}
-		}
 	}
 }

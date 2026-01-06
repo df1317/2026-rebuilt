@@ -16,13 +16,12 @@ This is the code for 1317's 2026 robot for this years Rebuilt FRC game!
 > [!WARNING]
 > Make sure to do these instructions before you start working on the code. (Looking at you Holden and Rebekah 👀)
 
-#### IntelliJ IDEA (Automatic)
-
-**IntelliJ IDEA automatically configures formatting when you open the project!** 
+#### IntelliJ IDEA
 
 The Eclipse formatter profile is auto-imported and format-on-save is enabled. Just open the project and start coding - formatting happens automatically.
 
 If for some reason it doesn't work:
+
 1. **Settings** → **Editor** → **Code Style** → **Java** → ⚙️ → **Import Scheme** → **Eclipse XML Profile**
 2. Select `eclipse-formatter.xml`
 3. **Settings** → **Tools** → **Actions on Save** → Enable "Reformat code" and "Optimize imports"
@@ -34,16 +33,12 @@ This project uses [Prettier](https://prettier.io/) for formatting config files, 
 Install dependencies:
 
 ```bash
-npm install
-# or
 bun install
 ```
 
 Format all non-Java files:
 
 ```bash
-npm run format
-# or
 bun format
 ```
 
@@ -108,9 +103,9 @@ public class RobotContainer {
 </p>
 
 <p align="center">
-	<code>&copy 2025-present <a href="https://github.com/df1317">Digital Fusion FRC team 1317</a></code>
+	<code>&copy 2026-present <a href="https://github.com/df1317">Digital Fusion FRC team 1317</a></code>
 </p>
 
 <p align="center">
-	<a href="https://github.com/df1317/2025-reefscape/blob/main/LICENSE.md"><img src="https://img.shields.io/static/v1.svg?style=for-the-badge&label=License&message=MIT&logoColor=d9e0ee&colorA=363a4f&colorB=b7bdf8"/></a>
+	<a href="https://github.com/df1317/2026-rebuilt/blob/main/LICENSE.md"><img src="https://img.shields.io/static/v1.svg?style=for-the-badge&label=License&message=MIT&logoColor=d9e0ee&colorA=363a4f&colorB=b7bdf8"/></a>
 </p>
