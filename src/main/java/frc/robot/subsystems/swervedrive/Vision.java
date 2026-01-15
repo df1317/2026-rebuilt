@@ -16,7 +16,7 @@ import frc.robot.Robot;
 import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
-import org.photonvision.PhotonPoseEstimator.PoseStrategy;
+
 import org.photonvision.PhotonUtils;
 import org.photonvision.simulation.PhotonCameraSim;
 import org.photonvision.simulation.SimCameraProperties;
@@ -135,21 +135,33 @@ public class Vision {
 			 */
 			visionSim.update(swerveDrive.getSimulationDriveTrainPose().get());
 		}
+
+		List<VisionMeasurement> measurements = new ArrayList<>();
 		for (Cameras camera : Cameras.values()) {
 			if (!camera.camera.isConnected()) {
 				continue;
 			}
+			camera.poseEstimator.addHeadingData(
+					swerveDrive.getGyro().getYawAngularVelocity().in(edu.wpi.first.units.Units.RadiansPerSecond),
+					swerveDrive.getOdometryHeading()
+			);
 			Optional<EstimatedRobotPose> poseEst = getEstimatedGlobalPose(camera);
-			if (poseEst.isPresent()) {
-				var pose = poseEst.get();
-				swerveDrive.addVisionMeasurement(
-						pose.estimatedPose.toPose2d(),
-						pose.timestampSeconds,
-						camera.curStdDevs
-				);
+			if (poseEst.isPresent() && camera.curStdDevs != null) {
+				measurements.add(new VisionMeasurement(poseEst.get(), camera.curStdDevs));
 			}
 		}
+
+		measurements.sort((a, b) -> Double.compare(a.pose.timestampSeconds, b.pose.timestampSeconds));
+		for (VisionMeasurement m : measurements) {
+			swerveDrive.addVisionMeasurement(
+					m.pose.estimatedPose.toPose2d(),
+					m.pose.timestampSeconds,
+					m.stdDevs
+			);
+		}
 	}
+
+	private record VisionMeasurement(EstimatedRobotPose pose, Matrix<N3, N1> stdDevs) {}
 
 	/**
 	 * Generates the estimated robot pose. Returns empty if:
@@ -161,7 +173,7 @@ public class Vision {
 	 * @return an {@link EstimatedRobotPose} with an estimated pose, timestamp, and targets used to create the estimate
 	 */
 	public Optional<EstimatedRobotPose> getEstimatedGlobalPose(Cameras camera) {
-		Optional<EstimatedRobotPose> poseEst = camera.getEstimatedGlobalPose();
+		Optional<EstimatedRobotPose> poseEst = camera.getEstimatedGlobalPose(currentPose.get());
 		if (Robot.isSimulation()) {
 			Field2d debugField = visionSim.getDebugField();
 			// Uncomment to enable outputting of vision targets in sim.
@@ -350,12 +362,7 @@ public class Vision {
 			// https://docs.wpilib.org/en/stable/docs/software/basic-programming/coordinate-system.html
 			robotToCamTransform = new Transform3d(robotToCamTranslation, robotToCamRotation);
 
-			poseEstimator = new PhotonPoseEstimator(
-					Vision.fieldLayout,
-					PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR,
-					robotToCamTransform
-			);
-			poseEstimator.setMultiTagFallbackStrategy(PoseStrategy.LOWEST_AMBIGUITY);
+			poseEstimator = new PhotonPoseEstimator(Vision.fieldLayout, robotToCamTransform);
 
 			this.singleTagStdDevs = singleTagStdDevs;
 			this.multiTagStdDevs = multiTagStdDevsMatrix;
@@ -428,17 +435,18 @@ public class Vision {
 		 * Get the estimated robot pose. Updates the current robot pose estimation, standard deviations, and flushes the
 		 * cache of results.
 		 *
+		 * @param referencePose Current robot pose from odometry for reference
 		 * @return Estimated pose.
 		 */
-		public Optional<EstimatedRobotPose> getEstimatedGlobalPose() {
-			updateUnreadResults();
+		public Optional<EstimatedRobotPose> getEstimatedGlobalPose(Pose2d referencePose) {
+			updateUnreadResults(referencePose);
 			return estimatedRobotPose;
 		}
 
 		/**
 		 * Update the latest results, cached with a maximum refresh rate of 1req/15ms. Sorts the list by timestamp.
 		 */
-		private void updateUnreadResults() {
+		private void updateUnreadResults(Pose2d referencePose) {
 			double mostRecentTimestamp = resultsList.isEmpty() ? 0.0 : resultsList.get(0).getTimestampSeconds();
 			double currentTimestamp = Microseconds.of(NetworkTablesJNI.now()).in(Seconds);
 			double debounceTime = Milliseconds.of(15).in(Seconds);
@@ -453,11 +461,12 @@ public class Vision {
 						? camera.getAllUnreadResults()
 						: cameraSim.getCamera().getAllUnreadResults();
 				lastReadTimestamp = currentTimestamp;
-				resultsList.sort((PhotonPipelineResult a, PhotonPipelineResult b) -> {
-					return a.getTimestampSeconds() >= b.getTimestampSeconds() ? 1 : -1;
-				});
-				if (!resultsList.isEmpty()) {
-					updateEstimatedGlobalPose();
+				resultsList.sort((a, b) -> Double.compare(b.getTimestampSeconds(), a.getTimestampSeconds()));
+				if (resultsList.isEmpty()) {
+					estimatedRobotPose = Optional.empty();
+					curStdDevs = singleTagStdDevs;
+				} else {
+					updateEstimatedGlobalPose(referencePose);
 				}
 			}
 		}
@@ -473,13 +482,33 @@ public class Vision {
 		 * @return An {@link EstimatedRobotPose} with an estimated pose, estimate timestamp, and targets used for
 		 * 		estimation.
 		 */
-		private void updateEstimatedGlobalPose() {
-			Optional<EstimatedRobotPose> visionEst = Optional.empty();
-			for (var change : resultsList) {
-				visionEst = poseEstimator.update(change);
-				updateEstimationStdDevs(visionEst, change.getTargets());
+		private void updateEstimatedGlobalPose(Pose2d referencePose) {
+			estimatedRobotPose = Optional.empty();
+			curStdDevs = singleTagStdDevs;
+
+			Pose3d referencePose3d = new Pose3d(referencePose);
+
+			for (var result : resultsList) {
+				if (!result.hasTargets()) {
+					continue;
+				}
+
+				var est = poseEstimator.estimateCoprocMultiTagPose(result);
+				boolean isMultiTag = est.isPresent();
+
+				if (est.isEmpty()) {
+					if (result.getBestTarget().getPoseAmbiguity() > 0.2) {
+						continue;
+					}
+					est = poseEstimator.estimateClosestToReferencePose(result, referencePose3d);
+				}
+
+				if (est.isPresent()) {
+					updateEstimationStdDevs(est, result.getTargets(), isMultiTag);
+					estimatedRobotPose = est;
+					return;
+				}
 			}
-			estimatedRobotPose = visionEst;
 		}
 
 		/**
@@ -490,54 +519,50 @@ public class Vision {
 		 * 		The estimated pose to guess standard deviations for.
 		 * @param targets
 		 * 		All targets in this camera frame
+		 * @param isMultiTag
+		 * 		Whether this estimate came from multi-tag solving
 		 */
 		private void updateEstimationStdDevs(
 				Optional<EstimatedRobotPose> estimatedPose,
-				List<PhotonTrackedTarget> targets
+				List<PhotonTrackedTarget> targets,
+				boolean isMultiTag
 		) {
 			if (estimatedPose.isEmpty()) {
-				// No pose input. Default to single-tag std devs
 				curStdDevs = singleTagStdDevs;
-			} else {
-				// Pose present. Start running Heuristic
-				var estStdDevs = singleTagStdDevs;
-				int numTags = 0;
-				double avgDist = 0;
-
-				// Precalculation - see how many tags we found, and calculate an
-				// average-distance metric
-				for (var tgt : targets) {
-					var tagPose = poseEstimator.getFieldTags().getTagPose(tgt.getFiducialId());
-					if (tagPose.isEmpty()) {
-						continue;
-					}
-					numTags++;
-					avgDist += tagPose
-							.get()
-							.toPose2d()
-							.getTranslation()
-							.getDistance(estimatedPose.get().estimatedPose.toPose2d().getTranslation());
-				}
-
-				if (numTags == 0) {
-					// No tags visible. Default to single-tag std devs
-					curStdDevs = singleTagStdDevs;
-				} else {
-					// One or more tags visible, run the full heuristic.
-					avgDist /= numTags;
-					// Decrease std devs if multiple targets are visible
-					if (numTags > 1) {
-						estStdDevs = multiTagStdDevs;
-					}
-					// Increase std devs based on (average) distance
-					if (numTags == 1 && avgDist > 4) {
-						estStdDevs = VecBuilder.fill(Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE);
-					} else {
-						estStdDevs = estStdDevs.times(1 + ((avgDist * avgDist) / 30));
-					}
-					curStdDevs = estStdDevs;
-				}
+				return;
 			}
+
+			var estStdDevs = isMultiTag ? multiTagStdDevs : singleTagStdDevs;
+			int numTags = 0;
+			double avgDist = 0;
+
+			for (var tgt : targets) {
+				var tagPose = poseEstimator.getFieldTags().getTagPose(tgt.getFiducialId());
+				if (tagPose.isEmpty()) {
+					continue;
+				}
+				numTags++;
+				avgDist += tagPose
+						.get()
+						.toPose2d()
+						.getTranslation()
+						.getDistance(estimatedPose.get().estimatedPose.toPose2d().getTranslation());
+			}
+
+			if (numTags == 0) {
+				curStdDevs = singleTagStdDevs;
+				return;
+			}
+
+			avgDist /= numTags;
+
+			if (numTags == 1 && avgDist > 4) {
+				curStdDevs = null;
+				return;
+			}
+
+			estStdDevs = estStdDevs.times(1 + ((avgDist * avgDist) / 30));
+			curStdDevs = estStdDevs;
 		}
 	}
 }
