@@ -153,13 +153,22 @@ public class Vision {
 
 		measurements.sort((a, b) -> Double.compare(a.pose.timestampSeconds, b.pose.timestampSeconds));
 		for (VisionMeasurement m : measurements) {
+			Pose2d visionPose = m.pose.estimatedPose.toPose2d();
+			double poseDifference = currentPose.get().getTranslation().getDistance(visionPose.getTranslation());
+
+			if (poseDifference > MAX_POSE_JUMP_METERS) {
+				continue;
+			}
+
 			swerveDrive.addVisionMeasurement(
-					m.pose.estimatedPose.toPose2d(),
+					visionPose,
 					m.pose.timestampSeconds,
 					m.stdDevs
 			);
 		}
 	}
+
+	private static final double MAX_POSE_JUMP_METERS = 1.0;
 
 	private record VisionMeasurement(EstimatedRobotPose pose, Matrix<N3, N1> stdDevs) {}
 
