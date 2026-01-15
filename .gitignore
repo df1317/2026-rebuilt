@@ -196,5 +196,4 @@ compile_commands.json
 # Eclipse generated file for annotation processors
 .factorypath
 
-# bun
-node_modules/
+.crush/

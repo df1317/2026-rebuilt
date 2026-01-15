@@ -1,9 +1,0 @@
-{
-	"dependencies": {
-		"prettier": "^3.5.1"
-	},
-	"scripts": {
-		"format": "prettier --write .",
-		"format:check": "prettier --check ."
-	}
-}

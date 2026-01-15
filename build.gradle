@@ -1,6 +1,6 @@
 plugins {
     id "java"
-    id "edu.wpi.first.GradleRIO" version "2025.3.2"
+    id "edu.wpi.first.GradleRIO" version "2026.1.1"
 }
 
 java {
@@ -101,28 +101,4 @@ wpi.java.configureTestTasks(test)
 // Configure string concat to always inline compile
 tasks.withType(JavaCompile) {
     options.compilerArgs.add '-XDstringConcat=inline'
-}
-
-// Task to run prettier for non-Java files
-task runPrettier(type: Exec) {
-    group = 'Formatting'
-    description = 'Format non-Java files using Prettier'
-    commandLine 'npm', 'run', 'format'
-    workingDir project.projectDir
-}
-
-// Task to format all non-Java files
-task formatAll {
-    group = 'Formatting'
-    description = 'Format non-Java files with Prettier'
-    dependsOn 'runPrettier'
-}
-
-// Task to setup Git hooks for automatic formatting
-task setupGitHooks(type: Copy) {
-    group = 'Setup'
-    description = 'Install git pre-commit hook for auto-formatting'
-    from '.githooks/pre-commit'
-    into '.git/hooks'
-    fileMode 0755
 }
