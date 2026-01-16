@@ -1,31 +1,27 @@
 package frc.robot.subsystems.swervedrive;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import frc.robot.Constants.VisionConstants;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 /**
  * Tests for Vision standard deviation calculation algorithm.
- * 
- * The Vision class uses a heuristic to calculate dynamic standard deviations based on:
- * - Number of tags (single vs multi)
- * - Distance from tags
- * - Formula: baseStdDev * (1 + (avgDistance² / 30))
+ * <p>
+ * The Vision class uses a heuristic to calculate dynamic standard deviations based on: - Number of tags (single vs.
+ * multi) - Distance from tags - Formula: baseStdDev * (1 + (avgDistance² / 30))
  */
 class VisionStdDevCalculationTest {
 
 	/**
 	 * Verifies the standard deviation scaling formula matches expected values.
-	 * 
-	 * Formula: stdDev = baseStdDev * (1 + (distance² / 30))
+	 * <p>
+	 * Formula: std dev = baseStdDev * (1 + (distance² / 30))
 	 */
 	@Test
 	void testStdDevScaling() {
@@ -36,24 +32,24 @@ class VisionStdDevCalculationTest {
 				VisionConstants.CameraStdDevs.SINGLE_TAG[2]);
 
 		// Test at different distances
-		double[] testDistances = {0.0, 1.0, 2.0, 4.0, 5.0};
-		double[] expectedMultipliers = {1.0, 1.033, 1.133, 1.533, 1.833};
+		double[] testDistances = { 0.0, 1.0, 2.0, 4.0, 5.0 };
+		double[] expectedMultipliers = { 1.0, 1.033, 1.133, 1.533, 1.833 };
 
 		for (int i = 0; i < testDistances.length; i++) {
 			double distance = testDistances[i];
 			double multiplier = 1 + ((distance * distance) / 30);
-			
+
 			assertEquals(expectedMultipliers[i], multiplier, 0.001,
 					"Distance " + distance + "m should have multiplier " + expectedMultipliers[i]);
 
 			Matrix<N3, N1> scaled = baseSingleTag.times(multiplier);
-			
-			// Verify X stddev scales correctly
+
+			// Verify X std dev scales correctly
 			assertEquals(
 					VisionConstants.CameraStdDevs.SINGLE_TAG[0] * multiplier,
 					scaled.get(0, 0),
 					0.001,
-					"X stddev at " + distance + "m");
+					"X std dev at " + distance + "m");
 		}
 	}
 
@@ -63,13 +59,13 @@ class VisionStdDevCalculationTest {
 	@Test
 	void testSingleTagDistanceRejection() {
 		double maxDistance = VisionConstants.MAX_SINGLE_TAG_DISTANCE_METERS;
-		
-		// Distance at the limit should be accepted (returns non-null stddev)
-		assertTrue(maxDistance > 0, "Max single tag distance should be positive");
-		
-		// Distance beyond limit should be rejected (returns null stddev)
+
+		// Distance at the limit should be accepted (returns non-null std dev)
+		assertEquals(4.0, maxDistance, "Max single tag distance should be positive");
+
+		// Distance beyond the limit should be rejected (returns null std dev)
 		double beyondLimit = maxDistance + 0.1;
-		assertTrue(beyondLimit > maxDistance, "Beyond limit distance should exceed max");
+		assertEquals(4.1, beyondLimit, 0.001, "Beyond limit distance should exceed max");
 	}
 
 	/**
@@ -98,8 +94,8 @@ class VisionStdDevCalculationTest {
 	}
 
 	/**
-	 * Tests the quadratic nature of distance-based scaling.
-	 * Doubling distance should increase multiplier by 4x (distance²).
+	 * Tests the quadratic nature of distance-based scaling. Doubling distance should increase multiplier by 4x
+	 * (distance²).
 	 */
 	@Test
 	void testQuadraticDistanceScaling() {
@@ -124,24 +120,22 @@ class VisionStdDevCalculationTest {
 	}
 
 	/**
-	 * Verifies that pose ambiguity threshold is reasonable (between 0 and 1).
+	 * Verifies that the pose ambiguity threshold is configured. Value should be between 0 (perfect match) and 1
+	 * (completely ambiguous).
 	 */
 	@Test
 	void testPoseAmbiguityThreshold() {
 		double ambiguity = VisionConstants.POSE_AMBIGUITY_THRESHOLD;
-		
-		assertTrue(ambiguity > 0 && ambiguity < 1,
-				"Pose ambiguity threshold (" + ambiguity + ") should be between 0 and 1");
+		assertEquals(0.2, ambiguity, "Pose ambiguity threshold");
 	}
 
 	/**
-	 * Tests that max pose jump threshold is reasonable for competition use.
+	 * Tests that the max pose jump threshold is configured. Used for rejecting vision measurements that differ too much
+	 * from odometry.
 	 */
 	@Test
 	void testMaxPoseJumpThreshold() {
 		double maxJump = VisionConstants.MAX_POSE_JUMP_METERS;
-		
-		assertTrue(maxJump > 0.1 && maxJump < 5.0,
-				"Max pose jump (" + maxJump + "m) should be reasonable for field dimensions");
+		assertEquals(1.0, maxJump, "Max pose jump threshold");
 	}
 }
