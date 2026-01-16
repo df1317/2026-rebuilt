@@ -5,10 +5,12 @@ import dev.doglog.DogLogOptions;
 import edu.wpi.first.net.WebServer;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
+import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import frc.robot.util.DevMode;
 
 /**
  * ---------- Robot --- The VM is configured to automatically run this class and
@@ -25,6 +27,11 @@ public class Robot extends TimedRobot {
 	private RobotContainer m_robotContainer;
 
 	private Timer disabledTimer;
+
+	// Loop timing measurement (dev mode only)
+	private long lastLoopTimeMicros = 0;
+	private double[] loopTimesMs = new double[50]; // Rolling buffer for 1 second of data
+	private int loopIndex = 0;
 
 	/**
 	 * ---------- RobotInit --- This function is run when the robot is first started
@@ -73,6 +80,33 @@ public class Robot extends TimedRobot {
 	 */
 	@Override
 	public void robotPeriodic() {
+		// Measure loop timing (dev mode only)
+		if (DevMode.isEnabled()) {
+			long nowMicros = RobotController.getFPGATime();
+
+			if (lastLoopTimeMicros != 0) {
+				double loopMs = (nowMicros - lastLoopTimeMicros) / 1000.0; // Convert μs to ms
+				loopTimesMs[loopIndex % loopTimesMs.length] = loopMs;
+
+				// Log individual loop time
+				DogLog.log("Robot/LoopTimeMs", loopMs);
+
+				// Calculate and log rolling average every 50 loops (~1 second)
+				if (loopIndex > 0 && loopIndex % loopTimesMs.length == 0) {
+					double sum = 0;
+					for (double time : loopTimesMs) {
+						sum += time;
+					}
+					double avgLoopMs = sum / loopTimesMs.length;
+					DogLog.log("Robot/AvgLoopTimeMs", avgLoopMs);
+				}
+
+				loopIndex++;
+			}
+
+			lastLoopTimeMicros = nowMicros;
+		}
+
 		/*
 		 * ----------
 		 * Runs the Scheduler. This is responsible for polling buttons, adding newly
@@ -83,7 +117,15 @@ public class Robot extends TimedRobot {
 		 * robot's periodic
 		 * block in order for anything in the Command-based framework to work.
 		 */
+		long schedulerStartMicros = RobotController.getFPGATime();
 		CommandScheduler.getInstance().run();
+		long schedulerEndMicros = RobotController.getFPGATime();
+
+		// Log CommandScheduler overhead (dev mode only)
+		if (DevMode.isEnabled()) {
+			double schedulerMs = (schedulerEndMicros - schedulerStartMicros) / 1000.0;
+			DogLog.log("Robot/SchedulerTimeMs", schedulerMs);
+		}
 
 		// Essential values for Elastic dashboard - forceNt ensures these are always
 		// published
