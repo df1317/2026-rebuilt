@@ -85,7 +85,8 @@ class VisionOutlierRejectionTest {
 	}
 
 	/**
-	 * Verifies that a pose ambiguity threshold is used for single-tag filtering. Ambiguity represents how similar the best and
+	 * Verifies that a pose ambiguity threshold is used for single-tag filtering. Ambiguity represents how similar the
+	 * best and
 	 * second-best pose solutions are. Value should be between 0 (perfect match) and 1 (completely ambiguous).
 	 */
 	@Test
