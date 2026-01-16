@@ -1,11 +1,12 @@
 package frc.robot;
 
+import dev.doglog.DogLog;
+import dev.doglog.DogLogOptions;
 import edu.wpi.first.net.WebServer;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
@@ -37,6 +38,16 @@ public class Robot extends TimedRobot {
 	 */
 	@Override
 	public void robotInit() {
+		// Configure DogLog for logging
+		// - Logs always go to DataLog (.wpilog) for AdvantageScope post-match analysis
+		// - NT publishing auto-disables when FMS connected (competition mode)
+		// - captureDs: logs joystick/DS data
+		// - logExtras: logs PDH currents, CAN usage, battery voltage, etc.
+		DogLog.setOptions(new DogLogOptions()
+				.withCaptureDs(true)
+				.withLogExtras(true)
+		);
+
 		// Instantiate our RobotContainer.  This will perform all our button bindings and put our
 		// autonomous chooser on the dashboard.
 		m_robotContainer = new RobotContainer();
@@ -70,9 +81,10 @@ public class Robot extends TimedRobot {
 		 */
 		CommandScheduler.getInstance().run();
 
-		// Put the current match time on the dashboard
-		SmartDashboard.putNumber("misc/Match Time", DriverStation.getMatchTime());
-		SmartDashboard.putBoolean("misc/robotRelative", m_robotContainer.robotRelative);
+		// Essential values for Elastic dashboard - forceNt ensures these are always published
+		// even at competition (when regular NT publishing is disabled)
+		DogLog.forceNt.log("Dash/MatchTime", DriverStation.getMatchTime());
+		DogLog.forceNt.log("Dash/RobotRelative", m_robotContainer.robotRelative);
 	}
 
 	/* ----------

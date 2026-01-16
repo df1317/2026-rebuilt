@@ -51,9 +51,9 @@ public class Vision {
 	 */
 	private final Supplier<Pose2d> currentPose;
 	/**
-	 * Field from {@link swervelib.SwerveDrive#field}
+	 * Dev-only telemetry handler for vision debug visualization.
 	 */
-	private final Field2d field2d;
+	private final VisionTelemetry telemetry;
 	/**
 	 * Photon Vision Simulation
 	 */
@@ -70,7 +70,7 @@ public class Vision {
 	@SuppressWarnings("resource")
 	public Vision(Supplier<Pose2d> currentPose, Field2d field) {
 		this.currentPose = currentPose;
-		this.field2d = field;
+		this.telemetry = new VisionTelemetry(field);
 
 		if (Robot.isSimulation()) {
 			visionSim = new VisionSystemSim("Vision");
@@ -173,27 +173,18 @@ public class Vision {
 	}
 
 	/**
-	 * Update the {@link Field2d} to display all currently tracked AprilTag targets. Useful for debugging which tags the
-	 * vision system is detecting.
+	 * Update dev-only vision telemetry (tracked targets on Field2d). Only runs in dev mode to avoid NT crowding during
+	 * competition.
 	 */
 	public void updateVisionField() {
-		List<PhotonTrackedTarget> targets = new ArrayList<>();
-		for (Cameras c : Cameras.values()) {
-			if (!c.resultsList.isEmpty()) {
-				PhotonPipelineResult latest = c.resultsList.get(0);
-				if (latest.hasTargets()) {
-					targets.addAll(latest.targets);
-				}
-			}
-		}
+		telemetry.update();
+	}
 
-		List<Pose2d> poses = new ArrayList<>();
-		for (PhotonTrackedTarget target : targets) {
-			Optional<Pose3d> tagPose = fieldLayout.getTagPose(target.getFiducialId());
-			tagPose.ifPresent(pose3d -> poses.add(pose3d.toPose2d()));
-		}
-
-		field2d.getObject("tracked targets").setPoses(poses);
+	/**
+	 * Get the vision telemetry handler for external configuration.
+	 */
+	public VisionTelemetry getTelemetry() {
+		return telemetry;
 	}
 
 	/**

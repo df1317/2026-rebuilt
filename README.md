@@ -63,6 +63,78 @@ Here are some examples of commit messages that are and aren't acceptable:
 
 Make branches early and often! If you are working on a new feature that isn't directly reliant on a side branch then make a new branch and open a PR as quick as possible. Be wary of working on too many branches at once though; it can get confusing. Aim to merge the branch once you have verified that the code works on the robot.
 
+### Logging with DogLog
+
+We use [DogLog](https://doglog.dev) for telemetry and logging. It automatically writes to DataLog files (`.wpilog`) for AdvantageScope analysis and publishes to NetworkTables during development.
+
+#### Quick Start
+
+```java
+import dev.doglog.DogLog;
+
+// Regular logging - auto-disables NT publishing when FMS connected
+DogLog.log("Subsystem/Value", 42.0);
+DogLog.log("Subsystem/Enabled", true);
+DogLog.log("Subsystem/Position", new Pose2d());
+
+// Force NT publishing even at competition (for Elastic dashboard essentials)
+DogLog.forceNt.log("Dash/MatchTime", Timer.getMatchTime());
+DogLog.forceNt.log("Dash/RobotRelative", true);
+```
+
+#### Key Concepts
+
+- **`DogLog.log(key, value)`** - Development telemetry
+  - Publishes to NetworkTables during practice/development
+  - Auto-disables NT when FMS connected (competition mode)
+  - Always writes to DataLog for post-match analysis
+
+- **`DogLog.forceNt.log(key, value)`** - Competition essentials
+  - Always publishes to NetworkTables (even at competition)
+  - Use sparingly for driver dashboard critical values
+  - Also writes to DataLog
+
+- **`DevMode.isEnabled()`** - Gate expensive operations
+  - Returns `true` in practice/development (not at FMS)
+  - Use for Field2d updates, extra computations, debug visualizations
+  - DogLog handles NT publishing automatically; use DevMode for non-logging overhead
+
+#### Workflow
+
+**Development:**
+1. Connect laptop to robot network
+2. Open [AdvantageScope](https://github.com/Mechanical-Advantage/AdvantageScope)
+3. File → Connect to Robot → NetworkTables 4 → Enter robot IP
+4. All `DogLog.log()` values stream live for debugging
+
+**Post-Match Analysis:**
+1. Download `.wpilog` files from roboRIO (`/home/lvuser/logs/`)
+2. AdvantageScope → File → Open Files → Select `.wpilog`
+3. Analyze all logged data with full history and Field2d visualization
+
+**Competition:**
+- Only `forceNt` values appear on Elastic dashboard
+- Everything still logs to DataLog for post-match review
+
+#### Example: Subsystem with Telemetry
+
+```java
+public class Elevator extends SubsystemBase {
+    private final SparkMax motor;
+
+    @Override
+    public void periodic() {
+        // Auto-disables at competition
+        DogLog.log("Elevator/Position", motor.getEncoder().getPosition());
+        DogLog.log("Elevator/Velocity", motor.getEncoder().getVelocity());
+        DogLog.log("Elevator/Current", motor.getOutputCurrent());
+
+        // Essential for driver dashboard (always published)
+        DogLog.forceNt.log("Dash/ElevatorAtSetpoint", atSetpoint());
+    }
+}
+```
+
 ### Commands and Subsystems
 
 As much as possible try to use the WPILIB built-ins for commands and subsystems. WPILib has some awesome docs on [Commands](https://docs.wpilib.org/en/latest/docs/software/commandbased/commands.html) and [Command Compositions](https://docs.wpilib.org/en/latest/docs/software/commandbased/command-compositions.html) as well as [Subsystems](https://docs.wpilib.org/en/latest/docs/software/commandbased/subsystems.html).
