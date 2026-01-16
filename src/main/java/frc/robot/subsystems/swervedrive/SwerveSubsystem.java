@@ -36,6 +36,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Config;
 import frc.robot.Constants;
 import frc.robot.subsystems.swervedrive.Vision.Cameras;
+import frc.robot.util.DevMode;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -69,6 +70,11 @@ public class SwerveSubsystem extends SubsystemBase {
 	 * PhotonVision class to keep an accurate odometry.
 	 */
 	private Vision vision;
+	/**
+	 * Autopilot controller for stateless holonomic motion control.
+	 * Used for teleop alignment and dynamic target tracking.
+	 */
+	private AutopilotController autopilotController;
 
 	/**
 	 * Initialize {@link SwerveDrive} with the directory provided.
@@ -126,6 +132,7 @@ public class SwerveSubsystem extends SubsystemBase {
 			swerveDrive.stopOdometryThread();
 		}
 		setupPathPlanner();
+		setupAutopilot();
 		// Epilogue.bind(this);
 	}
 
@@ -165,6 +172,14 @@ public class SwerveSubsystem extends SubsystemBase {
 		swerveDrive.updateOdometry();
 		if (visionDriveTest) {
 			vision.updatePoseEstimation(swerveDrive);
+		}
+
+		// Autopilot telemetry (dev mode only)
+		if (DevMode.isEnabled() && autopilotController != null) {
+			SmartDashboard.putString("Autopilot/Constraints",
+					String.format("Accel: %.2f m/s², Jerk: %.2f m/s³",
+							autopilotController.getAcceleration(),
+							autopilotController.getJerk()));
 		}
 	}
 
@@ -239,6 +254,13 @@ public class SwerveSubsystem extends SubsystemBase {
 		// Preload PathPlanner Path finding
 		// IF USING CUSTOM PATHFINDER ADD BEFORE THIS LINE
 		CommandScheduler.getInstance().schedule(PathfindingCommand.warmupCommand());
+	}
+
+	/**
+	 * Setup Autopilot controller.
+	 */
+	public void setupAutopilot() {
+		autopilotController = new AutopilotController();
 	}
 
 	/**
@@ -834,5 +856,107 @@ public class SwerveSubsystem extends SubsystemBase {
 	 */
 	public SwerveDrive getSwerveDrive() {
 		return swerveDrive;
+	}
+
+	/**
+	 * Drive to a pose using Autopilot's stateless motion control.
+	 *
+	 * <p>
+	 * This command uses Autopilot for real-time drive-to-pose with smooth deceleration.
+	 * Best for teleop alignment and dynamic target tracking where the target may move.
+	 *
+	 * <p>
+	 * <b>Use PathPlanner's driveToPose() instead if you need obstacle avoidance.</b>
+	 *
+	 * @param targetPose
+	 *          Target pose supplier
+	 * @return Command to drive to the target pose
+	 */
+	public Command driveToPoseAutopilot(Supplier<Pose2d> targetPose) {
+		return run(() -> {
+			ChassisSpeeds speeds = autopilotController.calculate(
+					getPose(),
+					getRobotVelocity(),
+					targetPose.get());
+			driveFieldOriented(speeds);
+		});
+	}
+
+	/**
+	 * Drive to a pose using Autopilot with entry angle control.
+	 *
+	 * <p>
+	 * Entry angle determines the direction from which the robot approaches the target,
+	 * creating curved paths for smoother trajectories.
+	 *
+	 * @param targetPose
+	 *          Target pose supplier
+	 * @param respectEntryAngle
+	 *          Whether to respect the target rotation as entry angle
+	 * @return Command to drive to the target pose
+	 */
+	public Command driveToPoseAutopilot(Supplier<Pose2d> targetPose, boolean respectEntryAngle) {
+		return run(() -> {
+			ChassisSpeeds speeds = autopilotController.calculate(
+					getPose(),
+					getRobotVelocity(),
+					targetPose.get(),
+					respectEntryAngle);
+			driveFieldOriented(speeds);
+		});
+	}
+
+	/**
+	 * Drive to a pose using Autopilot with finish detection.
+	 *
+	 * <p>
+	 * This command completes when the robot reaches the target within tolerances.
+	 *
+	 * @param targetPose
+	 *          Target pose supplier
+	 * @param translationTolerance
+	 *          Translation tolerance (meters)
+	 * @param rotationTolerance
+	 *          Rotation tolerance (radians)
+	 * @return Command that finishes when robot reaches target
+	 */
+	public Command driveToPoseAutopilotUntilFinished(
+			Supplier<Pose2d> targetPose,
+			double translationTolerance,
+			double rotationTolerance) {
+		return run(() -> {
+			ChassisSpeeds speeds = autopilotController.calculate(
+					getPose(),
+					getRobotVelocity(),
+					targetPose.get());
+			driveFieldOriented(speeds);
+		}).until(() -> autopilotController.atTarget(
+				getPose(),
+				targetPose.get(),
+				translationTolerance,
+				rotationTolerance));
+	}
+
+	/**
+	 * Drive to a static pose using Autopilot.
+	 *
+	 * <p>
+	 * Convenience method for static targets (non-moving).
+	 *
+	 * @param targetPose
+	 *          Static target pose
+	 * @return Command to drive to the target pose
+	 */
+	public Command driveToPoseAutopilot(Pose2d targetPose) {
+		return driveToPoseAutopilot(() -> targetPose);
+	}
+
+	/**
+	 * Get the Autopilot controller.
+	 *
+	 * @return Autopilot controller instance
+	 */
+	public AutopilotController getAutopilotController() {
+		return autopilotController;
 	}
 }

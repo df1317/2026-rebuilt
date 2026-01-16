@@ -112,6 +112,33 @@ public class RobotContainer {
 		driverXbox
 				.back()
 				.whileTrue(Commands.either(drivebase.centerModulesCommand(), Commands.none(), DriverStation::isTest));
+
+		// ========== Autopilot Examples ==========
+		// Uncomment these to enable Autopilot drive-to-pose commands during testing
+		//
+		// Example 1: Drive to scoring position (field coordinates)
+		// driverXbox.x().whileTrue(
+		// drivebase.driveToPoseAutopilot(() -> new Pose2d(5.0, 3.0, Rotation2d.fromDegrees(0)))
+		// );
+		//
+		// Example 2: Drive to amp with entry angle (approach from specific direction)
+		// driverXbox.y().whileTrue(
+		// drivebase.driveToPoseAutopilot(() -> FieldConstants.ampPose, true)
+		// );
+		//
+		// Example 3: Drive to pose and finish (command completes when at target)
+		// driverXbox.b().whileTrue(
+		// drivebase.driveToPoseAutopilotUntilFinished(
+		// () -> new Pose2d(2.0, 2.0, Rotation2d.fromDegrees(45)),
+		// 0.05, // 5cm tolerance
+		// Math.toRadians(2) // 2 degree tolerance
+		// )
+		// );
+		//
+		// Example 4: Static target convenience method
+		// driverXbox.povUp().whileTrue(
+		// drivebase.driveToPoseAutopilot(new Pose2d(1.0, 1.0, new Rotation2d()))
+		// );
 	}
 
 	/**
