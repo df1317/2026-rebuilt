@@ -34,10 +34,35 @@ import swervelib.SwerveDrive;
 import swervelib.telemetry.SwerveDriveTelemetry;
 
 /**
- * Example PhotonVision class to aid in the pursuit of accurate odometry. Taken
- * from <a
- * href=
- * "https://gitlab.com/ironclad_code/ironclad-2024/-/blob/master/src/main/java/frc/robot/vision/Vision.java?ref_type=heads">...</a>
+ * PhotonVision-based vision system for improving odometry accuracy through AprilTag detection.
+ *
+ * <p>
+ * This class manages multiple PhotonVision cameras and fuses their pose estimates with
+ * swerve drive odometry using a pose estimator. It includes outlier rejection, dynamic standard
+ * deviation calculation, and simulation support.
+ *
+ * <h2>Features:</h2>
+ * <ul>
+ * <li>Multi-camera support with independent pose estimation</li>
+ * <li>Outlier rejection based on pose jump distance (see {@link frc.robot.Constants.VisionConstants})</li>
+ * <li>Dynamic standard deviations based on tag count and distance</li>
+ * <li>Single-tag filtering by ambiguity and distance thresholds</li>
+ * <li>PhotonVision simulation integration</li>
+ * </ul>
+ *
+ * <h2>Usage:</h2>
+ *
+ * <pre>
+ * Vision vision = new Vision(swerveDrive::getPose, swerveDrive.field);
+ * // In periodic:
+ * vision.updatePoseEstimation(swerveDrive);
+ * </pre>
+ *
+ * <p>
+ * Adapted from <a href="https://gitlab.com/ironclad_code/ironclad-2024">Ironclad 2024</a>
+ *
+ * @see frc.robot.Constants.VisionConstants
+ * @see org.photonvision.PhotonPoseEstimator
  */
 public class Vision {
 
@@ -95,11 +120,24 @@ public class Vision {
 	}
 
 	/**
-	 * Update the pose estimation inside of {@link SwerveDrive} with all the given
-	 * poses.
+	 * Updates pose estimation by fusing vision measurements from all connected cameras
+	 * with the swerve drive's wheel odometry.
+	 *
+	 * <p>
+	 * This method should be called in the subsystem's periodic() after manually calling
+	 * {@code swerveDrive.updateOdometry()} to ensure proper ordering of updates.
+	 *
+	 * <p>
+	 * <b>Processing steps:</b>
+	 * <ol>
+	 * <li>Collects pose estimates from all connected cameras</li>
+	 * <li>Sorts measurements by timestamp (oldest first)</li>
+	 * <li>Applies outlier rejection based on pose jump distance</li>
+	 * <li>Adds valid measurements to the swerve drive's pose estimator with calculated standard deviations</li>
+	 * </ol>
 	 *
 	 * @param swerveDrive
-	 *          {@link SwerveDrive} instance.
+	 *          The swerve drive instance to update with vision measurements
 	 */
 	public void updatePoseEstimation(SwerveDrive swerveDrive) {
 		if (SwerveDriveTelemetry.isSimulation && swerveDrive.getSimulationDriveTrainPose().isPresent()) {
@@ -147,8 +185,15 @@ public class Vision {
 	}
 
 	/**
-	 * Generates the estimated robot pose for a camera and updates the debug field
-	 * in simulation.
+	 * Retrieves the estimated robot pose from a specific camera and updates simulation debug visualization.
+	 *
+	 * <p>
+	 * In simulation mode, this also updates the Field2d debug field with the vision estimate
+	 * for visualization in AdvantageScope or Glass.
+	 *
+	 * @param camera
+	 *          The camera to get the pose estimate from
+	 * @return Optional containing the estimated pose, or empty if no valid estimate available
 	 */
 	private Optional<EstimatedRobotPose> getEstimatedGlobalPose(Cameras camera) {
 		Optional<EstimatedRobotPose> poseEst = camera.getEstimatedGlobalPose(currentPose.get());
@@ -162,11 +207,15 @@ public class Vision {
 	}
 
 	/**
-	 * Get distance from the robot's current pose to an AprilTag.
+	 * Calculates the distance from the robot's current pose to a specific AprilTag.
+	 *
+	 * <p>
+	 * Useful for game-specific logic that depends on proximity to field elements
+	 * (e.g., scoring positions, pickup zones).
 	 *
 	 * @param id
-	 *          AprilTag ID
-	 * @return Distance in meters, or -1.0 if tag not found
+	 *          The AprilTag ID to measure distance to
+	 * @return Distance in meters, or -1.0 if the tag ID is not found in the field layout
 	 */
 	public double getDistanceFromAprilTag(int id) {
 		Optional<Pose3d> tag = fieldLayout.getTagPose(id);
@@ -174,25 +223,43 @@ public class Vision {
 	}
 
 	/**
-	 * Update dev-only vision telemetry (tracked targets on Field2d). Only runs in
-	 * dev mode to avoid NT crowding during
-	 * competition.
+	 * Updates dev-only vision telemetry (tracked targets on Field2d).
+	 *
+	 * <p>
+	 * This visualization shows detected AprilTags and their pose estimates on the field.
+	 * Should only be called in development mode to avoid NetworkTables traffic during competition.
+	 *
+	 * @see VisionTelemetry
 	 */
 	public void updateVisionField() {
 		telemetry.update();
 	}
 
 	/**
-	 * Get the vision telemetry handler for external configuration.
+	 * Gets the vision telemetry handler for external configuration.
 	 *
-	 * @return the vision telemetry instance
+	 * <p>
+	 * Allows other classes to access vision debug information and configure telemetry settings.
+	 *
+	 * @return The vision telemetry instance
 	 */
 	public VisionTelemetry getTelemetry() {
 		return telemetry;
 	}
 
 	/**
-	 * Camera Enum to select each camera
+	 * Enum defining all PhotonVision cameras on the robot.
+	 *
+	 * <p>
+	 * Each camera entry specifies:
+	 * <ul>
+	 * <li>Camera name (must match PhotonVision UI)</li>
+	 * <li>Robot-to-camera transform (rotation and translation)</li>
+	 * <li>Standard deviations for single-tag and multi-tag estimates</li>
+	 * </ul>
+	 *
+	 * <p>
+	 * To add a new camera, create a new enum constant with its configuration.
 	 */
 	enum Cameras {
 		/**
