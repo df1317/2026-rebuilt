@@ -5,7 +5,9 @@ import static edu.wpi.first.units.Units.Meters;
 
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
+import frc.robot.util.DevMode;
 import swervelib.math.Matter;
+import swervelib.telemetry.SwerveDriveTelemetry.TelemetryVerbosity;
 
 /**
  * ---------- Constants --- The Constants class provides a convenient place for
@@ -21,13 +23,49 @@ import swervelib.math.Matter;
  */
 public final class Constants {
 
-	public static final double ROBOT_MASS = (148 - 20.3) * 0.453592; // 32lbs * kg per pound
+	public static final double ROBOT_MASS = 60 * 0.453592; // 60lbs * kg per pound
 	public static final Matter CHASSIS = new Matter(new Translation3d(0, 0, Inches.of(8).in(Meters)), ROBOT_MASS);
+
+	/**
+	 * Expected control loop time including robot periodic (20ms) and motor controller
+	 * velocity control latency.
+	 *
+	 * <p>
+	 * <b>Note:</b> The 110ms "SparkMAX velocity lag" comment appears to be outdated.
+	 * Typical SparkMAX closed-loop velocity control adds 10-20ms of latency, not 110ms.
+	 *
+	 * <p>
+	 * If you're experiencing 130ms total loop times, investigate:
+	 * <ul>
+	 * <li>Telemetry verbosity (now auto-switches to LOW at competition)</li>
+	 * <li>Vision processing time</li>
+	 * <li>CAN bus utilization (check DriverStation diagnostics)</li>
+	 * </ul>
+	 *
+	 * <p>
+	 * Typical values:
+	 * <ul>
+	 * <li>20ms - Robot periodic cycle time</li>
+	 * <li>10-20ms - Motor controller latency</li>
+	 * <li>Total: 30-40ms expected, not 130ms</li>
+	 * </ul>
+	 *
+	 * @deprecated This constant may need revision based on actual measured loop times
+	 */
+	@Deprecated
 	public static final double LOOP_TIME = 0.13; // s, 20ms + 110ms sprk max velocity lag
 	public static final double MAX_SPEED = Units.feetToMeters(14.5);
 	public static final double MAX_ANGULAR_SPEED = Math.toRadians(240.0);
 	public static final double MAX_ACCELERATION = 1.5;
 	public static final double MAX_ANGULAR_ACCELERATION = Math.toRadians(120.0);
+
+	/**
+	 * Swerve telemetry verbosity - automatically switches based on dev/comp mode.
+	 * HIGH for development/testing, LOW for competition to reduce NT traffic.
+	 */
+	public static final TelemetryVerbosity SwerveTelemetryVerbosity = DevMode.isEnabled()
+			? TelemetryVerbosity.HIGH
+			: TelemetryVerbosity.LOW;
 
 	public static final class DrivebaseConstants {
 
@@ -39,7 +77,26 @@ public final class Constants {
 		public static final double DRIVE_KV = 2.7435;
 		public static final double DRIVE_KA = 2.0788;
 
-		// Translation scaling factor for driver input
+		/**
+		 * Translation scaling factor for driver input (0.0 to 1.0).
+		 *
+		 * <p>
+		 * Limits maximum translational speed to a percentage of the robot's theoretical max.
+		 * This provides finer control for drivers during teleop without sacrificing full speed
+		 * capability in autonomous.
+		 *
+		 * <p>
+		 * Common values:
+		 * <ul>
+		 * <li>0.8 - Good balance of speed and control (current)</li>
+		 * <li>0.6-0.7 - More precise control for intricate maneuvering</li>
+		 * <li>1.0 - Full speed (requires very experienced drivers)</li>
+		 * </ul>
+		 *
+		 * <p>
+		 * Note: This does NOT affect rotation speed, which uses cubic scaling
+		 * (see {@code Math.pow(input, 3)}) for smooth control.
+		 */
 		public static final double TRANSLATION_SCALE = 0.8;
 	}
 
