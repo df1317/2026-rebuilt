@@ -32,6 +32,9 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-gradle-
     
+    - name: Check formatting
+      run: ./gradlew spotlessCheck --parallel --max-workers=4
+    
     - name: Compile Java
       run: ./gradlew compileJava --parallel --max-workers=4
     

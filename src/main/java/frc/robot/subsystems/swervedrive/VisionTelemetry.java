@@ -8,23 +8,25 @@ import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import frc.robot.subsystems.swervedrive.Vision.Cameras;
 import frc.robot.util.DevMode;
-import org.photonvision.targeting.PhotonPipelineResult;
-import org.photonvision.targeting.PhotonTrackedTarget;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import org.photonvision.targeting.PhotonPipelineResult;
+import org.photonvision.targeting.PhotonTrackedTarget;
 
 /**
  * Handles dev-only vision debug telemetry.
  *
- * <p>This class extracts debug visualization logic from Vision to avoid class pollution.
+ * <p>
+ * This class extracts debug visualization logic from Vision to avoid class
+ * pollution.
  * Field2d overlays only run when {@link DevMode#isEnabled()} returns true.
  *
- * <p>Logging uses DogLog, which automatically handles dev vs. competition:
+ * <p>
+ * Logging uses DogLog, which automatically handles dev vs. competition:
  * <ul>
- *   <li>Always logs to DataLog (.wpilog) for AdvantageScope</li>
- *   <li>NT publishing auto-disabled when FMS connected</li>
+ * <li>Always logs to DataLog (.wpilog) for AdvantageScope</li>
+ * <li>NT publishing auto-disabled when FMS connected</li>
  * </ul>
  */
 public class VisionTelemetry {
@@ -35,7 +37,8 @@ public class VisionTelemetry {
 	/**
 	 * Constructs a new VisionTelemetry instance for debug visualization.
 	 *
-	 * @param field the Field2d object to display vision targets on
+	 * @param field
+	 *          the Field2d object to display vision targets on
 	 */
 	public VisionTelemetry(Field2d field) {
 		this.field2d = field;
@@ -47,7 +50,8 @@ public class VisionTelemetry {
 
 	/**
 	 * Update Field2d to display tracked AprilTag targets and log vision debug data.
-	 * Field2d updates only run in dev mode; DogLog handles NT publishing automatically.
+	 * Field2d updates only run in dev mode; DogLog handles NT publishing
+	 * automatically.
 	 */
 	public void update() {
 		List<PhotonTrackedTarget> targets = collectTrackedTargets();
@@ -98,7 +102,8 @@ public class VisionTelemetry {
 	/**
 	 * Enable/disable tracked target visualization on Field2d.
 	 *
-	 * @param show true to show tracked targets, false to hide
+	 * @param show
+	 *          true to show tracked targets, false to hide
 	 */
 	public void setShowTrackedTargets(boolean show) {
 		showTrackedTargetsToggle.set(show);

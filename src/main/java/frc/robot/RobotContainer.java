@@ -9,8 +9,8 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import frc.robot.Constants.OperatorConstants;
 import frc.robot.Constants.DrivebaseConstants;
+import frc.robot.Constants.OperatorConstants;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
 import swervelib.SwerveInputStream;
 
@@ -35,21 +35,21 @@ public class RobotContainer {
 	 * ---------- Subsystems ------------
 	 */
 	private final SwerveSubsystem drivebase = new SwerveSubsystem(
-			new File(Filesystem.getDeployDirectory(), "swerve/neo")
-	);
+			new File(Filesystem.getDeployDirectory(), "swerve/neo"));
 	public boolean robotRelative = false;
 
-	/** ----------
+	/**
+	 * ----------
 	 * Swerve Drive Input Streams
-	 * ------------ */
+	 * ------------
+	 */
 	/**
 	 * Converts driver input into a field-relative ChassisSpeeds that is controlled by angular velocity.
 	 */
 	SwerveInputStream driveAngularVelocity = SwerveInputStream.of(
-					drivebase.getSwerveDrive(),
-					() -> driverXbox.getLeftY() * -1,
-					() -> driverXbox.getLeftX() * -1
-			)
+			drivebase.getSwerveDrive(),
+			() -> driverXbox.getLeftY() * -1,
+			() -> driverXbox.getLeftX() * -1)
 			.withControllerRotationAxis(() -> driverXbox.getRightX() * -1)
 			.deadband(OperatorConstants.DEADBAND)
 			.scaleTranslation(DrivebaseConstants.TRANSLATION_SCALE)
@@ -88,9 +88,7 @@ public class RobotContainer {
 	 * button-press functions on it. ---
 	 */
 	private void configureBindings() {
-		Command driveFieldOrientedAnglularVelocity = drivebase.robotDriveCommand(driveAngularVelocity, () ->
-				robotRelative
-		);
+		Command driveFieldOrientedAnglularVelocity = drivebase.robotDriveCommand(driveAngularVelocity, () -> robotRelative);
 
 		drivebase.setDefaultCommand(driveFieldOrientedAnglularVelocity);
 
@@ -128,7 +126,8 @@ public class RobotContainer {
 	/**
 	 * Sets brake mode on all swerve drive motors.
 	 *
-	 * @param brake true to enable brake mode, false for coast mode
+	 * @param brake
+	 *          true to enable brake mode, false for coast mode
 	 */
 	public void setMotorBrake(boolean brake) {
 		drivebase.setMotorBrake(brake);
