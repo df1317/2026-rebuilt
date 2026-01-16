@@ -1,12 +1,12 @@
 package frc.robot.subsystems.swervedrive;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 /**
  * Tests for alliance-relative coordinate transforms.
@@ -38,7 +38,8 @@ class AllianceTransformTest {
 	/**
 	 * Tests red alliance pose mirroring across the field centerline.
 	 * <p>
-	 * Red alliance mirrors Y coordinates and rotations. X coordinate remains unchanged (along the alliance wall direction).
+	 * Red alliance mirrors Y coordinates and rotations. X coordinate remains unchanged (along the alliance wall
+	 * direction).
 	 */
 	@Test
 	void testRedAllianceMirrorY() {
@@ -84,11 +85,11 @@ class AllianceTransformTest {
 	/**
 	 * Tests red alliance 180-degree heading offset on gyro zero.
 	 * <p>
-	 * When zeroing gyro on red alliance, robot should face 180 degrees to point toward opposing alliance.
+	 * When zeroing gyro on red alliance, the robot should face 180 degrees to point toward opposing alliance.
 	 */
 	@Test
 	void testRedAllianceGyroOffset() {
-		// Blue alliance starts at 0 degrees (facing away from driver station)
+		// Blue alliance starts at 0 degrees (facing away from the driver station)
 		Rotation2d blueHeading = Rotation2d.fromDegrees(0);
 
 		// Red alliance should start at 180 degrees
@@ -124,7 +125,7 @@ class AllianceTransformTest {
 		double centerlineY = FIELD_WIDTH / 2.0;
 		Pose2d centerlinePose = new Pose2d(1.0, centerlineY, Rotation2d.fromDegrees(90));
 
-		// Mirrored pose should also be on centerline
+		// Mirrored pose should also be on the centerline
 		Pose2d mirrored = new Pose2d(
 				centerlinePose.getX(),
 				FIELD_WIDTH - centerlinePose.getY(),
