@@ -54,7 +54,6 @@ import swervelib.parser.SwerveControllerConfiguration;
 import swervelib.parser.SwerveDriveConfiguration;
 import swervelib.parser.SwerveParser;
 import swervelib.telemetry.SwerveDriveTelemetry;
-import swervelib.telemetry.SwerveDriveTelemetry.TelemetryVerbosity;
 
 public class SwerveSubsystem extends SubsystemBase {
 
@@ -80,7 +79,7 @@ public class SwerveSubsystem extends SubsystemBase {
 	public SwerveSubsystem(File directory) {
 		// Configure the Telemetry before creating the SwerveDrive to avoid unnecessary
 		// objects being created.
-		SwerveDriveTelemetry.verbosity = TelemetryVerbosity.HIGH;
+		SwerveDriveTelemetry.verbosity = Constants.SwerveTelemetryVerbosity;
 		try {
 			swerveDrive = new SwerveParser(directory).createSwerveDrive(
 					MAX_SPEED,
@@ -111,19 +110,19 @@ public class SwerveSubsystem extends SubsystemBase {
 		swerveDrive.setAngularVelocityCompensation(true, true, 0.1); // Correct for skew that gets worse as angular velocity
 		// increases. Start with a
 		// coefficient of 0.1.
+		swerveDrive.setAutoCenteringModules(true); // Reduce "crabbing" when no input given
 		swerveDrive.setModuleEncoderAutoSynchronize(false, 1); // Enable if you want to resynchronize your absolute encoders
 		// anti jitter
 		Arrays.stream(swerveDrive.getModules()).forEach(m -> m.setAntiJitter(true));
 		// and motor encoders
 		// periodically when they are not moving.
-		// swerveDrive.pushOffsetsToEncoders(); // Set the absolute encoder to be used
-		// over the internal encoder and push the offsets onto it. Throws warning if not
-		// possible
 		SmartDashboard.putBoolean("Swerve Drive/vision enabled", visionDriveTest);
 		if (visionDriveTest) {
 			setupPhotonVision();
 			// Stop the odometry thread if we are using vision that way we can synchronize
-			// updates better.
+			// updates better. This prevents race conditions where vision measurements and
+			// odometry updates happen simultaneously. We manually call updateOdometry() in
+			// periodic() followed by vision updates to ensure proper ordering.
 			swerveDrive.stopOdometryThread();
 		}
 		setupPathPlanner();
