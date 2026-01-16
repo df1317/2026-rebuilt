@@ -72,9 +72,6 @@ public class SwerveSubsystem extends SubsystemBase {
 	 */
 	private Vision vision;
 
-	// Pose2d startPose;
-	// double initDis;
-
 	/**
 	 * Initialize {@link SwerveDrive} with the directory provided.
 	 *
@@ -97,7 +94,11 @@ public class SwerveSubsystem extends SubsystemBase {
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
-		this.replaceSwerveModuleFeedforward(0.024309, 2.7435, 2.0788);
+		this.replaceSwerveModuleFeedforward(
+				DrivebaseConstants.DRIVE_KS,
+				DrivebaseConstants.DRIVE_KV,
+				DrivebaseConstants.DRIVE_KA
+		);
 
 		swerveDrive.setMaximumAllowableSpeeds(MAX_SPEED, MAX_ANGULAR_SPEED);
 
@@ -158,6 +159,9 @@ public class SwerveSubsystem extends SubsystemBase {
 		vision = new Vision(swerveDrive::getPose, swerveDrive.field);
 	}
 
+	/**
+	 * Called periodically to update swerve drive odometry and vision pose estimation.
+	 */
 	@Override
 	public void periodic() {
 		visionDriveTest = SmartDashboard.getBoolean("Swerve Drive/vision enabled", visionDriveTest);
@@ -169,6 +173,9 @@ public class SwerveSubsystem extends SubsystemBase {
 		}
 	}
 
+	/**
+	 * Called periodically during simulation to update vision camera simulation.
+	 */
 	@Override
 	public void simulationPeriodic() {
 	}
@@ -459,19 +466,6 @@ public class SwerveSubsystem extends SubsystemBase {
 				return (swerveDrive.getPose().getTranslation().getDistance(startTranslation) > distanceInMeters);
 			}
 		};
-		// return run(() -> {
-		// startPose = swerveDrive.getPose();
-		// initDis =
-		// swerveDrive.getPose().getTranslation().getDistance(startPose.getTranslation());
-
-		// drive(new ChassisSpeeds(speedInMetersPerSecond, 0, 0));
-		// System.out.println("got here! :yay:! " + initDis);
-		// SmartDashboard.putNumber("StartPOse: ", initDis);
-		// }
-
-		// ).until(() ->
-		// swerveDrive.getPose().getTranslation().getDistance(startPose.getTranslation())
-		// > distanceInMeters);
 	}
 
 	/**

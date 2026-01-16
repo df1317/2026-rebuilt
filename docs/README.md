@@ -32,10 +32,11 @@ Quick reference documentation for robot controls and configuration.
 
 #### Xbox Controller (Driver)
 
-| Binding       | Action         | Description            |
-|---------------|----------------|------------------------|
-| `A Button`    | Zero gyro      | Resets gyro heading    |
-| `Back Button` | Center modules | Centers swerve modules |
+| Binding       | Action         | Description                                   |
+|---------------|----------------|-----------------------------------------------|
+| `A Button`    | Zero gyro      | Resets gyro heading                           |
+| `Left Bumper` | Lock drive     | Locks drivebase in X pattern                  |
+| `Back Button` | Center modules | Centers swerve modules (test mode only)       |
 
 ## CAN IDs
 

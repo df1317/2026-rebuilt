@@ -114,7 +114,7 @@ AdvantageScope analysis and publishes to NetworkTables during development.
 
 ```java
 public class Elevator extends SubsystemBase {
-	private final SparkMax motor;
+	private final CANSparkMax motor;
 
 	@Override
 	public void periodic() {
@@ -141,13 +141,13 @@ Here is a quick example of a subsystem with a command and then a command binding
 ```java
 public class ExampleSubsystem extends SubsystemBase {
 
-	private final SparkMotor motor;
+	private final CANSparkMax motor;
 
 	public ExampleSubsystem() {
-		motor = new SparkMotor(0);
+		motor = new CANSparkMax(0, MotorType.kBrushless);
 	}
 
-	public Command getExampleCommand(BooleanSupplier speed) {
+	public Command runMotorCommand(DoubleSupplier speed) {
 		return new RunCommand(() -> motor.set(speed.getAsDouble()), this);
 	}
 }
@@ -158,10 +158,10 @@ public class ExampleSubsystem extends SubsystemBase {
 public class RobotContainer {
 
 	private final ExampleSubsystem exampleSubsystem = new ExampleSubsystem();
-	private final Joystick joystick = new Joystick(0);
+	private final CommandXboxController controller = new CommandXboxController(0);
 
 	public RobotContainer() {
-		joystick.trigger().onTrue(elevatorSubsystem.setPos(() -> 0.3));
+		controller.a().whileTrue(exampleSubsystem.runMotorCommand(() -> 0.5));
 	}
 }
 

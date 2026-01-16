@@ -29,6 +29,32 @@ public final class Constants {
 
 		// Hold time on motor brakes when disabled
 		public static final double WHEEL_LOCK_TIME = 10; // seconds
+
+		// Feedforward characterization values from SysId
+		public static final double DRIVE_KS = 0.024309;
+		public static final double DRIVE_KV = 2.7435;
+		public static final double DRIVE_KA = 2.0788;
+
+		// Translation scaling factor for driver input
+		public static final double TRANSLATION_SCALE = 0.8;
+	}
+
+	public static final class VisionConstants {
+
+		// Outlier rejection: maximum pose jump between updates
+		public static final double MAX_POSE_JUMP_METERS = 1.0;
+
+		// Single tag filtering thresholds
+		public static final double POSE_AMBIGUITY_THRESHOLD = 0.2;
+		public static final double MAX_SINGLE_TAG_DISTANCE_METERS = 4.0;
+
+		// Camera standard deviations for pose estimation (X, Y, Theta in radians)
+		public static final class CameraStdDevs {
+			// Single tag: Higher uncertainty
+			public static final double[] SINGLE_TAG = {4.0, 4.0, 8.0};
+			// Multi tag: Lower uncertainty
+			public static final double[] MULTI_TAG = {0.5, 0.5, 1.0};
+		}
 	}
 
 	public static class OperatorConstants {

@@ -32,6 +32,11 @@ public class VisionTelemetry {
 	private final Field2d field2d;
 	private final BooleanEntry showTrackedTargetsToggle;
 
+	/**
+	 * Constructs a new VisionTelemetry instance for debug visualization.
+	 *
+	 * @param field the Field2d object to display vision targets on
+	 */
 	public VisionTelemetry(Field2d field) {
 		this.field2d = field;
 
@@ -41,8 +46,8 @@ public class VisionTelemetry {
 	}
 
 	/**
-	 * Update Field2d to display tracked AprilTag targets and log vision debug data. Field2d updates only run in dev mode;
-	 * DogLog handles NT publishing automatically.
+	 * Update Field2d to display tracked AprilTag targets and log vision debug data.
+	 * Field2d updates only run in dev mode; DogLog handles NT publishing automatically.
 	 */
 	public void update() {
 		List<PhotonTrackedTarget> targets = collectTrackedTargets();
@@ -92,6 +97,8 @@ public class VisionTelemetry {
 
 	/**
 	 * Enable/disable tracked target visualization on Field2d.
+	 *
+	 * @param show true to show tracked targets, false to hide
 	 */
 	public void setShowTrackedTargets(boolean show) {
 		showTrackedTargetsToggle.set(show);
@@ -99,6 +106,8 @@ public class VisionTelemetry {
 
 	/**
 	 * Get current state of tracked target visualization toggle.
+	 *
+	 * @return true if showing tracked targets, false otherwise
 	 */
 	public boolean isShowingTrackedTargets() {
 		return showTrackedTargetsToggle.get();

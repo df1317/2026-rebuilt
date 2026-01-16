@@ -12,6 +12,7 @@ import edu.wpi.first.networktables.NetworkTablesJNI;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import frc.robot.Constants.VisionConstants;
 import frc.robot.Robot;
 import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
@@ -45,7 +46,7 @@ public class Vision {
 	public static final AprilTagFieldLayout fieldLayout = AprilTagFieldLayout.loadField(
 			AprilTagFields.k2025ReefscapeWelded
 	);
-	private static final double MAX_POSE_JUMP_METERS = 1.0;
+
 	/**
 	 * Current pose from the pose estimator using wheel odometry.
 	 */
@@ -133,7 +134,7 @@ public class Vision {
 			Pose2d visionPose = m.pose.estimatedPose.toPose2d();
 			double poseDifference = currentPose.get().getTranslation().getDistance(visionPose.getTranslation());
 
-			if (poseDifference > MAX_POSE_JUMP_METERS) {
+			if (poseDifference > VisionConstants.MAX_POSE_JUMP_METERS) {
 				continue;
 			}
 
@@ -182,6 +183,8 @@ public class Vision {
 
 	/**
 	 * Get the vision telemetry handler for external configuration.
+	 *
+	 * @return the vision telemetry instance
 	 */
 	public VisionTelemetry getTelemetry() {
 		return telemetry;
@@ -198,8 +201,16 @@ public class Vision {
 				"PEBBLE",
 				new Rotation3d(0, Units.degreesToRadians(15.0), 0),
 				new Translation3d(0.32, 0.32, 0.30),
-				VecBuilder.fill(4, 4, 8),
-				VecBuilder.fill(0.5, 0.5, 1)
+				VecBuilder.fill(
+						VisionConstants.CameraStdDevs.SINGLE_TAG[0],
+						VisionConstants.CameraStdDevs.SINGLE_TAG[1],
+						VisionConstants.CameraStdDevs.SINGLE_TAG[2]
+				),
+				VecBuilder.fill(
+						VisionConstants.CameraStdDevs.MULTI_TAG[0],
+						VisionConstants.CameraStdDevs.MULTI_TAG[1],
+						VisionConstants.CameraStdDevs.MULTI_TAG[2]
+				)
 		);
 
 		/**
@@ -455,7 +466,7 @@ public class Vision {
 
 			avgDist /= numTags;
 
-			if (numTags == 1 && avgDist > 4) {
+			if (numTags == 1 && avgDist > VisionConstants.MAX_SINGLE_TAG_DISTANCE_METERS) {
 				curStdDevs = null;
 				return;
 			}

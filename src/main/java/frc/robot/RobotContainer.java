@@ -10,6 +10,7 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Constants.OperatorConstants;
+import frc.robot.Constants.DrivebaseConstants;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
 import swervelib.SwerveInputStream;
 
@@ -51,7 +52,7 @@ public class RobotContainer {
 			)
 			.withControllerRotationAxis(() -> driverXbox.getRightX() * -1)
 			.deadband(OperatorConstants.DEADBAND)
-			.scaleTranslation(0.8)
+			.scaleTranslation(DrivebaseConstants.TRANSLATION_SCALE)
 			.allianceRelativeControl(true);
 
 	/**
@@ -71,8 +72,7 @@ public class RobotContainer {
 			.allianceRelativeControl(false);
 
 	/**
-	 * ---------- RobotContainer Root Class --- This is the root class for the robot. It is responsible for configuring
-	 * the robot, its subsystems, and bindings. ---
+	 * The container for the robot. Contains subsystems, input devices, and commands.
 	 */
 	public RobotContainer() {
 		configureBindings();
@@ -117,14 +117,19 @@ public class RobotContainer {
 	}
 
 	/**
-	 * ---------- Use this to pass the autonomous command to the main {@link Robot} class. ---
+	 * Use this to pass the autonomous command to the main {@link Robot} class.
 	 *
-	 * @return the command to run in autonomous ---
+	 * @return the command to run in autonomous
 	 */
 	public Command getAutonomousCommand() {
 		return autoChooser.getSelected();
 	}
 
+	/**
+	 * Sets brake mode on all swerve drive motors.
+	 *
+	 * @param brake true to enable brake mode, false for coast mode
+	 */
 	public void setMotorBrake(boolean brake) {
 		drivebase.setMotorBrake(brake);
 	}

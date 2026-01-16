@@ -17,20 +17,11 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
  */
 public class Robot extends TimedRobot {
 
-	private static Robot instance;
 	private Command m_autonomousCommand;
 
 	private RobotContainer m_robotContainer;
 
 	private Timer disabledTimer;
-
-	public Robot() {
-		instance = this;
-	}
-
-	public static Robot getInstance() {
-		return instance;
-	}
 
 	/**
 	 * ---------- RobotInit --- This function is run when the robot is first started up and should be used for any
@@ -87,13 +78,10 @@ public class Robot extends TimedRobot {
 		DogLog.forceNt.log("Dash/RobotRelative", m_robotContainer.robotRelative);
 	}
 
-	/* ----------
-	 * DisabledInit
-	 * ---
+	/**
 	 * This function is called once each time the robot enters Disabled mode.
 	 * You can use it to reset any subsystem information you want to clear when the robot is disabled.
-	 * ---
-	 *  */
+	 */
 	@Override
 	public void disabledInit() {
 		m_robotContainer.setMotorBrake(true);
