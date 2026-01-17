@@ -1,7 +1,6 @@
 package frc.robot.subsystems.swervedrive;
 
 import dev.doglog.DogLog;
-import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.networktables.BooleanSubscriber;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
@@ -69,13 +68,14 @@ public class VisionTelemetry {
 			return;
 		}
 
-		List<Pose2d> poses = new ArrayList<>();
+		List<Pose3d> poses3d = new ArrayList<>();
 		for (PhotonTrackedTarget target : targets) {
 			Optional<Pose3d> tagPose = Vision.fieldLayout.getTagPose(target.getFiducialId());
-			tagPose.ifPresent(pose3d -> poses.add(pose3d.toPose2d()));
+			tagPose.ifPresent(poses3d::add);
 		}
 
-		field2d.getObject("tracked targets").setPoses(poses);
+		// Log as Pose3d array for AdvantageScope - can be styled as vision targets
+		DogLog.log("Vision/TrackedTagPoses", poses3d.toArray(new Pose3d[0]));
 
 		// Log tracked tag IDs for AdvantageScope analysis
 		int[] tagIds = targets.stream().mapToInt(PhotonTrackedTarget::getFiducialId).toArray();

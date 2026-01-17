@@ -1,7 +1,6 @@
 package frc.robot.subsystems.swervedrive;
 
-import static edu.wpi.first.units.Units.*;
-
+import dev.doglog.DogLog;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.Matrix;
@@ -16,11 +15,6 @@ import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import frc.robot.Constants.VisionConstants;
 import frc.robot.Robot;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
-import java.util.function.Supplier;
 import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
@@ -33,13 +27,21 @@ import org.photonvision.targeting.PhotonTrackedTarget;
 import swervelib.SwerveDrive;
 import swervelib.telemetry.SwerveDriveTelemetry;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+import java.util.function.Supplier;
+
+import static edu.wpi.first.units.Units.Microseconds;
+import static edu.wpi.first.units.Units.Seconds;
+
 /**
  * PhotonVision-based vision system for improving odometry accuracy through AprilTag detection.
  *
  * <p>
- * This class manages multiple PhotonVision cameras and fuses their pose estimates with
- * swerve drive odometry using a pose estimator. It includes outlier rejection, dynamic standard
- * deviation calculation, and simulation support.
+ * This class manages multiple PhotonVision cameras and fuses their pose estimates with swerve drive odometry using a
+ * pose estimator. It includes outlier rejection, dynamic standard deviation calculation, and simulation support.
  *
  * <h2>Features:</h2>
  * <ul>
@@ -53,7 +55,7 @@ import swervelib.telemetry.SwerveDriveTelemetry;
  * <h2>Usage:</h2>
  *
  * <pre>
- * Vision vision = new Vision(swerveDrive::getPose, swerveDrive.field);
+ * `Vision vision = new Vision(swerveDrive::getPose, swerveDrive.field);`
  * // In periodic:
  * vision.updatePoseEstimation(swerveDrive);
  * </pre>
@@ -89,8 +91,7 @@ public class Vision {
 	 * Constructor for the Vision class.
 	 *
 	 * @param currentPose
-	 *          Current pose supplier, should reference
-	 *          {@link SwerveDrive#getPose()}
+	 *          Current pose supplier, should reference {@link SwerveDrive#getPose()}
 	 * @param field
 	 *          Current field, should be {@link SwerveDrive#field}
 	 */
@@ -120,8 +121,8 @@ public class Vision {
 	}
 
 	/**
-	 * Updates pose estimation by fusing vision measurements from all connected cameras
-	 * with the swerve drive's wheel odometry.
+	 * Updates pose estimation by fusing vision measurements from all connected cameras with the swerve drive's wheel
+	 * odometry.
 	 *
 	 * <p>
 	 * This method should be called in the subsystem's periodic() after manually calling
@@ -155,10 +156,14 @@ public class Vision {
 		}
 
 		List<VisionMeasurement> measurements = new ArrayList<>();
+		int connectedCameras = 0;
+
 		for (Cameras camera : Cameras.values()) {
 			if (!camera.camera.isConnected()) {
 				continue;
 			}
+			connectedCameras++;
+
 			camera.poseEstimator.addHeadingData(
 					swerveDrive.getGyro().getYawAngularVelocity().in(edu.wpi.first.units.Units.RadiansPerSecond),
 					swerveDrive.getOdometryHeading());
@@ -168,28 +173,27 @@ public class Vision {
 			}
 		}
 
+		DogLog.log("Vision/ConnectedCameras", connectedCameras);
+
 		measurements.sort(Comparator.comparingDouble(m -> m.pose.timestampSeconds));
+
+		// Feed all measurements to the Kalman filter - it handles outlier weighting via std devs
 		for (VisionMeasurement m : measurements) {
-			Pose2d visionPose = m.pose.estimatedPose.toPose2d();
-			double poseDifference = currentPose.get().getTranslation().getDistance(visionPose.getTranslation());
-
-			if (poseDifference > VisionConstants.MAX_POSE_JUMP_METERS) {
-				continue;
-			}
-
 			swerveDrive.addVisionMeasurement(
-					visionPose,
+					m.pose.estimatedPose.toPose2d(),
 					m.pose.timestampSeconds,
 					m.stdDevs);
 		}
+
+		DogLog.log("Vision/AcceptedMeasurements", measurements.size());
 	}
 
 	/**
 	 * Retrieves the estimated robot pose from a specific camera and updates simulation debug visualization.
 	 *
 	 * <p>
-	 * In simulation mode, this also updates the Field2d debug field with the vision estimate
-	 * for visualization in AdvantageScope or Glass.
+	 * In simulation mode, this also updates the Field2d debug field with the vision estimate for visualization in
+	 * AdvantageScope or Glass.
 	 *
 	 * @param camera
 	 *          The camera to get the pose estimate from
@@ -210,8 +214,8 @@ public class Vision {
 	 * Calculates the distance from the robot's current pose to a specific AprilTag.
 	 *
 	 * <p>
-	 * Useful for game-specific logic that depends on proximity to field elements
-	 * (e.g., scoring positions, pickup zones).
+	 * Useful for game-specific logic that depends on proximity to field elements (e.g., scoring positions, pickup
+	 * zones).
 	 *
 	 * @param id
 	 *          The AprilTag ID to measure distance to
@@ -226,8 +230,8 @@ public class Vision {
 	 * Updates dev-only vision telemetry (tracked targets on Field2d).
 	 *
 	 * <p>
-	 * This visualization shows detected AprilTags and their pose estimates on the field.
-	 * Should only be called in development mode to avoid NetworkTables traffic during competition.
+	 * This visualization shows detected AprilTags and their pose estimates on the field. Should only be called in
+	 * development mode to avoid NetworkTables traffic during competition.
 	 *
 	 * @see VisionTelemetry
 	 */
@@ -299,10 +303,13 @@ public class Vision {
 		 */
 		private final Matrix<N3, N1> multiTagStdDevs;
 		/**
-		 * Transform of the camera rotation and translation relative to the center of
-		 * the robot
+		 * Transform of the camera rotation and translation relative to the center of the robot
 		 */
 		private final Transform3d robotToCamTransform;
+		/**
+		 * Last read from the camera timestamp to prevent lag due to slow data fetches.
+		 */
+		private final double lastReadTimestamp = Microseconds.of(NetworkTablesJNI.now()).in(Seconds);
 		/**
 		 * Current standard deviations used.
 		 */
@@ -312,22 +319,16 @@ public class Vision {
 		 */
 		public PhotonCameraSim cameraSim;
 		/**
-		 * Results list to be updated periodically and cached to avoid unnecessary
-		 * queries.
+		 * Results list to be updated periodically and cached to avoid unnecessary queries.
 		 */
 		public List<PhotonPipelineResult> resultsList = new ArrayList<>();
 		/**
 		 * Estimated robot pose (null if no valid estimate).
 		 */
 		private EstimatedRobotPose estimatedRobotPose;
-		/**
-		 * Last read from the camera timestamp to prevent lag due to slow data fetches.
-		 */
-		private double lastReadTimestamp = Microseconds.of(NetworkTablesJNI.now()).in(Seconds);
 
 		/**
-		 * Construct a Photon Camera class with help. Standard deviations are fake
-		 * values, experiment and determine
+		 * Construct a Photon Camera class with help. Standard deviations are fake values, experiment and determine
 		 * estimation noise on an actual robot.
 		 *
 		 * @param name
@@ -337,11 +338,9 @@ public class Vision {
 		 * @param robotToCamTranslation
 		 *          {@link Translation3d} relative to the center of the robot.
 		 * @param singleTagStdDevs
-		 *          Single AprilTag standard deviations of estimated poses from the
-		 *          camera.
+		 *          Single AprilTag standard deviations of estimated poses from the camera.
 		 * @param multiTagStdDevsMatrix
-		 *          Multi AprilTag standard deviations of estimated poses from the
-		 *          camera.
+		 *          Multi AprilTag standard deviations of estimated poses from the camera.
 		 */
 		Cameras(
 				String name,
@@ -393,12 +392,10 @@ public class Vision {
 		}
 
 		/**
-		 * Get the result with the least ambiguity from the best tracked target within
-		 * the Cache. This may not be the most
+		 * Get the result with the least ambiguity from the best tracked target within the Cache. This may not be the most
 		 * recent result!
 		 *
-		 * @return The result in the cache with the least ambiguous best tracked target.
-		 *         This is not the most recent result!
+		 * @return The result in the cache with the least ambiguous best tracked target. This is not the most recent result!
 		 */
 		public Optional<PhotonPipelineResult> getBestResult() {
 			if (resultsList.isEmpty()) {
@@ -421,8 +418,7 @@ public class Vision {
 		}
 
 		/**
-		 * Get the estimated robot pose. Updates the current robot pose estimation,
-		 * standard deviations, and flushes the
+		 * Get the estimated robot pose. Updates the current robot pose estimation, standard deviations, and flushes the
 		 * cache of results.
 		 *
 		 * @param referencePose
@@ -435,35 +431,36 @@ public class Vision {
 		}
 
 		/**
-		 * Update the latest results, cached with a maximum refresh rate of 1req/15ms.
-		 * Sorts the list by timestamp.
+		 * Update the latest results from the camera. Always fetches new results and keeps the most recent one with
+		 * targets.
 		 */
 		private void updateUnreadResults(Pose2d referencePose) {
-			double mostRecentTimestamp = resultsList.isEmpty() ? 0.0 : resultsList.get(0).getTimestampSeconds();
-			double currentTimestamp = Microseconds.of(NetworkTablesJNI.now()).in(Seconds);
-			double debounceTime = Milliseconds.of(15).in(Seconds);
-			for (PhotonPipelineResult result : resultsList) {
-				mostRecentTimestamp = Math.max(mostRecentTimestamp, result.getTimestampSeconds());
-			}
-			if ((resultsList.isEmpty() || (currentTimestamp - mostRecentTimestamp >= debounceTime)) &&
-					(currentTimestamp - lastReadTimestamp) >= debounceTime) {
-				resultsList = Robot.isReal()
-						? camera.getAllUnreadResults()
-						: cameraSim.getCamera().getAllUnreadResults();
-				lastReadTimestamp = currentTimestamp;
+			List<PhotonPipelineResult> newResults = Robot.isReal()
+					? camera.getAllUnreadResults()
+					: cameraSim.getCamera().getAllUnreadResults();
+
+			// Add new results to cache
+			if (!newResults.isEmpty()) {
+				resultsList.addAll(newResults);
+				// Sort by timestamp (newest first) and keep only recent results
 				resultsList.sort(Comparator.comparingDouble(PhotonPipelineResult::getTimestampSeconds).reversed());
-				if (resultsList.isEmpty()) {
-					estimatedRobotPose = null;
-					curStdDevs = singleTagStdDevs;
-				} else {
-					updateEstimatedGlobalPose(referencePose);
+				// Keep only the 5 most recent results to prevent memory growth
+				if (resultsList.size() > 5) {
+					resultsList = new ArrayList<>(resultsList.subList(0, 5));
 				}
+			}
+
+			// Process results if we have any
+			if (resultsList.isEmpty()) {
+				estimatedRobotPose = null;
+				curStdDevs = singleTagStdDevs;
+			} else {
+				updateEstimatedGlobalPose(referencePose);
 			}
 		}
 
 		/**
-		 * Updates the estimated robot pose from vision data. Also updates standard
-		 * deviations based on tag count and
+		 * Updates the estimated robot pose from vision data. Also updates standard deviations based on tag count and
 		 * distance.
 		 *
 		 * @param referencePose
@@ -499,8 +496,7 @@ public class Vision {
 		}
 
 		/**
-		 * Calculates new standard deviations. This algorithm is a heuristic that
-		 * creates dynamic standard deviations based
+		 * Calculates new standard deviations. This algorithm is a heuristic that creates dynamic standard deviations based
 		 * on the number of tags, estimation strategy, and distance from the tags.
 		 *
 		 * @param estimatedPose

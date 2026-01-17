@@ -82,7 +82,7 @@ public class SwerveSubsystem extends SubsystemBase {
 	 * Initialize {@link SwerveDrive} with the directory provided.
 	 *
 	 * @param directory
-	 * 		Directory of swerve drive config files.
+	 *          Directory of swerve drive config files.
 	 */
 	public SwerveSubsystem(File directory) {
 		// Configure the Telemetry before creating the SwerveDrive to avoid unnecessary
@@ -140,9 +140,9 @@ public class SwerveSubsystem extends SubsystemBase {
 	 * Construct the swerve drive.
 	 *
 	 * @param driveCfg
-	 * 		SwerveDriveConfiguration for the swerve.
+	 *          SwerveDriveConfiguration for the swerve.
 	 * @param controllerCfg
-	 * 		Swerve Controller.
+	 *          Swerve Controller.
 	 */
 	public SwerveSubsystem(SwerveDriveConfiguration driveCfg, SwerveControllerConfiguration controllerCfg) {
 		swerveDrive = new SwerveDrive(
@@ -169,6 +169,11 @@ public class SwerveSubsystem extends SubsystemBase {
 		swerveDrive.updateOdometry();
 		if (visionEnabled.get() && vision != null) {
 			vision.updatePoseEstimation(swerveDrive);
+		}
+
+		// Update vision field telemetry (tracked targets on Field2d)
+		if (vision != null) {
+			vision.updateVisionField();
 		}
 
 		// Dev mode telemetry (DogLog auto-disables NT at FMS)
@@ -226,7 +231,7 @@ public class SwerveSubsystem extends SubsystemBase {
 							new PIDConstants(5.0, 0.0, 0.0),
 							// Translation PID constants
 							new PIDConstants(5.0, 0.0, 0.0)
-							// Rotation PID constants
+					// Rotation PID constants
 					),
 					config,
 					// The robot configuration
@@ -243,7 +248,7 @@ public class SwerveSubsystem extends SubsystemBase {
 						return false;
 					},
 					this
-					// Reference to this subsystem to set requirements
+			// Reference to this subsystem to set requirements
 			);
 		} catch (Exception e) {
 			// Handle exception as needed
@@ -284,7 +289,7 @@ public class SwerveSubsystem extends SubsystemBase {
 	 * Get the path follower with events.
 	 *
 	 * @param pathName
-	 * 		PathPlanner path name.
+	 *          PathPlanner path name.
 	 * @return {@link AutoBuilder#followPath(PathPlannerPath)} path command.
 	 */
 	public Command getAutonomousCommand(String pathName) {
@@ -297,7 +302,7 @@ public class SwerveSubsystem extends SubsystemBase {
 	 * Use PathPlanner Path finding to go to a point on the field.
 	 *
 	 * @param pose
-	 * 		Target {@link Pose2d} to go to.
+	 *          Target {@link Pose2d} to go to.
 	 * @return PathFinding command
 	 */
 	public Command driveToPose(Supplier<Pose2d> pose) {
@@ -322,7 +327,7 @@ public class SwerveSubsystem extends SubsystemBase {
 	 * Use PathPlanner Path finding to go to a point on the field.
 	 *
 	 * @param pose
-	 * 		Target {@link Pose2d} to go to.
+	 *          Target {@link Pose2d} to go to.
 	 * @return PathFinding command
 	 */
 	public Command driveToPose(Supplier<Pose2d> pose, double velocity, double acceleration) {
@@ -347,12 +352,12 @@ public class SwerveSubsystem extends SubsystemBase {
 	 * Drive with {@link SwerveSetpointGenerator} from 254, implemented by PathPlanner.
 	 *
 	 * @param robotRelativeChassisSpeed
-	 * 		Robot relative {@link ChassisSpeeds} to achieve.
+	 *          Robot relative {@link ChassisSpeeds} to achieve.
 	 * @return {@link Command} to run.
 	 * @throws IOException
-	 * 		If the PathPlanner GUI settings is invalid
+	 *           If the PathPlanner GUI settings is invalid
 	 * @throws ParseException
-	 * 		If PathPlanner GUI settings is nonexistent.
+	 *           If PathPlanner GUI settings is nonexistent.
 	 */
 	private Command driveWithSetpointGenerator(Supplier<ChassisSpeeds> robotRelativeChassisSpeed)
 			throws IOException, ParseException {
@@ -387,7 +392,7 @@ public class SwerveSubsystem extends SubsystemBase {
 	 * Drive with 254's Setpoint generator; port written by PathPlanner.
 	 *
 	 * @param fieldRelativeSpeeds
-	 * 		Field-Relative {@link ChassisSpeeds}
+	 *          Field-Relative {@link ChassisSpeeds}
 	 * @return Command to drive the robot using the setpoint generator.
 	 */
 	public Command driveWithSetpointGeneratorFieldRelative(Supplier<ChassisSpeeds> fieldRelativeSpeeds) {
@@ -445,9 +450,9 @@ public class SwerveSubsystem extends SubsystemBase {
 	 * Returns a Command that drives the swerve drive to a specific distance at a given speed.
 	 *
 	 * @param distanceInMeters
-	 * 		the distance to drive in meters
+	 *          the distance to drive in meters
 	 * @param speedInMetersPerSecond
-	 * 		the speed at which to drive in meters per second
+	 *          the speed at which to drive in meters per second
 	 * @return a Command that drives the swerve drive to a specific distance at a given speed
 	 */
 
@@ -476,11 +481,11 @@ public class SwerveSubsystem extends SubsystemBase {
 	 * Replaces the swerve module feedforward with a new SimpleMotorFeedforward object.
 	 *
 	 * @param kS
-	 * 		the static gain of the feedforward
+	 *          the static gain of the feedforward
 	 * @param kV
-	 * 		the velocity gain of the feedforward
+	 *          the velocity gain of the feedforward
 	 * @param kA
-	 * 		the acceleration gain of the feedforward
+	 *          the acceleration gain of the feedforward
 	 */
 	public void replaceSwerveModuleFeedforward(double kS, double kV, double kA) {
 		swerveDrive.replaceSwerveModuleFeedforward(new SimpleMotorFeedforward(kS, kV, kA));
@@ -490,11 +495,11 @@ public class SwerveSubsystem extends SubsystemBase {
 	 * Command to drive the robot using translative values and heading as angular velocity.
 	 *
 	 * @param translationX
-	 * 		Translation in the X direction. Cubed for smoother controls.
+	 *          Translation in the X direction. Cubed for smoother controls.
 	 * @param translationY
-	 * 		Translation in the Y direction. Cubed for smoother controls.
+	 *          Translation in the Y direction. Cubed for smoother controls.
 	 * @param angularRotationX
-	 * 		Angular velocity of the robot to set. Cubed for smoother controls.
+	 *          Angular velocity of the robot to set. Cubed for smoother controls.
 	 * @return Drive command.
 	 */
 	public Command driveCommand(
@@ -519,13 +524,13 @@ public class SwerveSubsystem extends SubsystemBase {
 	 * Command to drive the robot using translative values and heading as a setpoint.
 	 *
 	 * @param translationX
-	 * 		Translation in the X direction. Cubed for smoother controls.
+	 *          Translation in the X direction. Cubed for smoother controls.
 	 * @param translationY
-	 * 		Translation in the Y direction. Cubed for smoother controls.
+	 *          Translation in the Y direction. Cubed for smoother controls.
 	 * @param headingX
-	 * 		Heading X to calculate angle of the joystick.
+	 *          Heading X to calculate angle of the joystick.
 	 * @param headingY
-	 * 		Heading Y to calculate angle of the joystick.
+	 *          Heading Y to calculate angle of the joystick.
 	 * @return Drive command.
 	 */
 	public Command driveCommand(
@@ -558,14 +563,17 @@ public class SwerveSubsystem extends SubsystemBase {
 	 * velocities. Also has field- and robot-relative modes, which affect how the translation vector is used.
 	 *
 	 * @param translation
-	 *    {@link Translation2d} that is the commanded linear velocity of the robot, in meters per second. In robot-relative
-	 * 		mode, positive x is torwards the bow (front) and positive y is torwards port (left). In field-relative mode,
-	 * 		positive x is away from the alliance wall (field North) and positive y is torwards the left wall when looking
-	 * 		through the driver station glass (field West).
+	 *          {@link Translation2d} that is the commanded linear velocity of the robot, in meters per second. In
+	 *          robot-relative
+	 *          mode, positive x is torwards the bow (front) and positive y is torwards port (left). In field-relative
+	 *          mode,
+	 *          positive x is away from the alliance wall (field North) and positive y is torwards the left wall when
+	 *          looking
+	 *          through the driver station glass (field West).
 	 * @param rotation
-	 * 		Robot angular rate, in radians per second. CCW positive. Unaffected by field/robot relativity.
+	 *          Robot angular rate, in radians per second. CCW positive. Unaffected by field/robot relativity.
 	 * @param fieldRelative
-	 * 		Drive mode. True for field-relative, false for robot-relative.
+	 *          Drive mode. True for field-relative, false for robot-relative.
 	 */
 	public void drive(Translation2d translation, double rotation, boolean fieldRelative) {
 		swerveDrive.drive(translation, rotation, fieldRelative, false); // Open loop is disabled since it shouldn't be used
@@ -576,7 +584,7 @@ public class SwerveSubsystem extends SubsystemBase {
 	 * Drive the robot given a chassis field oriented velocity.
 	 *
 	 * @param velocity
-	 * 		Velocity according to the field.
+	 *          Velocity according to the field.
 	 */
 	public void driveFieldOriented(ChassisSpeeds velocity) {
 		swerveDrive.driveFieldOriented(velocity);
@@ -586,7 +594,7 @@ public class SwerveSubsystem extends SubsystemBase {
 	 * Drive the robot given a chassis field oriented velocity.
 	 *
 	 * @param velocity
-	 * 		Velocity according to the field.
+	 *          Velocity according to the field.
 	 */
 	public Command driveFieldOriented(Supplier<ChassisSpeeds> velocity) {
 		return run(() -> {
@@ -613,7 +621,7 @@ public class SwerveSubsystem extends SubsystemBase {
 	 * Drive according to the chassis robot oriented velocity.
 	 *
 	 * @param velocity
-	 * 		Robot oriented {@link ChassisSpeeds}
+	 *          Robot oriented {@link ChassisSpeeds}
 	 */
 	public void drive(ChassisSpeeds velocity) {
 		swerveDrive.drive(velocity);
@@ -635,7 +643,7 @@ public class SwerveSubsystem extends SubsystemBase {
 	 * keep working.
 	 *
 	 * @param initialHolonomicPose
-	 * 		The pose to set the odometry to
+	 *          The pose to set the odometry to
 	 */
 	public void resetOdometry(Pose2d initialHolonomicPose) {
 		swerveDrive.resetOdometry(initialHolonomicPose);
@@ -655,7 +663,7 @@ public class SwerveSubsystem extends SubsystemBase {
 	 * Set chassis speeds with closed-loop velocity control.
 	 *
 	 * @param chassisSpeeds
-	 * 		Chassis Speeds to set.
+	 *          Chassis Speeds to set.
 	 */
 	public void setChassisSpeeds(ChassisSpeeds chassisSpeeds) {
 		swerveDrive.setChassisSpeeds(chassisSpeeds);
@@ -665,7 +673,7 @@ public class SwerveSubsystem extends SubsystemBase {
 	 * Post the trajectory to the field.
 	 *
 	 * @param trajectory
-	 * 		The trajectory to post.
+	 *          The trajectory to post.
 	 */
 	public void postTrajectory(Trajectory trajectory) {
 		swerveDrive.postTrajectory(trajectory);
@@ -707,7 +715,7 @@ public class SwerveSubsystem extends SubsystemBase {
 	 * Sets the drive motors to brake/coast mode.
 	 *
 	 * @param brake
-	 * 		True to set motors to brake mode, false for coast.
+	 *          True to set motors to brake mode, false for coast.
 	 */
 	public void setMotorBrake(boolean brake) {
 		swerveDrive.setMotorIdleMode(brake);
@@ -728,13 +736,13 @@ public class SwerveSubsystem extends SubsystemBase {
 	 * the angle of the robot.
 	 *
 	 * @param xInput
-	 * 		X joystick input for the robot to move in the X direction.
+	 *          X joystick input for the robot to move in the X direction.
 	 * @param yInput
-	 * 		Y joystick input for the robot to move in the Y direction.
+	 *          Y joystick input for the robot to move in the Y direction.
 	 * @param headingX
-	 * 		X joystick which controls the angle of the robot.
+	 *          X joystick which controls the angle of the robot.
 	 * @param headingY
-	 * 		Y joystick which controls the angle of the robot.
+	 *          Y joystick which controls the angle of the robot.
 	 * @return {@link ChassisSpeeds} which can be sent to the Swerve Drive.
 	 */
 	public ChassisSpeeds getTargetSpeeds(double xInput, double yInput, double headingX, double headingY) {
@@ -753,11 +761,11 @@ public class SwerveSubsystem extends SubsystemBase {
 	 * 90deg.
 	 *
 	 * @param xInput
-	 * 		X joystick input for the robot to move in the X direction.
+	 *          X joystick input for the robot to move in the X direction.
 	 * @param yInput
-	 * 		Y joystick input for the robot to move in the Y direction.
+	 *          Y joystick input for the robot to move in the Y direction.
 	 * @param angle
-	 * 		The angle in as a {@link Rotation2d}.
+	 *          The angle in as a {@link Rotation2d}.
 	 * @return {@link ChassisSpeeds} which can be sent to the Swerve Drive.
 	 */
 	public ChassisSpeeds getTargetSpeeds(double xInput, double yInput, Rotation2d angle) {
@@ -850,7 +858,7 @@ public class SwerveSubsystem extends SubsystemBase {
 	 * <b>Use PathPlanner's driveToPose() instead if you need obstacle avoidance.</b>
 	 *
 	 * @param targetPose
-	 * 		Target pose supplier
+	 *          Target pose supplier
 	 * @return Command to drive to the target pose
 	 */
 	public Command driveToPoseAutopilot(Supplier<Pose2d> targetPose) {
@@ -871,9 +879,9 @@ public class SwerveSubsystem extends SubsystemBase {
 	 * trajectories.
 	 *
 	 * @param targetPose
-	 * 		Target pose supplier
+	 *          Target pose supplier
 	 * @param respectEntryAngle
-	 * 		Whether to respect the target rotation as entry angle
+	 *          Whether to respect the target rotation as entry angle
 	 * @return Command to drive to the target pose
 	 */
 	public Command driveToPoseAutopilot(Supplier<Pose2d> targetPose, boolean respectEntryAngle) {
@@ -894,11 +902,11 @@ public class SwerveSubsystem extends SubsystemBase {
 	 * This command completes when the robot reaches the target within tolerances.
 	 *
 	 * @param targetPose
-	 * 		Target pose supplier
+	 *          Target pose supplier
 	 * @param translationTolerance
-	 * 		Translation tolerance (meters)
+	 *          Translation tolerance (meters)
 	 * @param rotationTolerance
-	 * 		Rotation tolerance (radians)
+	 *          Rotation tolerance (radians)
 	 * @return Command that finishes when robot reaches target
 	 */
 	public Command driveToPoseAutopilotUntilFinished(
@@ -925,7 +933,7 @@ public class SwerveSubsystem extends SubsystemBase {
 	 * Convenience method for static targets (non-moving).
 	 *
 	 * @param targetPose
-	 * 		Static target pose
+	 *          Static target pose
 	 * @return Command to drive to the target pose
 	 */
 	public Command driveToPoseAutopilot(Pose2d targetPose) {
