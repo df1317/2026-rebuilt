@@ -3,24 +3,23 @@ package frc.robot.subsystems.swervedrive;
 import dev.doglog.DogLog;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.networktables.BooleanEntry;
-import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.BooleanSubscriber;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import frc.robot.subsystems.swervedrive.Vision.Cameras;
 import frc.robot.util.DevMode;
+import org.photonvision.targeting.PhotonPipelineResult;
+import org.photonvision.targeting.PhotonTrackedTarget;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import org.photonvision.targeting.PhotonPipelineResult;
-import org.photonvision.targeting.PhotonTrackedTarget;
 
 /**
  * Handles dev-only vision debug telemetry.
  *
  * <p>
- * This class extracts debug visualization logic from Vision to avoid class
- * pollution.
- * Field2d overlays only run when {@link DevMode#isEnabled()} returns true.
+ * This class extracts debug visualization logic from Vision to avoid class pollution. Field2d overlays only run when
+ * {@link DevMode#isEnabled()} returns true.
  *
  * <p>
  * Logging uses DogLog, which automatically handles dev vs. competition:
@@ -32,7 +31,7 @@ import org.photonvision.targeting.PhotonTrackedTarget;
 public class VisionTelemetry {
 
 	private final Field2d field2d;
-	private final BooleanEntry showTrackedTargetsToggle;
+	private final BooleanSubscriber showTrackedTargetsToggle;
 
 	/**
 	 * Constructs a new VisionTelemetry instance for debug visualization.
@@ -43,15 +42,12 @@ public class VisionTelemetry {
 	public VisionTelemetry(Field2d field) {
 		this.field2d = field;
 
-		// Create dashboard toggle - BooleanEntry supports both get() and set()
-		var table = NetworkTableInstance.getDefault().getTable("Vision");
-		showTrackedTargetsToggle = table.getBooleanTopic("ShowTrackedTargets").getEntry(false);
+		showTrackedTargetsToggle = DogLog.tunable("Vision/ShowTrackedTargets", false);
 	}
 
 	/**
-	 * Update Field2d to display tracked AprilTag targets and log vision debug data.
-	 * Field2d updates only run in dev mode; DogLog handles NT publishing
-	 * automatically.
+	 * Update Field2d to display tracked AprilTag targets and log vision debug data. Field2d updates only run in dev mode;
+	 * DogLog handles NT publishing automatically.
 	 */
 	public void update() {
 		List<PhotonTrackedTarget> targets = collectTrackedTargets();
@@ -97,16 +93,6 @@ public class VisionTelemetry {
 			}
 		}
 		return targets;
-	}
-
-	/**
-	 * Enable/disable tracked target visualization on Field2d.
-	 *
-	 * @param show
-	 *          true to show tracked targets, false to hide
-	 */
-	public void setShowTrackedTargets(boolean show) {
-		showTrackedTargetsToggle.set(show);
 	}
 
 	/**
