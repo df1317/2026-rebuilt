@@ -60,6 +60,7 @@ repositories {
 // Also defines JUnit 5.
 dependencies {
     implementation "com.github.jonahsnider:doglog:2026.3.0"
+    implementation "com.github.therekrab:autopilot:1.0.1"
     annotationProcessor wpi.java.deps.wpilibAnnotations()
     implementation wpi.java.deps.wpilib()
     implementation wpi.java.vendor.java()

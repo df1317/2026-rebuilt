@@ -90,6 +90,12 @@ AdvantageScope analysis and publishes to NetworkTables during development.
     - Use for Field2d updates, extra computations, debug visualizations
     - DogLog handles NT publishing automatically; use DevMode for non-logging overhead
 
+- **`DogLog.tunable(key, defaultValue)`** - Runtime-adjustable values
+    - Creates a NetworkTables subscriber for live tweaking (published under `Tunable/` table)
+    - Auto-reverts to default value when FMS connected (competition mode)
+    - Perfect for PID tuning, thresholds, and debug toggles
+    - Values are logged to DataLog under `Robot/Tunable/`
+
 #### Workflow
 
 **Development:**
@@ -128,6 +134,31 @@ public class Elevator extends SubsystemBase {
 	}
 }
 ```
+
+#### Example: Tunable Values
+
+```java
+public class SwerveSubsystem extends SubsystemBase {
+	// Toggle for enabling/disabling vision (editable in AdvantageScope/Glass)
+	private final BooleanSubscriber visionEnabled = DogLog.tunable("Swerve/VisionEnabled", true);
+
+	// PID tuning without redeploying code
+	private final DoubleSubscriber driveKp = DogLog.tunable("Drive/kP", 0.1);
+
+	@Override
+	public void periodic() {
+		if (visionEnabled.get()) {
+			updateVision();
+		}
+	}
+}
+```
+
+To change tunables at runtime:
+1. Open AdvantageScope or Glass
+2. Navigate to `Tunable/` table in NetworkTables
+3. Edit values live - changes apply immediately
+4. At FMS, tunables revert to defaults for safety
 
 ### Commands and Subsystems
 

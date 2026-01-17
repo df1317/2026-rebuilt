@@ -12,14 +12,14 @@ import frc.robot.Constants;
 import static edu.wpi.first.units.Units.*;
 
 /**
- * Wrapper class for Autopilot motion control library.
+ * Wrapper class for an Autopilot motion control library.
  *
  * <h2>Overview</h2>
  * <p>
- * Autopilot is a stateless holonomic motion controller integrated as a complementary solution to PathPlanner.
- * It uses jerk-limited motion profiles for smooth deceleration and excels at real-time drive-to-pose scenarios.
+ * Autopilot is a stateless holonomic motion controller integrated as a complementary solution to PathPlanner. It uses
+ * jerk-limited motion profiles for smooth deceleration and excels at real-time drive-to-pose scenarios.
  *
- * <h2>When to Use Autopilot vs PathPlanner</h2>
+ * <h2>When to Use Autopilot vs. PathPlanner</h2>
  * <p>
  * <b>Use Autopilot for:</b>
  * <ul>
@@ -59,7 +59,8 @@ import static edu.wpi.first.units.Units.*;
  * <h2>Rotation Control</h2>
  * <p>
  * This wrapper returns ChassisSpeeds with omega=0. The YAGSL field-relative drive handles rotation separately.
- * For explicit rotation control, use {@link #getTargetHeading(Pose2d, ChassisSpeeds, Pose2d)} with YAGSL's heading controller.
+ * For explicit rotation control, use {@link #getTargetHeading(Pose2d, ChassisSpeeds, Pose2d)} with YAGSL's heading
+ * controller.
  *
  * <h2>Tuning Recommendations</h2>
  * <ul>
@@ -70,7 +71,8 @@ import static edu.wpi.first.units.Units.*;
  * </ul>
  *
  * <p>
- * <b>Key Limitation:</b> Autopilot does NOT support obstacle avoidance. For navigation through cluttered fields, use PathPlanner.
+ * <b>Key Limitation:</b> Autopilot does NOT support obstacle avoidance. For navigation through cluttered fields, use
+ * PathPlanner.
  *
  * <p>
  * <b>References:</b>
@@ -93,45 +95,27 @@ public class AutopilotController {
 	 * Creates an AutopilotController with default motion constraints from Constants.
 	 */
 	public AutopilotController() {
-		this(
-				Constants.MAX_SPEED,
-				Constants.MAX_ACCELERATION,
-				Constants.MAX_ANGULAR_SPEED,
-				Constants.MAX_ANGULAR_ACCELERATION);
+		this(Constants.MAX_ACCELERATION);
 	}
 
 	/**
 	 * Creates an AutopilotController with custom motion constraints.
 	 *
-	 * @param maxVelocity
-	 *          Maximum linear velocity (m/s)
 	 * @param maxAcceleration
 	 *          Maximum linear acceleration (m/s²)
-	 * @param maxAngularVelocity
-	 *          Maximum angular velocity (rad/s)
-	 * @param maxAngularAcceleration
-	 *          Maximum angular acceleration (rad/s²)
 	 */
-	public AutopilotController(
-			double maxVelocity,
-			double maxAcceleration,
-			double maxAngularVelocity,
-			double maxAngularAcceleration) {
-		// Store values for getter access
+	public AutopilotController(double maxAcceleration) {
 		this.acceleration = maxAcceleration;
 		this.jerk = 1.0;
 
-		// Create constraints with default jerk values
-		// Jerk of 1.0 provides smooth deceleration without being overly conservative
 		this.constraints = new APConstraints()
 				.withAcceleration(maxAcceleration)
 				.withJerk(this.jerk);
 
-		// Create profile with reasonable error tolerances
 		APProfile profile = new APProfile(constraints)
-				.withErrorXY(Centimeters.of(2)) // 2cm position tolerance
-				.withErrorTheta(Degrees.of(1)) // 1 degree rotation tolerance
-				.withBeelineRadius(Centimeters.of(10)); // 10cm beeline radius
+				.withErrorXY(Centimeters.of(2))
+				.withErrorTheta(Degrees.of(1))
+				.withBeelineRadius(Centimeters.of(10));
 
 		this.autopilot = new Autopilot(profile);
 	}
@@ -162,8 +146,8 @@ public class AutopilotController {
 	 * Calculate field-relative chassis speeds with entry angle control.
 	 *
 	 * <p>
-	 * Entry angle determines the direction from which the robot approaches the target.
-	 * This creates curved paths for smoother approach trajectories.
+	 * Entry angle determines the direction from which the robot approaches the target. This creates curved paths for
+	 * smoother approach trajectories.
 	 *
 	 * @param currentPose
 	 *          Current robot pose
@@ -172,7 +156,7 @@ public class AutopilotController {
 	 * @param targetPose
 	 *          Target pose to reach
 	 * @param respectEntryAngle
-	 *          Whether to respect the target's rotation as entry angle
+	 *          Whether to respect the target's rotation as an entry angle
 	 * @return Field-relative ChassisSpeeds command
 	 */
 	public ChassisSpeeds calculate(
@@ -228,7 +212,7 @@ public class AutopilotController {
 	 *          Translation tolerance (meters)
 	 * @param rotationTolerance
 	 *          Rotation tolerance (radians)
-	 * @return True if robot is within tolerance of target
+	 * @return True if the robot is within tolerance of the target
 	 */
 	public boolean atTarget(Pose2d currentPose, Pose2d targetPose, double translationTolerance,
 			double rotationTolerance) {

@@ -27,8 +27,9 @@ import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.DriverStation;
+import dev.doglog.DogLog;
+import edu.wpi.first.networktables.BooleanSubscriber;
 import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -36,7 +37,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Config;
 import frc.robot.Constants;
 import frc.robot.subsystems.swervedrive.Vision.Cameras;
-import frc.robot.util.DevMode;
+import frc.robot.subsystems.swervedrive.avoidance.FieldZones;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -63,9 +64,10 @@ public class SwerveSubsystem extends SubsystemBase {
 	 */
 	private final SwerveDrive swerveDrive;
 	/**
-	 * Enable vision odometry updates while driving.
+	 * Tunable toggle for vision odometry updates.
+	 * Can be changed at runtime via NetworkTables (disabled at FMS).
 	 */
-	private boolean visionDriveTest = true;
+	private final BooleanSubscriber visionEnabled = DogLog.tunable("Swerve/VisionEnabled", true);
 	/**
 	 * PhotonVision class to keep an accurate odometry.
 	 */
@@ -122,8 +124,7 @@ public class SwerveSubsystem extends SubsystemBase {
 		Arrays.stream(swerveDrive.getModules()).forEach(m -> m.setAntiJitter(true));
 		// and motor encoders
 		// periodically when they are not moving.
-		SmartDashboard.putBoolean("Swerve Drive/vision enabled", visionDriveTest);
-		if (visionDriveTest) {
+		if (visionEnabled.get()) {
 			setupPhotonVision();
 			// Stop the odometry thread if we are using vision that way we can synchronize
 			// updates better. This prevents race conditions where vision measurements and
@@ -166,21 +167,21 @@ public class SwerveSubsystem extends SubsystemBase {
 	 */
 	@Override
 	public void periodic() {
-		visionDriveTest = SmartDashboard.getBoolean("Swerve Drive/vision enabled", visionDriveTest);
-
 		// When vision is enabled we must manually update odometry in SwerveDrive
 		swerveDrive.updateOdometry();
-		if (visionDriveTest) {
+		if (visionEnabled.get() && vision != null) {
 			vision.updatePoseEstimation(swerveDrive);
 		}
 
-		// Autopilot telemetry (dev mode only)
-		if (DevMode.isEnabled() && autopilotController != null) {
-			SmartDashboard.putString("Autopilot/Constraints",
-					String.format("Accel: %.2f m/s², Jerk: %.2f m/s³",
-							autopilotController.getAcceleration(),
-							autopilotController.getJerk()));
+		// Dev mode telemetry (DogLog auto-disables NT at FMS)
+		if (autopilotController != null) {
+			DogLog.log("Autopilot/Acceleration", autopilotController.getAcceleration());
+			DogLog.log("Autopilot/Jerk", autopilotController.getJerk());
 		}
+
+		FieldZones.Zone currentZone = FieldZones.getZone(getPose());
+		DogLog.log("Field/Zone", currentZone.name());
+		DogLog.log("Field/DistanceToZoneBoundary", FieldZones.getDistanceToNearestZoneBoundary(getPose()));
 	}
 
 	/**
@@ -959,4 +960,5 @@ public class SwerveSubsystem extends SubsystemBase {
 	public AutopilotController getAutopilotController() {
 		return autopilotController;
 	}
+
 }

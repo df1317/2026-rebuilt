@@ -156,11 +156,12 @@ class AutopilotIntegrationTest {
 
 	@Test
 	void testCustomConstraints() {
-		// Create controller with custom constraints
-		AutopilotController customController = new AutopilotController(2.0, 1.0, Math.PI, Math.PI / 2);
+		// Create controller with custom acceleration constraint
+		AutopilotController customController = new AutopilotController(1.0);
 
 		assertNotNull(customController);
 		assertNotNull(customController.getConstraints());
+		assertEquals(1.0, customController.getAcceleration(), 0.01);
 
 		// Test that it produces reasonable output
 		Pose2d currentPose = new Pose2d(0, 0, new Rotation2d());
