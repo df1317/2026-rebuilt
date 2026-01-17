@@ -596,10 +596,15 @@ public class SwerveSubsystem extends SubsystemBase {
 
 	public Command robotDriveCommand(Supplier<ChassisSpeeds> velocity, BooleanSupplier robotRelative) {
 		return run(() -> {
+			ChassisSpeeds speeds = velocity.get();
+			DogLog.log("Swerve/Input/AngularVelocity", speeds.omegaRadiansPerSecond);
+			DogLog.log("Swerve/Input/XVelocity", speeds.vxMetersPerSecond);
+			DogLog.log("Swerve/Input/YVelocity", speeds.vyMetersPerSecond);
+
 			if (robotRelative.getAsBoolean()) {
-				swerveDrive.driveFieldOrientedAndRobotOriented(new ChassisSpeeds(0, 0, 0), velocity.get());
+				swerveDrive.driveFieldOrientedAndRobotOriented(new ChassisSpeeds(0, 0, 0), speeds);
 			} else {
-				swerveDrive.driveFieldOriented(velocity.get());
+				swerveDrive.driveFieldOriented(speeds);
 			}
 		});
 	}
