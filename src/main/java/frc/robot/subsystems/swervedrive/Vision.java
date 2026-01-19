@@ -270,7 +270,7 @@ public class Vision {
 	 * <p>
 	 * To add a new camera, create a new enum constant with its configuration.
 	 */
-	enum Cameras {
+	public enum Cameras {
 		/**
 		 * Center Camera
 		 */

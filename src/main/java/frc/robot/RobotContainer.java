@@ -113,6 +113,13 @@ public class RobotContainer {
 				.back()
 				.whileTrue(Commands.either(drivebase.centerModulesCommand(), Commands.none(), DriverStation::isTest));
 
+		// Auto-aim at hub (middle of alliance line) while allowing translation
+		driverXbox
+				.b()
+				.whileTrue(drivebase.aimAtHub(
+						() -> driverXbox.getLeftY() * -1,
+						() -> driverXbox.getLeftX() * -1));
+
 		// ========== Autopilot Examples ==========
 		// Uncomment these to enable Autopilot drive-to-pose commands during testing
 		//
