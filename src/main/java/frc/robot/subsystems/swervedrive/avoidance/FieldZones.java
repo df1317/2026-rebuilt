@@ -1,6 +1,7 @@
 package frc.robot.subsystems.swervedrive.avoidance;
 
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
 
@@ -27,13 +28,13 @@ public final class FieldZones {
 	public static final double NEUTRAL_ZONE_START = ALLIANCE_ZONE_DEPTH;
 	public static final double NEUTRAL_ZONE_END = FIELD_LENGTH - ALLIANCE_ZONE_DEPTH;
 	public static final double NEUTRAL_ZONE_CENTER = FIELD_LENGTH / 2;
-
+	public static final double HUB_WIDTH = Units.inchesToMeters(46.8);
+	public static final Pose2d HUB_POSE = new Pose2d(
+			new Translation2d(FieldZones.ALLIANCE_ZONE_DEPTH + FieldZones.HUB_WIDTH / 2,
+					FieldZones.FIELD_WIDTH / 2),
+			new Rotation2d());
 	private static final double OUTPOST_AREA_WIDTH = Units.inchesToMeters(71.0);
 	private static final double OUTPOST_AREA_DEPTH = Units.inchesToMeters(134.0);
-
-	public enum Zone {
-		BLUE_ALLIANCE, RED_ALLIANCE, NEUTRAL, BLUE_OUTPOST, RED_OUTPOST, OUT_OF_BOUNDS
-	}
 
 	private FieldZones() {
 	}
@@ -163,5 +164,9 @@ public final class FieldZones {
 		return isRedAlliance
 				? x < NEUTRAL_ZONE_CENTER
 				: x > NEUTRAL_ZONE_CENTER;
+	}
+
+	public enum Zone {
+		BLUE_ALLIANCE, RED_ALLIANCE, NEUTRAL, BLUE_OUTPOST, RED_OUTPOST, OUT_OF_BOUNDS
 	}
 }

@@ -295,40 +295,6 @@ public class SwerveSubsystem extends SubsystemBase {
 	}
 
 	/**
-	 * Aim the robot at the hub (middle of the alliance line) while allowing translation.
-	 *
-	 * @param translationX
-	 *          Supplier for X translation input (-1 to 1)
-	 * @param translationY
-	 *          Supplier for Y translation input (-1 to 1)
-	 * @return A {@link Command} which will run the alignment while translating.
-	 */
-	public Command aimAtHub(DoubleSupplier translationX, DoubleSupplier translationY) {
-		Translation2d hubPosition = new Translation2d(
-				FieldZones.ALLIANCE_ZONE_DEPTH,
-				FieldZones.FIELD_WIDTH / 2);
-
-		return run(() -> {
-			Pose2d currentPose = getPose();
-			Translation2d toHub = hubPosition.minus(currentPose.getTranslation());
-			Rotation2d targetAngle = toHub.getAngle();
-
-			Translation2d scaledInputs = SwerveMath.scaleTranslation(
-					new Translation2d(translationX.getAsDouble(), translationY.getAsDouble()),
-					0.8);
-
-			driveFieldOriented(
-					swerveDrive.swerveController.getTargetSpeeds(
-							scaledInputs.getX(),
-							scaledInputs.getY(),
-							targetAngle.getCos(),
-							targetAngle.getSin(),
-							swerveDrive.getOdometryHeading().getRadians(),
-							swerveDrive.getMaximumChassisVelocity()));
-		});
-	}
-
-	/**
 	 * Get the path follower with events.
 	 *
 	 * @param pathName

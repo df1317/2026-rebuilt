@@ -1,6 +1,7 @@
 package frc.robot;
 
 import com.pathplanner.lib.auto.AutoBuilder;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -12,6 +13,7 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Constants.DrivebaseConstants;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
+import frc.robot.subsystems.swervedrive.avoidance.FieldZones;
 import swervelib.SwerveInputStream;
 
 import java.io.File;
@@ -50,7 +52,17 @@ public class RobotContainer {
 			drivebase.getSwerveDrive(),
 			() -> driverXbox.getLeftY() * -1,
 			() -> driverXbox.getLeftX() * -1)
-			.withControllerRotationAxis(() -> driverXbox.getRightX() * -1)
+			.withControllerRotationAxis(() -> {
+				// Right stick X for rotation, plus triggers for fine-tuning (cubic scaling)
+				// Right trigger = clockwise (negative), Left trigger = counter-clockwise (positive)
+				double stickRotation = driverXbox.getRightX() * -1;
+				double leftTrigger = Math.pow(driverXbox.getLeftTriggerAxis(), 3);
+				double rightTrigger = Math.pow(driverXbox.getRightTriggerAxis(), 3);
+				double triggerRotation = (leftTrigger - rightTrigger) * 0.3;
+				return MathUtil.clamp(stickRotation + triggerRotation, -1.0, 1.0);
+			})
+			.aim(FieldZones.HUB_POSE)
+			.aimWhile(driverXbox.b())
 			.deadband(OperatorConstants.DEADBAND)
 			.scaleTranslation(DrivebaseConstants.TRANSLATION_SCALE)
 			.allianceRelativeControl(true);
@@ -112,13 +124,6 @@ public class RobotContainer {
 		driverXbox
 				.back()
 				.whileTrue(Commands.either(drivebase.centerModulesCommand(), Commands.none(), DriverStation::isTest));
-
-		// Auto-aim at hub (middle of alliance line) while allowing translation
-		driverXbox
-				.b()
-				.whileTrue(drivebase.aimAtHub(
-						() -> driverXbox.getLeftY() * -1,
-						() -> driverXbox.getLeftX() * -1));
 
 		// ========== Autopilot Examples ==========
 		// Uncomment these to enable Autopilot drive-to-pose commands during testing
