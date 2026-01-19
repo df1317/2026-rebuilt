@@ -11,6 +11,7 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.util.DevMode;
+import frc.robot.util.HubState;
 
 /**
  * ---------- Robot --- The VM is configured to automatically run this class and
@@ -132,6 +133,7 @@ public class Robot extends TimedRobot {
 		// even at competition (when regular NT publishing is disabled)
 		DogLog.forceNt.log("Dash/MatchTime", DriverStation.getMatchTime());
 		DogLog.forceNt.log("Dash/RobotRelative", m_robotContainer.robotRelative);
+		DogLog.forceNt.log("Dash/HubStatusColor", HubState.getHubStatusColor().toHexString());
 	}
 
 	/**

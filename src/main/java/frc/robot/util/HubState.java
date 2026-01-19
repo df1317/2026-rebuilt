@@ -2,6 +2,7 @@ package frc.robot.util;
 
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import edu.wpi.first.wpilibj.util.Color;
 
 public final class HubState {
 
@@ -101,5 +102,31 @@ public final class HubState {
 	public static boolean hasGameData() {
 		String gameData = DriverStation.getGameSpecificMessage();
 		return gameData != null && !gameData.isEmpty();
+	}
+
+	public enum HubStatus {
+		NOT_AVAILABLE, BUFFERED, ACTIVE
+	}
+
+	private static final Color COLOR_RED = new Color(255, 0, 0);
+	private static final Color COLOR_YELLOW = new Color(255, 255, 0);
+	private static final Color COLOR_GREEN = new Color(0, 255, 0);
+
+	public static HubStatus getHubStatus() {
+		if (isHubActive()) {
+			return HubStatus.ACTIVE;
+		} else if (isHubActiveBuffered()) {
+			return HubStatus.BUFFERED;
+		} else {
+			return HubStatus.NOT_AVAILABLE;
+		}
+	}
+
+	public static Color getHubStatusColor() {
+		return switch (getHubStatus()) {
+			case ACTIVE -> COLOR_GREEN;
+			case BUFFERED -> COLOR_YELLOW;
+			case NOT_AVAILABLE -> COLOR_RED;
+		};
 	}
 }
