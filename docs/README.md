@@ -2,6 +2,10 @@
 
 Quick reference documentation for robot controls and configuration.
 
+## Documentation
+
+- [Logging & Error Handling](logging.md) - Centralized logging system with Elastic notifications
+
 ## Controls
 
 ### Teleop

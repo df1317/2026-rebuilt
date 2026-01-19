@@ -1,7 +1,7 @@
 # 2026 Rebuilt
 
 > [!NOTE]
-> the bindings and can ids are documented in [`docs`](/docs)
+> Full code documentation is available in [`docs`](/docs).
 
 ![rebuilt logo](https://www.firstinspires.org/hs-fs/hubfs/image-library/web/frc_rebuilt_1240x860.webp?width=630)
 
