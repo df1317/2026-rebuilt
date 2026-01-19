@@ -12,11 +12,12 @@ Quick reference documentation for robot controls and configuration.
 
 #### Xbox Controller (Driver) [`Port 0`]
 
-| Binding        | Action                | Description                                       |
-|----------------|-----------------------|---------------------------------------------------|
-| `Button A`     | Zero gyro             | Resets gyro heading                               |
-| `Left Bumper`  | Lock drive            | Locks drivebase                                   |
-| `Right Bumper` | Toggle robot relative | Switches between field and robot relative driving |
+| Binding        | Action                | Description                                            |
+|----------------|-----------------------|--------------------------------------------------------|
+| `Button A`     | Zero gyro             | Resets gyro heading                                    |
+| `Button B`     | Auto-aim at hub       | Rotate to face hub while allowing translation (hold)  |
+| `Left Bumper`  | Lock drive            | Locks drivebase                                        |
+| `Right Bumper` | Toggle robot relative | Switches between field and robot relative driving      |
 
 #### Left Joystick (Operator) [`Port 1`]
 
