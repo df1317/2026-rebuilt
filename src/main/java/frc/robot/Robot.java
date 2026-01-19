@@ -206,4 +206,16 @@ public class Robot extends TimedRobot {
 		// Cancels all running commands at the start of test mode.
 		CommandScheduler.getInstance().cancelAll();
 	}
+
+	@Override
+	public void autonomousPeriodic() {
+	}
+
+	@Override
+	public void teleopPeriodic() {
+	}
+
+	@Override
+	public void testPeriodic() {
+	}
 }
