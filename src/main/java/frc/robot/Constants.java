@@ -109,6 +109,9 @@ public final class Constants {
 		public static final double POSE_AMBIGUITY_THRESHOLD = 0.2;
 		public static final double MAX_SINGLE_TAG_DISTANCE_METERS = 4.0;
 
+		// High latency threshold in milliseconds
+		public static final double HIGH_LATENCY_THRESHOLD_MS = 100.0;
+
 		// Camera standard deviations for pose estimation (X, Y, Theta in radians)
 		public static final class CameraStdDevs {
 			// Single tag: Higher uncertainty

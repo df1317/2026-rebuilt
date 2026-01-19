@@ -34,6 +34,7 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Config;
 import frc.robot.Constants;
 import frc.robot.subsystems.swervedrive.Vision.Cameras;
 import frc.robot.subsystems.swervedrive.avoidance.FieldZones;
+import frc.robot.util.RobotLog;
 import org.json.simple.parser.ParseException;
 import org.photonvision.targeting.PhotonPipelineResult;
 import swervelib.SwerveController;
@@ -97,7 +98,11 @@ public class SwerveSubsystem extends SubsystemBase {
 			// swerveDrive = new SwerveParser(directory).createSwerveDrive(maximumSpeed,
 			// angleConversionFactor, driveConversionFactor);
 		} catch (Exception e) {
-			throw new RuntimeException(e);
+			throw RobotLog.fatal(
+					"Swerve/Init",
+					"Swerve init failed",
+					"Failed to create SwerveDrive from config directory",
+					e);
 		}
 		this.replaceSwerveModuleFeedforward(
 				DrivebaseConstants.DRIVE_KS,
@@ -251,8 +256,12 @@ public class SwerveSubsystem extends SubsystemBase {
 			// Reference to this subsystem to set requirements
 			);
 		} catch (Exception e) {
-			// Handle exception as needed
-			e.printStackTrace();
+			RobotLog.error(
+					"Auto/PathPlannerConfig",
+					"PathPlanner config failed",
+					"AutoBuilder/RobotConfig setup failed; autos may be unavailable",
+					e);
+			RobotLog.setErrorAlert("Auto/Unavailable", "Autos unavailable (PathPlanner config failed)", true);
 		}
 
 		// Preload PathPlanner Path finding
@@ -401,7 +410,11 @@ public class SwerveSubsystem extends SubsystemBase {
 				return ChassisSpeeds.fromFieldRelativeSpeeds(fieldRelativeSpeeds.get(), getHeading());
 			});
 		} catch (Exception e) {
-			DriverStation.reportError(e.toString(), true);
+			RobotLog.error(
+					"Swerve/SetpointGenerator",
+					"Setpoint generator failed",
+					"Failed to create setpoint generator command",
+					e);
 		}
 		return Commands.none();
 	}

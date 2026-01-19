@@ -10,11 +10,10 @@ import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.networktables.NetworkTablesJNI;
-import edu.wpi.first.wpilibj.Alert;
-import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import frc.robot.Constants.VisionConstants;
 import frc.robot.Robot;
+import frc.robot.util.RobotLog;
 import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
@@ -117,7 +116,13 @@ public class Vision {
 				break;
 			}
 		}
-		new Alert("No PhotonVision clients found", AlertType.kWarning).set(!hasCamera);
+		RobotLog.setWarningAlert("Vision/NoClients", "No PhotonVision clients found", !hasCamera);
+		if (!hasCamera) {
+			RobotLog.warn(
+					"Vision/NoClientsNotify",
+					"Vision warning",
+					"No PhotonVision clients found; odometry may drift");
+		}
 	}
 
 	/**
@@ -283,9 +288,9 @@ public class Vision {
 						VisionConstants.CameraStdDevs.MULTI_TAG[2]));
 
 		/**
-		 * Latency alert to use when high latency is detected.
+		 * Camera name for alert keys.
 		 */
-		public final Alert latencyAlert;
+		private final String cameraName;
 		/**
 		 * Camera instance for comms.
 		 */
@@ -348,8 +353,7 @@ public class Vision {
 				Translation3d robotToCamTranslation,
 				Matrix<N3, N1> singleTagStdDevs,
 				Matrix<N3, N1> multiTagStdDevsMatrix) {
-			latencyAlert = new Alert("'" + name + "' Camera is experiencing high latency.", AlertType.kWarning);
-
+			this.cameraName = name;
 			camera = new PhotonCamera(name);
 
 			// https://docs.wpilib.org/en/stable/docs/software/basic-programming/coordinate-system.html
@@ -448,6 +452,15 @@ public class Vision {
 				if (resultsList.size() > 5) {
 					resultsList = new ArrayList<>(resultsList.subList(0, 5));
 				}
+
+				// Check for high latency on the most recent result
+				PhotonPipelineResult latest = resultsList.get(0);
+				double latencyMs = latest.metadata.getLatencyMillis();
+				boolean highLatency = latencyMs > VisionConstants.HIGH_LATENCY_THRESHOLD_MS;
+				RobotLog.setWarningAlert(
+						"Vision/Latency/" + cameraName,
+						"'" + cameraName + "' camera high latency (" + (int) latencyMs + "ms)",
+						highLatency);
 			}
 
 			// Process results if we have any
