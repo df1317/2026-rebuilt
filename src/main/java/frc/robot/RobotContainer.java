@@ -1,5 +1,6 @@
 package frc.robot;
 
+import java.io.File;
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -16,159 +17,140 @@ import frc.robot.subsystems.swervedrive.SwerveSubsystem;
 import frc.robot.subsystems.swervedrive.avoidance.FieldZones;
 import swervelib.SwerveInputStream;
 
-import java.io.File;
-
 /**
- * ---------- RobotContainer Class --- This class is where the bulk of the robot should be declared. Since Command-based
- * is a "declarative" paradigm, very little robot logic should actually be handled in the {@link Robot} periodic methods
- * (other than the scheduler calls). Instead, the structure of the robot (including subsystems, commands, and trigger
- * mappings) should be declared here. ---
+ * ---------- RobotContainer Class --- This class is where the bulk of the robot should be declared.
+ * Since Command-based is a "declarative" paradigm, very little robot logic should actually be
+ * handled in the {@link Robot} periodic methods (other than the scheduler calls). Instead, the
+ * structure of the robot (including subsystems, commands, and trigger mappings) should be declared
+ * here. ---
  */
 public class RobotContainer {
 
-	private final SendableChooser<Command> autoChooser;
-	/**
-	 * ---------- HID Initialization ------------
-	 */
-	private final CommandXboxController driverXbox = new CommandXboxController(0);
-	private final CommandJoystick m_JoystickL = new CommandJoystick(1);
-	private final CommandJoystick m_JoystickR = new CommandJoystick(2);
-	/**
-	 * ---------- Subsystems ------------
-	 */
-	private final SwerveSubsystem drivebase = new SwerveSubsystem(
-			new File(Filesystem.getDeployDirectory(), "swerve/neo"));
-	public boolean robotRelative = false;
+  private final SendableChooser<Command> autoChooser;
+  /**
+   * ---------- HID Initialization ------------
+   */
+  private final CommandXboxController driverXbox = new CommandXboxController(0);
+  private final CommandJoystick m_JoystickL = new CommandJoystick(1);
+  private final CommandJoystick m_JoystickR = new CommandJoystick(2);
+  /**
+   * ---------- Subsystems ------------
+   */
+  private final SwerveSubsystem drivebase =
+      new SwerveSubsystem(new File(Filesystem.getDeployDirectory(), "swerve/neo"));
+  public boolean robotRelative = false;
 
-	/**
-	 * ----------
-	 * Swerve Drive Input Streams
-	 * ------------
-	 */
-	/**
-	 * Converts driver input into a field-relative ChassisSpeeds that is controlled by angular velocity.
-	 */
-	SwerveInputStream driveAngularVelocity = SwerveInputStream.of(
-			drivebase.getSwerveDrive(),
-			() -> driverXbox.getLeftY() * -1,
-			() -> driverXbox.getLeftX() * -1)
-			.withControllerRotationAxis(() -> {
-				// Right stick X for rotation, plus triggers for fine-tuning (cubic scaling)
-				// Right trigger = clockwise (negative), Left trigger = counter-clockwise (positive)
-				double stickRotation = driverXbox.getRightX() * -1;
-				double leftTrigger = Math.pow(driverXbox.getLeftTriggerAxis(), 3);
-				double rightTrigger = Math.pow(driverXbox.getRightTriggerAxis(), 3);
-				double triggerRotation = (leftTrigger - rightTrigger) * 0.3;
-				return MathUtil.clamp(stickRotation + triggerRotation, -1.0, 1.0);
-			})
-			.aim(FieldZones.HUB_POSE)
-			.aimWhile(driverXbox.b())
-			.deadband(OperatorConstants.DEADBAND)
-			.scaleTranslation(DrivebaseConstants.TRANSLATION_SCALE)
-			.allianceRelativeControl(true);
+  /**
+   * ---------- Swerve Drive Input Streams ------------
+   */
+  /**
+   * Converts driver input into a field-relative ChassisSpeeds that is controlled by angular
+   * velocity.
+   */
+  SwerveInputStream driveAngularVelocity =
+      SwerveInputStream.of(drivebase.getSwerveDrive(), () -> driverXbox.getLeftY() * -1,
+          () -> driverXbox.getLeftX() * -1).withControllerRotationAxis(() -> {
+            // Right stick X for rotation, plus triggers for fine-tuning (cubic scaling)
+            // Right trigger = clockwise (negative), Left trigger = counter-clockwise (positive)
+            double stickRotation = driverXbox.getRightX() * -1;
+            double leftTrigger = Math.pow(driverXbox.getLeftTriggerAxis(), 3);
+            double rightTrigger = Math.pow(driverXbox.getRightTriggerAxis(), 3);
+            double triggerRotation = (leftTrigger - rightTrigger) * 0.3;
+            return MathUtil.clamp(stickRotation + triggerRotation, -1.0, 1.0);
+          }).aim(FieldZones.HUB_POSE).aimWhile(driverXbox.b()).deadband(OperatorConstants.DEADBAND)
+          .scaleTranslation(DrivebaseConstants.TRANSLATION_SCALE).allianceRelativeControl(true);
 
-	/**
-	 * Clone's the angular velocity input stream and converts it to a fieldRelative input stream.
-	 */
-	SwerveInputStream driveDirectAngle = driveAngularVelocity
-			.copy()
-			.withControllerHeadingAxis(driverXbox::getRightX, driverXbox::getRightY)
-			.headingWhile(true);
+  /**
+   * Clone's the angular velocity input stream and converts it to a fieldRelative input stream.
+   */
+  SwerveInputStream driveDirectAngle = driveAngularVelocity.copy()
+      .withControllerHeadingAxis(driverXbox::getRightX, driverXbox::getRightY).headingWhile(true);
 
-	/**
-	 * Clone's the angular velocity input stream and converts it to a robotRelative input stream.
-	 */
-	SwerveInputStream driveRobotOriented = driveAngularVelocity
-			.copy()
-			.robotRelative(true)
-			.allianceRelativeControl(false);
+  /**
+   * Clone's the angular velocity input stream and converts it to a robotRelative input stream.
+   */
+  SwerveInputStream driveRobotOriented =
+      driveAngularVelocity.copy().robotRelative(true).allianceRelativeControl(false);
 
-	/**
-	 * The container for the robot. Contains subsystems, input devices, and commands.
-	 */
-	public RobotContainer() {
-		configureBindings();
-		DriverStation.silenceJoystickConnectionWarning(true);
+  /**
+   * The container for the robot. Contains subsystems, input devices, and commands.
+   */
+  public RobotContainer() {
+    configureBindings();
+    DriverStation.silenceJoystickConnectionWarning(true);
 
-		autoChooser = AutoBuilder.buildAutoChooser();
-		SmartDashboard.putData("misc/Auto Chooser", autoChooser);
-	}
+    autoChooser = AutoBuilder.buildAutoChooser();
+    SmartDashboard.putData("misc/Auto Chooser", autoChooser);
+  }
 
-	/**
-	 * ---------- Configure the button bindings --- Use this method to define your button->command mappings. Buttons can
-	 * be created by instantiating a {@link CommandButton} with a {@link Command} and then calling the various
-	 * button-press functions on it. ---
-	 */
-	private void configureBindings() {
-		Command driveFieldOrientedAnglularVelocity = drivebase.robotDriveCommand(driveAngularVelocity, () -> robotRelative);
+  /**
+   * ---------- Configure the button bindings --- Use this method to define your button->command
+   * mappings. Buttons can be created by instantiating a {@link CommandButton} with a
+   * {@link Command} and then calling the various button-press functions on it. ---
+   */
+  private void configureBindings() {
+    Command driveFieldOrientedAnglularVelocity =
+        drivebase.robotDriveCommand(driveAngularVelocity, () -> robotRelative);
 
-		drivebase.setDefaultCommand(driveFieldOrientedAnglularVelocity);
+    drivebase.setDefaultCommand(driveFieldOrientedAnglularVelocity);
 
-		// Zero gyro
-		driverXbox
-				.a()
-				.onTrue(Commands.runOnce(drivebase::zeroGyro));
+    // Zero gyro
+    driverXbox.a().onTrue(Commands.runOnce(drivebase::zeroGyro));
 
-		// Toggle robot relative
-		driverXbox
-				.rightBumper()
-				.onTrue(Commands.runOnce(() -> robotRelative = !robotRelative))
-				.and(DriverStation::isTeleop);
+    // Toggle robot relative
+    driverXbox.rightBumper().onTrue(Commands.runOnce(() -> robotRelative = !robotRelative))
+        .and(DriverStation::isTeleop);
 
-		// Lock drivebase
-		driverXbox
-				.leftBumper()
-				.whileTrue(Commands.runOnce(drivebase::lock, drivebase).repeatedly());
+    // Lock drivebase
+    driverXbox.leftBumper().whileTrue(Commands.runOnce(drivebase::lock, drivebase).repeatedly());
 
-		// Center modules (test mode only)
-		driverXbox
-				.back()
-				.whileTrue(Commands.either(drivebase.centerModulesCommand(), Commands.none(), DriverStation::isTest));
+    // Center modules (test mode only)
+    driverXbox.back().whileTrue(
+        Commands.either(drivebase.centerModulesCommand(), Commands.none(), DriverStation::isTest));
 
-		// ========== Autopilot Examples ==========
-		// Uncomment these to enable Autopilot drive-to-pose commands during testing
-		//
-		// Example 1: Drive to scoring position (field coordinates)
-		// driverXbox.x().whileTrue(
-		// drivebase.driveToPoseAutopilot(() -> new Pose2d(5.0, 3.0, Rotation2d.fromDegrees(0)))
-		// );
-		//
-		// Example 2: Drive to amp with entry angle (approach from specific direction)
-		// driverXbox.y().whileTrue(
-		// drivebase.driveToPoseAutopilot(() -> FieldConstants.ampPose, true)
-		// );
-		//
-		// Example 3: Drive to pose and finish (command completes when at target)
-		// driverXbox.b().whileTrue(
-		// drivebase.driveToPoseAutopilotUntilFinished(
-		// () -> new Pose2d(2.0, 2.0, Rotation2d.fromDegrees(45)),
-		// 0.05, // 5cm tolerance
-		// Math.toRadians(2) // 2 degree tolerance
-		// )
-		// );
-		//
-		// Example 4: Static target convenience method
-		// driverXbox.povUp().whileTrue(
-		// drivebase.driveToPoseAutopilot(new Pose2d(1.0, 1.0, new Rotation2d()))
-		// );
-	}
+    // ========== Autopilot Examples ==========
+    // Uncomment these to enable Autopilot drive-to-pose commands during testing
+    //
+    // Example 1: Drive to scoring position (field coordinates)
+    // driverXbox.x().whileTrue(
+    // drivebase.driveToPoseAutopilot(() -> new Pose2d(5.0, 3.0, Rotation2d.fromDegrees(0)))
+    // );
+    //
+    // Example 2: Drive to amp with entry angle (approach from specific direction)
+    // driverXbox.y().whileTrue(
+    // drivebase.driveToPoseAutopilot(() -> FieldConstants.ampPose, true)
+    // );
+    //
+    // Example 3: Drive to pose and finish (command completes when at target)
+    // driverXbox.b().whileTrue(
+    // drivebase.driveToPoseAutopilotUntilFinished(
+    // () -> new Pose2d(2.0, 2.0, Rotation2d.fromDegrees(45)),
+    // 0.05, // 5cm tolerance
+    // Math.toRadians(2) // 2 degree tolerance
+    // )
+    // );
+    //
+    // Example 4: Static target convenience method
+    // driverXbox.povUp().whileTrue(
+    // drivebase.driveToPoseAutopilot(new Pose2d(1.0, 1.0, new Rotation2d()))
+    // );
+  }
 
-	/**
-	 * Use this to pass the autonomous command to the main {@link Robot} class.
-	 *
-	 * @return the command to run in autonomous
-	 */
-	public Command getAutonomousCommand() {
-		return autoChooser.getSelected();
-	}
+  /**
+   * Use this to pass the autonomous command to the main {@link Robot} class.
+   *
+   * @return the command to run in autonomous
+   */
+  public Command getAutonomousCommand() {
+    return autoChooser.getSelected();
+  }
 
-	/**
-	 * Sets brake mode on all swerve drive motors.
-	 *
-	 * @param brake
-	 *          true to enable brake mode, false for coast mode
-	 */
-	public void setMotorBrake(boolean brake) {
-		drivebase.setMotorBrake(brake);
-	}
+  /**
+   * Sets brake mode on all swerve drive motors.
+   *
+   * @param brake true to enable brake mode, false for coast mode
+   */
+  public void setMotorBrake(boolean brake) {
+    drivebase.setMotorBrake(brake);
+  }
 }
