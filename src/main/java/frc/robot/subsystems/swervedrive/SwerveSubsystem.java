@@ -41,6 +41,7 @@ import edu.wpi.first.math.util.Units;
 import edu.wpi.first.networktables.BooleanSubscriber;
 import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
@@ -55,6 +56,7 @@ import frc.robot.util.RobotLog;
 import swervelib.SwerveController;
 import swervelib.SwerveDrive;
 import swervelib.SwerveDriveTest;
+import swervelib.SwerveInputStream;
 import swervelib.math.SwerveMath;
 import swervelib.parser.SwerveControllerConfiguration;
 import swervelib.parser.SwerveDriveConfiguration;
@@ -159,6 +161,8 @@ public class SwerveSubsystem extends SubsystemBase {
     vision = new Vision(swerveDrive::getPose, swerveDrive.field);
   }
 
+  Optional<Alliance> prevAlliance = Optional.empty();
+
   /**
    * Called periodically to update swerve drive odometry and vision pose estimation.
    */
@@ -187,6 +191,9 @@ public class SwerveSubsystem extends SubsystemBase {
     DogLog.log("Field/Zone", currentZone.name());
     DogLog.log("Field/DistanceToZoneBoundary",
         FieldZones.getDistanceToNearestZoneBoundary(getPose()));
+
+
+
   }
 
   /**
@@ -545,9 +552,23 @@ public class SwerveSubsystem extends SubsystemBase {
     });
   }
 
-  public Command robotDriveCommand(Supplier<ChassisSpeeds> velocity,
-      BooleanSupplier robotRelative) {
+  public Command robotDriveCommand(SwerveInputStream velocity, BooleanSupplier robotRelative) {
     return run(() -> {
+      Optional<Alliance> ally = DriverStation.getAlliance();
+
+      if (ally.isPresent() && !ally.equals(prevAlliance)) {
+        // System.out.println("not running a ton!");
+
+        prevAlliance = ally;
+        if (ally.get() == Alliance.Red) { // <RED ACTION>
+          velocity.aim(FieldZones.HUB_POSE_RED);
+          DogLog.log("misc/team", "RED");
+        }
+        if (ally.get() == Alliance.Blue) { // <BLUE ACTION>
+          velocity.aim(FieldZones.HUB_POSE_BLUE);
+          DogLog.log("misc/team", "BLUE");
+        }
+      }
       ChassisSpeeds speeds = velocity.get();
       DogLog.log("Swerve/Input/AngularVelocity", speeds.omegaRadiansPerSecond);
       DogLog.log("Swerve/Input/XVelocity", speeds.vxMetersPerSecond);
