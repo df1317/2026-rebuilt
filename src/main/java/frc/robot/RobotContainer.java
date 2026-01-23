@@ -57,7 +57,8 @@ public class RobotContainer {
             double rightTrigger = Math.pow(driverXbox.getRightTriggerAxis(), 3);
             double triggerRotation = (leftTrigger - rightTrigger) * 0.3;
             return MathUtil.clamp(stickRotation + triggerRotation, -1.0, 1.0);
-          }).aim(FieldZones.HUB_POSE).aimWhile(driverXbox.b()).deadband(OperatorConstants.DEADBAND)
+          }).aim(FieldZones.HUB_POSE_RED).aimWhile(driverXbox.b())
+          .deadband(OperatorConstants.DEADBAND)
           .scaleTranslation(DrivebaseConstants.TRANSLATION_SCALE).allianceRelativeControl(true);
 
   /**
