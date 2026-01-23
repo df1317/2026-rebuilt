@@ -29,10 +29,14 @@ public final class FieldZones {
 	public static final double NEUTRAL_ZONE_END = FIELD_LENGTH - ALLIANCE_ZONE_DEPTH;
 	public static final double NEUTRAL_ZONE_CENTER = FIELD_LENGTH / 2;
 	public static final double HUB_WIDTH = Units.inchesToMeters(46.8);
-	public static final Pose2d HUB_POSE = new Pose2d(
+	public static final Pose2d HUB_POSE_BLUE = new Pose2d(
 			new Translation2d(FieldZones.ALLIANCE_ZONE_DEPTH + FieldZones.HUB_WIDTH / 2,
 					FieldZones.FIELD_WIDTH / 2),
-			new Rotation2d());
+			Rotation2d.kZero);
+	public static final Pose2d HUB_POSE_RED = new Pose2d(
+			new Translation2d(FIELD_LENGTH - HUB_POSE_BLUE.getX(), HUB_POSE_BLUE.getY()),
+			Rotation2d.kZero); // TODO: verify
+
 	private static final double OUTPOST_AREA_WIDTH = Units.inchesToMeters(71.0);
 	private static final double OUTPOST_AREA_DEPTH = Units.inchesToMeters(134.0);
 
@@ -101,8 +105,7 @@ public final class FieldZones {
 	 */
 	public static boolean isInOwnAllianceZone(Pose2d pose, boolean isRedAlliance) {
 		Zone zone = getZone(pose);
-		return isRedAlliance
-				? (zone == Zone.RED_ALLIANCE || zone == Zone.RED_OUTPOST)
+		return isRedAlliance ? (zone == Zone.RED_ALLIANCE || zone == Zone.RED_OUTPOST)
 				: (zone == Zone.BLUE_ALLIANCE || zone == Zone.BLUE_OUTPOST);
 	}
 
@@ -117,8 +120,7 @@ public final class FieldZones {
 	 */
 	public static boolean isInOpponentAllianceZone(Pose2d pose, boolean isRedAlliance) {
 		Zone zone = getZone(pose);
-		return isRedAlliance
-				? (zone == Zone.BLUE_ALLIANCE || zone == Zone.BLUE_OUTPOST)
+		return isRedAlliance ? (zone == Zone.BLUE_ALLIANCE || zone == Zone.BLUE_OUTPOST)
 				: (zone == Zone.RED_ALLIANCE || zone == Zone.RED_OUTPOST);
 	}
 
@@ -161,9 +163,7 @@ public final class FieldZones {
 	 */
 	public static boolean hasCrossedCenterLine(Pose2d pose, boolean isRedAlliance) {
 		double x = pose.getX();
-		return isRedAlliance
-				? x < NEUTRAL_ZONE_CENTER
-				: x > NEUTRAL_ZONE_CENTER;
+		return isRedAlliance ? x < NEUTRAL_ZONE_CENTER : x > NEUTRAL_ZONE_CENTER;
 	}
 
 	public enum Zone {
