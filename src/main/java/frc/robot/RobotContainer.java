@@ -13,9 +13,9 @@ import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Constants.DrivebaseConstants;
 import frc.robot.Constants.OperatorConstants;
+import frc.robot.subsystems.swervedrive.OurSwerveInputStream;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
 import frc.robot.subsystems.swervedrive.avoidance.FieldZones;
-import swervelib.SwerveInputStream;
 
 /**
  * ---------- RobotContainer Class --- This class is where the bulk of the robot should be declared.
@@ -42,12 +42,11 @@ public class RobotContainer {
 
 	/**
 	 * ---------- Swerve Drive Input Streams ------------
-	 */
-	/**
+	 * --------------------------------------------------
 	 * Converts driver input into a field-relative ChassisSpeeds that is controlled by angular
 	 * velocity.
 	 */
-	SwerveInputStream driveAngularVelocity = SwerveInputStream
+	OurSwerveInputStream driveAngularVelocity = OurSwerveInputStream
 			.of(drivebase.getSwerveDrive(), () -> driverXbox.getLeftY() * -1,
 					() -> driverXbox.getLeftX() * -1)
 			.withControllerRotationAxis(() -> {
@@ -65,13 +64,14 @@ public class RobotContainer {
 	/**
 	 * Clone's the angular velocity input stream and converts it to a fieldRelative input stream.
 	 */
-	SwerveInputStream driveDirectAngle = driveAngularVelocity.copy()
+	OurSwerveInputStream driveDirectAngle = driveAngularVelocity.copy()
 			.withControllerHeadingAxis(driverXbox::getRightX, driverXbox::getRightY).headingWhile(true);
 
 	/**
 	 * Clone's the angular velocity input stream and converts it to a robotRelative input stream.
 	 */
-	SwerveInputStream driveRobotOriented = driveAngularVelocity.copy().robotRelative(true).allianceRelativeControl(false);
+	OurSwerveInputStream driveRobotOriented = driveAngularVelocity.copy().robotRelative(true)
+			.allianceRelativeControl(false);
 
 	/**
 	 * The container for the robot. Contains subsystems, input devices, and commands.
