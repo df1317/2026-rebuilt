@@ -91,9 +91,7 @@ public class RobotContainer {
 	}
 
 	/**
-	 * ---------- Configure the button bindings --- Use this method to define your button->command
-	 * mappings. Buttons can be created by instantiating a {@link CommandButton} with a
-	 * {@link Command} and then calling the various button-press functions on it. ---
+	 * Configure the button bindings for driver and operator controls.
 	 */
 	private void configureBindings() {
 		Command driveFieldOrientedAnglularVelocity = drivebase.robotDriveCommand(driveAngularVelocity, () -> robotRelative);
