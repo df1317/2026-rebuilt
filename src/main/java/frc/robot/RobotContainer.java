@@ -1,8 +1,5 @@
 package frc.robot;
 
-import static edu.wpi.first.units.Units.Meters;
-
-import java.io.File;
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -17,17 +14,21 @@ import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Constants.DrivebaseConstants;
 import frc.robot.Constants.OperatorConstants;
-import frc.robot.subsystems.shooter.ShooterSubsystem;
+import frc.robot.subsystems.ShooterSubsystem;
 import frc.robot.subsystems.swervedrive.OurSwerveInputStream;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
 import frc.robot.subsystems.swervedrive.avoidance.FieldZones;
 
+import java.io.File;
+
+import static edu.wpi.first.units.Units.Meters;
+import static edu.wpi.first.units.Units.RPM;
+
 /**
- * ---------- RobotContainer Class --- This class is where the bulk of the robot should be declared.
- * Since Command-based is a "declarative" paradigm, very little robot logic should actually be
- * handled in the {@link Robot} periodic methods (other than the scheduler calls). Instead, the
- * structure of the robot (including subsystems, commands, and trigger mappings) should be declared
- * here. ---
+ * ---------- RobotContainer Class --- This class is where the bulk of the robot should be declared. Since Command-based
+ * is a "declarative" paradigm, very little robot logic should actually be handled in the {@link Robot} periodic methods
+ * (other than the scheduler calls). Instead, the structure of the robot (including subsystems, commands, and trigger
+ * mappings) should be declared here. ---
  */
 public class RobotContainer {
 
@@ -47,10 +48,8 @@ public class RobotContainer {
 	public boolean robotRelative = false;
 
 	/**
-	 * ---------- Swerve Drive Input Streams ------------
-	 * --------------------------------------------------
-	 * Converts driver input into a field-relative ChassisSpeeds that is controlled by angular
-	 * velocity.
+	 * ---------- Swerve Drive Input Streams ------------ -------------------------------------------------- Converts
+	 * driver input into a field-relative ChassisSpeeds that is controlled by angular velocity.
 	 */
 	OurSwerveInputStream driveAngularVelocity = OurSwerveInputStream
 			.of(drivebase.getSwerveDrive(), () -> driverXbox.getLeftY() * -1,
@@ -112,7 +111,7 @@ public class RobotContainer {
 		// X: Hold to shoot based on distance to target
 		driverXbox.x().whileTrue(shooter.shootForDistanceCommand(this::getDistanceToTarget));
 		// Y: Hold to shoot at fixed RPM
-		driverXbox.y().whileTrue(shooter.shootCommand(3500));
+		driverXbox.y().whileTrue(shooter.shootCommand(RPM.of(3500)));
 
 		// Center modules (test mode only)
 		driverXbox.back().whileTrue(

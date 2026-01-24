@@ -6,8 +6,10 @@ import frc.robot.util.DevMode;
 import swervelib.math.Matter;
 import swervelib.telemetry.SwerveDriveTelemetry.TelemetryVerbosity;
 
-import static edu.wpi.first.units.Units.Inches;
-import static edu.wpi.first.units.Units.Meters;
+import static edu.wpi.first.units.Units.*;
+
+import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.units.measure.Voltage;
 
 /**
  * ---------- Constants --- The Constants class provides a convenient place for teams to hold robot-wide numerical or
@@ -138,7 +140,10 @@ public final class Constants {
 		public static final double KV = 0.000175;
 
 		// Velocity control
-		public static final double VELOCITY_TOLERANCE = 100.0; // RPM
+		public static final AngularVelocity VELOCITY_TOLERANCE = RPM.of(100);
 		public static final double AT_SPEED_DEBOUNCE_TIME = 0.1; // seconds
+
+		// SysId configuration
+		public static final Voltage SYSID_STEP_VOLTAGE = Volts.of(7);
 	}
 }

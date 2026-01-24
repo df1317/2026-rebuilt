@@ -1,6 +1,6 @@
-package frc.robot.subsystems.shooter;
+package frc.robot.subsystems;
 
-import static edu.wpi.first.units.Units.Meters;
+import static edu.wpi.first.units.Units.*;
 
 import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
@@ -15,11 +15,13 @@ import dev.doglog.DogLog;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
+import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.wpilibj.util.Color;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Constants.ShooterConstants;
 import java.util.function.Supplier;
 
@@ -30,8 +32,9 @@ public class ShooterSubsystem extends SubsystemBase {
 	private final SparkClosedLoopController controller;
 	private final Debouncer atSpeedDebouncer;
 	private final InterpolatingDoubleTreeMap distanceToRPM = new InterpolatingDoubleTreeMap();
+	private final SysIdRoutine sysIdRoutine;
 
-	private double targetVelocityRPM = 0.0;
+	private AngularVelocity targetVelocity = RPM.of(0);
 
 	public ShooterSubsystem() {
 		motor = new SparkMax(ShooterConstants.MOTOR_ID, MotorType.kBrushless);
@@ -41,6 +44,17 @@ public class ShooterSubsystem extends SubsystemBase {
 
 		configureMotor();
 		populateLookupTable();
+
+		sysIdRoutine = new SysIdRoutine(
+				new SysIdRoutine.Config(
+						null,
+						ShooterConstants.SYSID_STEP_VOLTAGE,
+						null,
+						state -> DogLog.log("Shooter/SysIdState", state.toString())),
+				new SysIdRoutine.Mechanism(
+						voltage -> motor.setVoltage(voltage.in(Volts)),
+						null,
+						this));
 	}
 
 	private void configureMotor() {
@@ -70,20 +84,24 @@ public class ShooterSubsystem extends SubsystemBase {
 
 	@Override
 	public void periodic() {
+		AngularVelocity currentVelocity = getVelocity();
+
+		// Status for LED strip
 		DogLog.forceNt.log("Shooter/Status", getStatusColor().toHexString());
 
-		DogLog.log("Shooter/VelocityRPM", getVelocity());
-		DogLog.log("Shooter/TargetVelocityRPM", targetVelocityRPM);
+		// Velocity tracking
+		DogLog.log("Shooter/VelocityRPM", currentVelocity.in(RPM));
+		DogLog.log("Shooter/TargetVelocityRPM", targetVelocity.in(RPM));
+		DogLog.log("Shooter/VelocityErrorRPM", targetVelocity.minus(currentVelocity).in(RPM));
 		DogLog.log("Shooter/AtSpeed", isAtSpeed());
+
+		// Motor data
+		DogLog.log("Shooter/MotorCurrentAmps", motor.getOutputCurrent());
+		DogLog.log("Shooter/MotorVoltage", motor.getBusVoltage() * motor.getAppliedOutput());
 	}
 
-	public double getRPMForDistance(Distance distance) {
-		return distanceToRPM.get(distance.in(Meters));
-	}
-
-	public void setVelocity(double rpm) {
-		targetVelocityRPM = rpm;
-		controller.setSetpoint(rpm, ControlType.kVelocity);
+	public AngularVelocity getRPMForDistance(Distance distance) {
+		return RPM.of(distanceToRPM.get(distance.in(Meters)));
 	}
 
 	public void setVelocityForDistance(Distance distance) {
@@ -91,57 +109,79 @@ public class ShooterSubsystem extends SubsystemBase {
 	}
 
 	public void stop() {
-		targetVelocityRPM = 0.0;
+		targetVelocity = RPM.of(0);
 		motor.stopMotor();
 	}
 
-	public double getVelocity() {
-		return encoder.getVelocity();
+	public AngularVelocity getVelocity() {
+		return RPM.of(encoder.getVelocity());
+	}
+
+	public void setVelocity(AngularVelocity velocity) {
+		targetVelocity = velocity;
+		controller.setSetpoint(velocity.in(RPM), ControlType.kVelocity);
 	}
 
 	public boolean isAtSpeed() {
-		double error = Math.abs(targetVelocityRPM - getVelocity());
-		boolean withinTolerance = error < ShooterConstants.VELOCITY_TOLERANCE && targetVelocityRPM > 0;
+		double error = Math.abs(targetVelocity.minus(getVelocity()).in(RPM));
+		boolean withinTolerance = error < ShooterConstants.VELOCITY_TOLERANCE.in(RPM) && targetVelocity.in(RPM) > 0;
 		return atSpeedDebouncer.calculate(withinTolerance);
 	}
 
-	private static final Color COLOR_RED = new Color(255, 0, 0);
-	private static final Color COLOR_YELLOW = new Color(255, 255, 0);
-	private static final Color COLOR_GREEN = new Color(0, 255, 0);
-
-	private Color getStatusColor() {
-		if (targetVelocityRPM <= 0) {
-			return COLOR_RED;
+	public Color getStatusColor() {
+		if (targetVelocity.in(RPM) <= 0) {
+			return Color.kRed;
 		} else if (isAtSpeed()) {
-			return COLOR_GREEN;
+			return Color.kGreen;
 		} else {
-			return COLOR_YELLOW;
+			return Color.kYellow;
 		}
 	}
 
 	// ==================== Commands ====================
 
-	public Command spinUpCommand(double rpm) {
-		return Commands.runOnce(() -> setVelocity(rpm), this);
+	public Command spinUpCommand(AngularVelocity velocity) {
+		return Commands.runOnce(() -> setVelocity(velocity), this);
 	}
 
 	public Command spinUpForDistanceCommand(Supplier<Distance> distance) {
 		return Commands.run(() -> setVelocityForDistance(distance.get()), this);
 	}
 
-	public Command spinUpAndWaitCommand(double rpm) {
-		return Commands.sequence(spinUpCommand(rpm), Commands.waitUntil(this::isAtSpeed));
+	public Command spinUpAndWaitCommand(AngularVelocity velocity) {
+		return Commands.sequence(spinUpCommand(velocity), Commands.waitUntil(this::isAtSpeed));
 	}
 
 	public Command stopCommand() {
 		return Commands.runOnce(this::stop, this);
 	}
 
-	public Command shootCommand(double rpm) {
-		return Commands.startEnd(() -> setVelocity(rpm), this::stop, this);
+	public Command shootCommand(AngularVelocity velocity) {
+		return Commands.startEnd(() -> setVelocity(velocity), this::stop, this);
 	}
 
 	public Command shootForDistanceCommand(Supplier<Distance> distance) {
 		return Commands.startEnd(() -> setVelocityForDistance(distance.get()), this::stop, this);
+	}
+
+	// ==================== SysId ====================
+
+	public Command sysIdQuasistatic(SysIdRoutine.Direction direction) {
+		return sysIdRoutine.quasistatic(direction);
+	}
+
+	public Command sysIdDynamic(SysIdRoutine.Direction direction) {
+		return sysIdRoutine.dynamic(direction);
+	}
+
+	public Command sysIdFullCommand() {
+		return Commands.sequence(
+				sysIdQuasistatic(SysIdRoutine.Direction.kForward),
+				Commands.waitSeconds(1),
+				sysIdQuasistatic(SysIdRoutine.Direction.kReverse),
+				Commands.waitSeconds(1),
+				sysIdDynamic(SysIdRoutine.Direction.kForward),
+				Commands.waitSeconds(1),
+				sysIdDynamic(SysIdRoutine.Direction.kReverse));
 	}
 }
