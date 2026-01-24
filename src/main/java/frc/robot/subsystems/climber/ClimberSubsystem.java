@@ -1,4 +1,4 @@
-package frc.robot.subsystems;
+package frc.robot.subsystems.climber;
 
 import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
@@ -10,7 +10,6 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
-import dev.doglog.DogLog;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ElevatorFeedforward;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
@@ -18,12 +17,7 @@ import edu.wpi.first.units.measure.MutDistance;
 import edu.wpi.first.units.measure.MutLinearVelocity;
 import edu.wpi.first.units.measure.MutVoltage;
 import edu.wpi.first.units.measure.Voltage;
-import edu.wpi.first.wpilibj.smartdashboard.Mechanism2d;
-import edu.wpi.first.wpilibj.smartdashboard.MechanismLigament2d;
-import edu.wpi.first.wpilibj.smartdashboard.MechanismRoot2d;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.util.Color;
-import edu.wpi.first.wpilibj.util.Color8Bit;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -44,28 +38,28 @@ import static frc.robot.Constants.ClimberConstants.*;
  */
 public class ClimberSubsystem extends SubsystemBase {
 
-	// ==================== Mechanism2d Visualization ====================
-	private static final double VIZ_WIDTH = 0.5;
-	private static final double VIZ_HEIGHT = MAX_HEIGHT.in(Meters) * 1.2;
 	// ==================== Hardware ====================
 	private final SparkMax motorLeft;
 	private final SparkMax motorRight;
 	private final SparkClosedLoopController controller;
 	private final RelativeEncoder encoder;
+
 	// ==================== Control State ====================
 	private final TrapezoidProfile profile;
 	private final ElevatorFeedforward feedforward;
-	// SysId mutable holders
+	private TrapezoidProfile.State currentState = new TrapezoidProfile.State();
+	private TrapezoidProfile.State goalState = new TrapezoidProfile.State();
+	private double lastUpdateTimestamp;
+
+	// ==================== SysId ====================
 	private final MutVoltage appliedVoltage = Volts.mutable(0);
 	private final MutDistance distance = Meters.mutable(0);
 	private final MutLinearVelocity velocity = MetersPerSecond.mutable(0);
 	private final SysIdRoutine sysIdRoutine;
-	private final Mechanism2d mechanism2d;
-	private final MechanismLigament2d elevatorLigament;
-	private final MechanismLigament2d setpointLigament;
-	private TrapezoidProfile.State currentState = new TrapezoidProfile.State();
-	private TrapezoidProfile.State goalState = new TrapezoidProfile.State();
-	private double lastUpdateTimestamp;
+
+	// ==================== Visualization & Telemetry ====================
+	private final ClimberVisualization visualization;
+	private final ClimberTelemetry telemetry;
 
 	/**
 	 * Creates a new ClimberSubsystem.
@@ -123,27 +117,8 @@ public class ClimberSubsystem extends SubsystemBase {
 								.linearVelocity(velocity.mut_replace(getVelocityMetersPerSecond(), MetersPerSecond)),
 						this));
 
-		// Set up Mechanism2d visualization (like YAMS)
-		mechanism2d = new Mechanism2d(VIZ_WIDTH, VIZ_HEIGHT);
-
-		// Root at the bottom center
-		MechanismRoot2d root = mechanism2d.getRoot("ClimberRoot", VIZ_WIDTH / 2, 0.05);
-
-		// Hard limit indicators
-		mechanism2d.getRoot("MinLimit", VIZ_WIDTH / 2 - 0.05, 0.05)
-				.append(new MechanismLigament2d("Min", MIN_HEIGHT.in(Meters) + 0.01, 90, 2, new Color8Bit(Color.kRed)));
-		mechanism2d.getRoot("MaxLimit", VIZ_WIDTH / 2 - 0.05, 0.05)
-				.append(new MechanismLigament2d("Max", MAX_HEIGHT.in(Meters), 90, 2, new Color8Bit(Color.kLimeGreen)));
-
-		// Setpoint indicator (thin white line showing target)
-		setpointLigament = root.append(
-				new MechanismLigament2d("Setpoint", 0, 90, 3, new Color8Bit(Color.kWhite)));
-
-		// Main elevator ligament (thick cyan showing actual position)
-		elevatorLigament = root.append(
-				new MechanismLigament2d("Elevator", 0, 90, 6, new Color8Bit(Color.kCyan)));
-
-		SmartDashboard.putData("Climber/mechanism", mechanism2d);
+		visualization = new ClimberVisualization();
+		telemetry = new ClimberTelemetry(motorLeft, encoder);
 	}
 
 	// ==================== Periodic ====================
@@ -181,7 +156,16 @@ public class ClimberSubsystem extends SubsystemBase {
 			motorLeft.stopMotor();
 		}
 
-		logTelemetry(measuredHeight);
+		visualization.update(measuredHeight, goalState.position, getStatusColor());
+		telemetry.log(
+				measuredHeight,
+				goalState.position,
+				currentState.position,
+				currentState.velocity,
+				isAtGoal(),
+				isAtTop(),
+				isAtBottom(),
+				getStatusColor());
 	}
 
 	// ==================== State Queries ====================
@@ -305,40 +289,5 @@ public class ClimberSubsystem extends SubsystemBase {
 				.andThen(Commands.waitSeconds(pauseTimeout))
 				.andThen(sysIdRoutine.dynamic(Direction.kReverse).withTimeout(dynamicTimeout))
 				.withName("Climber SysId");
-	}
-
-	// ==================== Telemetry ====================
-	private void logTelemetry(double measuredHeight) {
-		// Update Mechanism2d visualization
-		elevatorLigament.setLength(measuredHeight);
-		setpointLigament.setLength(goalState.position);
-
-		// Change color based on state (like YAMS status indicators)
-		if (isAtGoal()) {
-			elevatorLigament.setColor(new Color8Bit(Color.kGreen));
-		} else if (isAtTop() || isAtBottom()) {
-			elevatorLigament.setColor(new Color8Bit(Color.kOrange));
-		} else {
-			elevatorLigament.setColor(new Color8Bit(Color.kCyan));
-		}
-
-		// Status for LED strip
-		DogLog.forceNt.log("Climber/Status", getStatusColor().toHexString());
-
-		// Position & velocity (always logged)
-		DogLog.log("Climber/HeightMeters", measuredHeight);
-		DogLog.log("Climber/GoalHeightMeters", goalState.position);
-		DogLog.log("Climber/ProfilePositionMeters", currentState.position);
-		DogLog.log("Climber/ProfileVelocityMps", currentState.velocity);
-
-		// State flags
-		DogLog.log("Climber/AtGoal", isAtGoal());
-		DogLog.log("Climber/AtTop", isAtTop());
-		DogLog.log("Climber/AtBottom", isAtBottom());
-
-		// Motor data
-		DogLog.log("Climber/EncoderRotations", encoder.getPosition());
-		DogLog.log("Climber/MotorCurrentAmps", motorLeft.getOutputCurrent());
-		DogLog.log("Climber/MotorVoltage", motorLeft.getBusVoltage() * motorLeft.getAppliedOutput());
 	}
 }
