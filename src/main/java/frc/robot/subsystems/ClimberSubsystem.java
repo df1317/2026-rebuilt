@@ -267,7 +267,7 @@ public class ClimberSubsystem extends SubsystemBase {
 	 */
 	public Command manualControlCommand(DoubleSupplier speedInput) {
 		return Commands.run(() -> {
-			double input = MathUtil.applyDeadband(speedInput.getAsDouble(), 0.1);
+			double input = speedInput.getAsDouble();
 			double targetHeight = input > 0
 					? MAX_HEIGHT.in(Meters)
 					: (input < 0 ? MIN_HEIGHT.in(Meters) : currentState.position);

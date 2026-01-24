@@ -128,7 +128,7 @@ public class RobotContainer {
 
 		// Trigger: Manual control with joystick Y axis
 		m_JoystickL.trigger().whileTrue(
-				climber.manualControlCommand(() -> -m_JoystickL.getY()));
+				climber.manualControlCommand(() -> MathUtil.applyDeadband(-m_JoystickL.getY(), 0.1)));
 
 		// ========== Autopilot Examples ==========
 		// Uncomment these to enable Autopilot drive-to-pose commands during testing
