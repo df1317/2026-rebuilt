@@ -2,14 +2,12 @@ package frc.robot;
 
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.units.measure.*;
 import frc.robot.util.DevMode;
 import swervelib.math.Matter;
 import swervelib.telemetry.SwerveDriveTelemetry.TelemetryVerbosity;
 
 import static edu.wpi.first.units.Units.*;
-
-import edu.wpi.first.units.measure.AngularVelocity;
-import edu.wpi.first.units.measure.Voltage;
 
 /**
  * ---------- Constants --- The Constants class provides a convenient place for teams to hold robot-wide numerical or
@@ -147,16 +145,43 @@ public final class Constants {
 		public static final Voltage SYSID_STEP_VOLTAGE = Volts.of(7);
 	}
 
-	public static class HopperConstants {
+	public static class ClimberConstants {
 
-		// Motor CAN ID
-		public static final int MOTOR_ID = 30;
+		// Motor CAN IDs
+		public static final int MOTOR_LEFT_ID = 24;
+		public static final int MOTOR_RIGHT_ID = 25;
 
 		// Motor configuration
 		public static final boolean INVERTED = false;
 		public static final int CURRENT_LIMIT = 40;
 
-		// PID constants (tune these for your wheel)
+		// Mechanism geometry
+		public static final Distance MAX_HEIGHT = Meters.of(1.23);
+		public static final Distance MIN_HEIGHT = Meters.of(0.0);
+		public static final double ROTATIONS_PER_METER = 42.4;
+		public static final Distance POSITION_TOLERANCE = Centimeters.of(2);
+
+		// Motion profile constraints
+		public static final LinearVelocity MAX_VELOCITY = MetersPerSecond.of(1.0);
+		public static final LinearAcceleration MAX_ACCELERATION = MetersPerSecondPerSecond.of(1.0);
+
+		// PID constants (tune with SysId)
+		public static final double KP = 0.00065;
+		public static final double KI = 0.0;
+		public static final double KD = 0.0;
+
+		// Feedforward constants (tune with SysId)
+		public static final double KS = 0.37;
+		public static final double KG = 0.49;
+		public static final double KV = 4.7;
+	}
+
+	public static class HopperConstants {
+
+		// Motor CAN ID
+		public static final int MOTOR_ID = 30;
+    
+    	// PID constants (tune these for your wheel)
 		public static final double KP = 0.0002;
 		public static final double KI = 0.0;
 		public static final double KD = 0.0;
@@ -173,5 +198,5 @@ public final class Constants {
 		public static final double WheelSpinupRPM = 500; // RPM
 		// Wheel idle velocity
 		public static final double WheelSpindownRPM = 0; // RPM
-	}
+  }
 }

@@ -14,6 +14,7 @@ import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Constants.DrivebaseConstants;
 import frc.robot.Constants.OperatorConstants;
+import frc.robot.subsystems.climber.ClimberSubsystem;
 import frc.robot.subsystems.ShooterSubsystem;
 import frc.robot.subsystems.swervedrive.OurSwerveInputStream;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
@@ -44,6 +45,7 @@ public class RobotContainer {
 	 */
 	private final SwerveSubsystem drivebase = new SwerveSubsystem(
 			new File(Filesystem.getDeployDirectory(), "swerve/neo"));
+	private final ClimberSubsystem climber = new ClimberSubsystem();
 	private final ShooterSubsystem shooter = new ShooterSubsystem();
 	public boolean robotRelative = false;
 
@@ -116,6 +118,17 @@ public class RobotContainer {
 		// Center modules (test mode only)
 		driverXbox.back().whileTrue(
 				Commands.either(drivebase.centerModulesCommand(), Commands.none(), DriverStation::isTest));
+
+		// ========== Climber Controls (Left Joystick) ==========
+		// Thumb cluster top: Extend climber
+		m_JoystickL.button(3).whileTrue(climber.extendCommand());
+
+		// Thumb cluster bottom: Retract climber
+		m_JoystickL.button(4).whileTrue(climber.retractCommand());
+
+		// Trigger: Manual control with joystick Y axis
+		m_JoystickL.trigger().whileTrue(
+				climber.manualControlCommand(() -> MathUtil.applyDeadband(-m_JoystickL.getY(), 0.1)));
 
 		// ========== Autopilot Examples ==========
 		// Uncomment these to enable Autopilot drive-to-pose commands during testing
