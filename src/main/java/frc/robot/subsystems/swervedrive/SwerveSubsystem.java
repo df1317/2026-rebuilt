@@ -56,7 +56,6 @@ import frc.robot.util.RobotLog;
 import swervelib.SwerveController;
 import swervelib.SwerveDrive;
 import swervelib.SwerveDriveTest;
-import swervelib.SwerveInputStream;
 import swervelib.math.SwerveMath;
 import swervelib.parser.SwerveControllerConfiguration;
 import swervelib.parser.SwerveDriveConfiguration;
@@ -578,7 +577,7 @@ public class SwerveSubsystem extends SubsystemBase {
 		});
 	}
 
-	public Command robotDriveCommand(SwerveInputStream velocity, BooleanSupplier robotRelative) {
+	public Command robotDriveCommand(OurSwerveInputStream velocity, BooleanSupplier robotRelative) {
 		return run(() -> {
 			Optional<Alliance> ally = DriverStation.getAlliance();
 
