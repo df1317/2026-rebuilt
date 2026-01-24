@@ -101,7 +101,9 @@ public class ShooterSubsystem extends SubsystemBase {
 	}
 
 	public AngularVelocity getRPMForDistance(Distance distance) {
-		return RPM.of(distanceToRPM.get(distance.in(Meters)));
+		double distanceMeters = distance.in(Meters);
+		double clampedDistance = Math.max(1.0, Math.min(6.0, distanceMeters));
+		return RPM.of(distanceToRPM.get(clampedDistance));
 	}
 
 	public void setVelocityForDistance(Distance distance) {
@@ -161,7 +163,7 @@ public class ShooterSubsystem extends SubsystemBase {
 	}
 
 	public Command shootForDistanceCommand(Supplier<Distance> distance) {
-		return Commands.startEnd(() -> setVelocityForDistance(distance.get()), this::stop, this);
+		return Commands.run(() -> setVelocityForDistance(distance.get()), this).finallyDo(this::stop);
 	}
 
 	// ==================== SysId ====================
