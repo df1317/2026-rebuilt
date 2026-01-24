@@ -1,10 +1,12 @@
 package frc.robot;
 
-import static edu.wpi.first.units.Units.Inches;
-import static edu.wpi.first.units.Units.Meters;
+import static edu.wpi.first.units.Units.*;
 
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.units.measure.Distance;
+import edu.wpi.first.units.measure.LinearAcceleration;
+import edu.wpi.first.units.measure.LinearVelocity;
 import frc.robot.util.DevMode;
 import swervelib.math.Matter;
 import swervelib.telemetry.SwerveDriveTelemetry.TelemetryVerbosity;
@@ -125,5 +127,36 @@ public final class Constants {
 
 		// Joystick Deadband
 		public static final double DEADBAND = 0.1;
+	}
+
+	public static class ClimberConstants {
+
+		// Motor CAN IDs
+		public static final int MOTOR_LEFT_ID = 24;
+		public static final int MOTOR_RIGHT_ID = 25;
+
+		// Motor configuration
+		public static final boolean INVERTED = false;
+		public static final int CURRENT_LIMIT = 40;
+
+		// Mechanism geometry
+		public static final Distance MAX_HEIGHT = Meters.of(1.23);
+		public static final Distance MIN_HEIGHT = Meters.of(0.0);
+		public static final double ROTATIONS_PER_METER = 42.4;
+		public static final Distance POSITION_TOLERANCE = Centimeters.of(2);
+
+		// Motion profile constraints
+		public static final LinearVelocity MAX_VELOCITY = MetersPerSecond.of(1.0);
+		public static final LinearAcceleration MAX_ACCELERATION = MetersPerSecondPerSecond.of(1.0);
+
+		// PID constants (tune with SysId)
+		public static final double KP = 0.00065;
+		public static final double KI = 0.0;
+		public static final double KD = 0.0;
+
+		// Feedforward constants (tune with SysId)
+		public static final double KS = 0.37;
+		public static final double KG = 0.49;
+		public static final double KV = 4.7;
 	}
 }
