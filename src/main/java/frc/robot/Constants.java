@@ -1,20 +1,13 @@
 package frc.robot;
 
-import static edu.wpi.first.units.Units.*;
-
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.units.measure.Distance;
-import edu.wpi.first.units.measure.LinearAcceleration;
-import edu.wpi.first.units.measure.LinearVelocity;
+import edu.wpi.first.units.measure.*;
 import frc.robot.util.DevMode;
 import swervelib.math.Matter;
 import swervelib.telemetry.SwerveDriveTelemetry.TelemetryVerbosity;
 
 import static edu.wpi.first.units.Units.*;
-
-import edu.wpi.first.units.measure.AngularVelocity;
-import edu.wpi.first.units.measure.Voltage;
 
 /**
  * ---------- Constants --- The Constants class provides a convenient place for teams to hold robot-wide numerical or
@@ -128,7 +121,7 @@ public final class Constants {
 		// Joystick Deadband
 		public static final double DEADBAND = 0.1;
 	}
-	
+
 	public static class ShooterConstants {
 
 		// Motor CAN ID
@@ -137,7 +130,7 @@ public final class Constants {
 		// Motor configuration
 		public static final boolean INVERTED = false;
 		public static final int CURRENT_LIMIT = 40;
-  
+
 		// PID constants (tune these for your flywheel)
 		public static final double KP = 0.0002;
 		public static final double KI = 0.0;
@@ -151,12 +144,16 @@ public final class Constants {
 		// SysId configuration
 		public static final Voltage SYSID_STEP_VOLTAGE = Volts.of(7);
 	}
-  
-  public static class ClimberConstants {
+
+	public static class ClimberConstants {
 
 		// Motor CAN IDs
 		public static final int MOTOR_LEFT_ID = 24;
 		public static final int MOTOR_RIGHT_ID = 25;
+
+		// Motor configuration
+		public static final boolean INVERTED = false;
+		public static final int CURRENT_LIMIT = 40;
 
 		// Mechanism geometry
 		public static final Distance MAX_HEIGHT = Meters.of(1.23);
@@ -177,5 +174,5 @@ public final class Constants {
 		public static final double KS = 0.37;
 		public static final double KG = 0.49;
 		public static final double KV = 4.7;
-  }
+	}
 }
