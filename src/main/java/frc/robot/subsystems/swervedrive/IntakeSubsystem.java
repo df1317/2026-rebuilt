@@ -3,9 +3,11 @@ package frc.robot.subsystems.swervedrive;
 import com.revrobotics.PersistMode;
 import com.revrobotics.ResetMode;
 import com.revrobotics.spark.ClosedLoopSlot;
+import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class IntakeSubsystem extends SubsystemBase {
@@ -13,7 +15,7 @@ public class IntakeSubsystem extends SubsystemBase {
   private final int positionMotorID = -1;
   private final int spinMotorID = -1;
 
-  private SparkMax positonMotor;
+  private SparkMax positionMotor;
   private SparkMax spinMotor;
 
   public SparkBaseConfig configPosition;
@@ -41,8 +43,37 @@ public class IntakeSubsystem extends SubsystemBase {
     spinMotor.configure(configSpin, ResetMode.kNoResetSafeParameters,
         PersistMode.kNoPersistParameters);
 
-    positonMotor.configure(configPosition, ResetMode.kNoResetSafeParameters,
+    positionMotor.configure(configPosition, ResetMode.kNoResetSafeParameters,
         PersistMode.kNoPersistParameters);
+  }
 
+  public Command goOut() {
+
+    return runOnce(() -> {
+
+      positionMotor.getClosedLoopController().setSetpoint(5, ControlType.kPosition, positionSlot);
+    });
+  }
+
+  public Command goIn() {
+
+    return runOnce(() -> {
+
+      positionMotor.getClosedLoopController().setSetpoint(0, ControlType.kPosition, positionSlot);
+    });
+  }
+
+  public Command spinUp() {
+
+    return runOnce(() -> {
+      spinMotor.getClosedLoopController().setSetpoint(2000, ControlType.kVelocity);
+    });
+  }
+
+  public Command spinDown() {
+
+    return runOnce(() -> {
+      spinMotor.getClosedLoopController().setSetpoint(0, ControlType.kVelocity);
+    });
   }
 }
