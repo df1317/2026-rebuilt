@@ -178,25 +178,13 @@ public final class Constants {
 
 	public static class HopperConstants {
 
-		// Motor CAN ID
+		// Motor configuration
 		public static final int MOTOR_ID = 30;
-    
-    	// PID constants (tune these for your wheel)
-		public static final double KP = 0.0002;
-		public static final double KI = 0.0;
-		public static final double KD = 0.0;
-		public static final double KV = 0.000175;
+		public static final int CURRENT_LIMIT = 35;
+		public static final boolean INVERTED = false;
 
-		// Velocity control
-		public static final AngularVelocity VELOCITY_TOLERANCE = RPM.of(100);
-		public static final double AT_SPEED_DEBOUNCE_TIME = 0.1; // seconds
-
-		// SysId configuration
-		public static final Voltage SYSID_STEP_VOLTAGE = Volts.of(7);
-
-		// Wheel active velocity
-		public static final double WheelSpinupRPM = 500; // RPM
-		// Wheel idle velocity
-		public static final double WheelSpindownRPM = 0; // RPM
-  }
+		// Feed speed (duty cycle, -1.0 to 1.0)
+		public static final double FEED_SPEED = 0.5;
+		public static final double REVERSE_SPEED = -0.3;
+	}
 }
