@@ -167,9 +167,9 @@ public final class Constants {
 
 		// Debounce time for state checks
 		public static final double AT_POSITION_DEBOUNCE_TIME = 0.1;
-  }
+	}
 
-  public static class ShooterConstants {
+	public static class ShooterConstants {
 
 		// Motor CAN ID
 		public static final int MOTOR_ID = 30;
