@@ -16,6 +16,8 @@ Quick reference documentation for robot controls and configuration.
 |----------------|-----------------------|--------------------------------------------------------|
 | `Button A`     | Zero gyro             | Resets gyro heading                                    |
 | `Button B`     | Auto-aim at hub       | Rotate to face hub while allowing translation (hold)  |
+| `Button X`     | Shoot (distance)      | Spin shooter based on distance to hub (hold)          |
+| `Button Y`     | Shoot (fixed)         | Spin shooter at fixed 3500 RPM (hold)                 |
 | `Left Bumper`  | Lock drive            | Locks drivebase                                        |
 | `Right Bumper` | Toggle robot relative | Switches between field and robot relative driving      |
 
@@ -61,6 +63,8 @@ Quick reference documentation for robot controls and configuration.
 | CanCoder    | Front Left  | `21` |
 | CanCoder    | Back Right  | `22` |
 | CanCoder    | Back Left   | `23` |
+|             |             |      |
+| Shooter     | Motor       | `30` |
 
 ## DIO Constants
 

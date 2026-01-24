@@ -1,25 +1,22 @@
 package frc.robot;
 
-import static edu.wpi.first.units.Units.Inches;
-import static edu.wpi.first.units.Units.Meters;
-
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
 import frc.robot.util.DevMode;
 import swervelib.math.Matter;
 import swervelib.telemetry.SwerveDriveTelemetry.TelemetryVerbosity;
 
+import static edu.wpi.first.units.Units.Inches;
+import static edu.wpi.first.units.Units.Meters;
+
 /**
- * ---------- Constants --- The Constants class provides a convenient place for
- * teams to hold robot-wide numerical or
- * boolean constants. This class should not be used for any other purpose. All
- * constants should be declared globally
+ * ---------- Constants --- The Constants class provides a convenient place for teams to hold robot-wide numerical or
+ * boolean constants. This class should not be used for any other purpose. All constants should be declared globally
  * (i.e. public static). Do not put anything functional in this class.
  *
  * <p>
- * It is advised to statically import this class (or one of its inner classes)
- * wherever the
- * constants are needed, to reduce verbosity. ---
+ * It is advised to statically import this class (or one of its inner classes) wherever the constants are needed to
+ * reduce verbosity. ---
  */
 public final class Constants {
 
@@ -27,8 +24,7 @@ public final class Constants {
 	public static final Matter CHASSIS = new Matter(new Translation3d(0, 0, Inches.of(8).in(Meters)), ROBOT_MASS);
 
 	/**
-	 * Expected control loop time including robot periodic (20ms) and motor controller
-	 * velocity control latency.
+	 * Expected control loop time including robot periodic (20ms) and motor controller velocity control latency.
 	 *
 	 * <p>
 	 * <b>Note:</b> The 110ms "SparkMAX velocity lag" comment appears to be outdated.
@@ -60,8 +56,8 @@ public final class Constants {
 	public static final double MAX_ANGULAR_ACCELERATION = Math.toRadians(120.0);
 
 	/**
-	 * Swerve telemetry verbosity - automatically switches based on dev/comp mode.
-	 * HIGH for development/testing, LOW for competition to reduce NT traffic.
+	 * Swerve telemetry verbosity - automatically switches based on dev/comp mode. HIGH for development/testing, LOW for
+	 * competition to reduce NT traffic.
 	 */
 	public static final TelemetryVerbosity SwerveTelemetryVerbosity = DevMode.isEnabled()
 			? TelemetryVerbosity.HIGH
@@ -81,9 +77,8 @@ public final class Constants {
 		 * Translation scaling factor for driver input (0.0 to 1.0).
 		 *
 		 * <p>
-		 * Limits maximum translational speed to a percentage of the robot's theoretical max.
-		 * This provides finer control for drivers during teleop without sacrificing full speed
-		 * capability in autonomous.
+		 * Limits maximum translational speed to a percentage of the robot's theoretical max. This provides finer control
+		 * for drivers during teleop without sacrificing full speed capability in autonomous.
 		 *
 		 * <p>
 		 * Common values:
@@ -125,5 +120,25 @@ public final class Constants {
 
 		// Joystick Deadband
 		public static final double DEADBAND = 0.1;
+	}
+
+	public static class ShooterConstants {
+
+		// Motor CAN ID
+		public static final int MOTOR_ID = 30;
+
+		// Motor configuration
+		public static final boolean INVERTED = false;
+		public static final int CURRENT_LIMIT = 40;
+
+		// PID constants (tune these for your flywheel)
+		public static final double KP = 0.0002;
+		public static final double KI = 0.0;
+		public static final double KD = 0.0;
+		public static final double KV = 0.000175;
+
+		// Velocity control
+		public static final double VELOCITY_TOLERANCE = 100.0; // RPM
+		public static final double AT_SPEED_DEBOUNCE_TIME = 0.1; // seconds
 	}
 }

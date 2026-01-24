@@ -1,8 +1,12 @@
 package frc.robot;
 
+import static edu.wpi.first.units.Units.Meters;
+
 import java.io.File;
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -13,6 +17,7 @@ import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Constants.DrivebaseConstants;
 import frc.robot.Constants.OperatorConstants;
+import frc.robot.subsystems.shooter.ShooterSubsystem;
 import frc.robot.subsystems.swervedrive.OurSwerveInputStream;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
 import frc.robot.subsystems.swervedrive.avoidance.FieldZones;
@@ -38,6 +43,7 @@ public class RobotContainer {
 	 */
 	private final SwerveSubsystem drivebase = new SwerveSubsystem(
 			new File(Filesystem.getDeployDirectory(), "swerve/neo"));
+	private final ShooterSubsystem shooter = new ShooterSubsystem();
 	public boolean robotRelative = false;
 
 	/**
@@ -104,6 +110,12 @@ public class RobotContainer {
 		// Lock drivebase
 		driverXbox.leftBumper().whileTrue(Commands.runOnce(drivebase::lock, drivebase).repeatedly());
 
+		// ========== Shooter Controls ==========
+		// X: Hold to shoot based on distance to target
+		driverXbox.x().whileTrue(shooter.shootForDistanceCommand(this::getDistanceToTarget));
+		// Y: Hold to shoot at fixed RPM
+		driverXbox.y().whileTrue(shooter.shootCommand(3500));
+
 		// Center modules (test mode only)
 		driverXbox.back().whileTrue(
 				Commands.either(drivebase.centerModulesCommand(), Commands.none(), DriverStation::isTest));
@@ -153,5 +165,15 @@ public class RobotContainer {
 	 */
 	public void setMotorBrake(boolean brake) {
 		drivebase.setMotorBrake(brake);
+	}
+
+	/**
+	 * Gets the distance to our alliance's scoring target.
+	 */
+	private Distance getDistanceToTarget() {
+		Pose2d hubPose = DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue) == DriverStation.Alliance.Red
+				? FieldZones.HUB_POSE_RED
+				: FieldZones.HUB_POSE_BLUE;
+		return Meters.of(drivebase.getPose().getTranslation().getDistance(hubPose.getTranslation()));
 	}
 }
