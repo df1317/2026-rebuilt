@@ -38,7 +38,8 @@ import static frc.robot.Constants.ClimberConstants.*;
 /**
  * Climber subsystem using an elevator mechanism.
  *
- * <p>Uses trapezoidal motion profiling with feedforward control for smooth,
+ * <p>
+ * Uses trapezoidal motion profiling with feedforward control for smooth,
  * controlled climbing. Implements soft limits based on encoder position.
  */
 public class ClimberSubsystem extends SubsystemBase {
@@ -66,6 +67,14 @@ public class ClimberSubsystem extends SubsystemBase {
 	private TrapezoidProfile.State goalState = new TrapezoidProfile.State();
 	private double lastUpdateTimestamp;
 
+	/**
+	 * Creates a new ClimberSubsystem.
+	 *
+	 * <p>
+	 * <b>Important:</b> The encoder position is not initialized on construction and will retain
+	 * values from previous power cycles or be zero after a fresh boot. Call {@link #resetEncoders()}
+	 * during robot initialization or before first use if the climber is not at the zero position.
+	 */
 	public ClimberSubsystem() {
 		motorLeft = new SparkMax(MOTOR_LEFT_ID, MotorType.kBrushless);
 		motorRight = new SparkMax(MOTOR_RIGHT_ID, MotorType.kBrushless);
@@ -85,6 +94,9 @@ public class ClimberSubsystem extends SubsystemBase {
 		followerConfig
 				.smartCurrentLimit(CURRENT_LIMIT)
 				.idleMode(IdleMode.kBrake)
+				// Follower inverts relative to leader. With INVERTED=false on leader,
+				// this causes motors to spin in opposite directions (correct for elevator
+				// with mirrored motor mounting). Verify physical mounting matches this assumption.
 				.follow(motorLeft, true);
 
 		motorLeft.configure(leaderConfig, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
@@ -92,6 +104,7 @@ public class ClimberSubsystem extends SubsystemBase {
 
 		controller = motorLeft.getClosedLoopController();
 		encoder = motorLeft.getEncoder();
+		encoder.setPosition(0);
 
 		profile = new TrapezoidProfile(new TrapezoidProfile.Constraints(
 				MAX_VELOCITY.in(MetersPerSecond), MAX_ACCELERATION.in(MetersPerSecondPerSecond)));
@@ -146,9 +159,11 @@ public class ClimberSubsystem extends SubsystemBase {
 
 		if (!MathUtil.isNear(goalState.position, measuredHeight, POSITION_TOLERANCE.in(Meters) * 5)) {
 			currentState.position = measuredHeight;
+			currentState.velocity = 0.0;
+		} else {
+			currentState.velocity = MathUtil.clamp(currentState.velocity,
+					-MAX_VELOCITY.in(MetersPerSecond), MAX_VELOCITY.in(MetersPerSecond));
 		}
-		currentState.velocity = MathUtil.clamp(currentState.velocity,
-				-MAX_VELOCITY.in(MetersPerSecond), MAX_VELOCITY.in(MetersPerSecond));
 
 		currentState = profile.calculate(dt, currentState, goalState);
 
@@ -160,7 +175,10 @@ public class ClimberSubsystem extends SubsystemBase {
 					ClosedLoopSlot.kSlot0,
 					ff);
 		} else {
-			stop();
+			// Movement blocked by soft limits; realign profile state with measured position
+			currentState.position = measuredHeight;
+			currentState.velocity = 0.0;
+			motorLeft.stopMotor();
 		}
 
 		logTelemetry(measuredHeight);
@@ -222,16 +240,31 @@ public class ClimberSubsystem extends SubsystemBase {
 	}
 
 	// ==================== Commands ====================
+	private static final double GO_TO_HEIGHT_TIMEOUT_SECONDS = 5.0;
+
 	public Command goToHeightCommand(double heightMeters) {
 		return Commands.runOnce(() -> setGoalHeight(heightMeters), this)
-				.andThen(Commands.waitUntil(this::isAtGoal));
+				.andThen(Commands.waitUntil(this::isAtGoal))
+				.withTimeout(GO_TO_HEIGHT_TIMEOUT_SECONDS);
 	}
 
 	public Command goToHeightCommand(DoubleSupplier heightMeters) {
 		return Commands.runOnce(() -> setGoalHeight(heightMeters.getAsDouble()), this)
-				.andThen(Commands.waitUntil(this::isAtGoal));
+				.andThen(Commands.waitUntil(this::isAtGoal))
+				.withTimeout(GO_TO_HEIGHT_TIMEOUT_SECONDS);
 	}
 
+	/**
+	 * Creates a command for manual climber control.
+	 *
+	 * <p>
+	 * When the command ends (button released), the climber holds its current position
+	 * by setting the goal to the current profile state.
+	 *
+	 * @param speedInput
+	 *          supplier for joystick input (-1 to 1)
+	 * @return command for manual control
+	 */
 	public Command manualControlCommand(DoubleSupplier speedInput) {
 		return Commands.run(() -> {
 			double input = MathUtil.applyDeadband(speedInput.getAsDouble(), 0.1);
