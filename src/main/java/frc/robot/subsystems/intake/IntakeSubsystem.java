@@ -1,7 +1,4 @@
-package frc.robot.subsystems;
-
-import static edu.wpi.first.units.Units.*;
-import static frc.robot.Constants.IntakeConstants.*;
+package frc.robot.subsystems.intake;
 
 import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
@@ -13,24 +10,25 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
-import dev.doglog.DogLog;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
-import edu.wpi.first.wpilibj.smartdashboard.Mechanism2d;
-import edu.wpi.first.wpilibj.smartdashboard.MechanismLigament2d;
-import edu.wpi.first.wpilibj.smartdashboard.MechanismRoot2d;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.util.Color;
-import edu.wpi.first.wpilibj.util.Color8Bit;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
+import static edu.wpi.first.units.Units.Degrees;
+import static edu.wpi.first.units.Units.RPM;
+import static frc.robot.Constants.IntakeConstants.*;
+
+/**
+ * Intake subsystem with a pivoting arm and roller mechanism.
+ */
 public class IntakeSubsystem extends SubsystemBase {
 
-	// Hardware
+	// ==================== Hardware ====================
 	private final SparkMax pivotMotor;
 	private final SparkMax rollerMotor;
 	private final SparkClosedLoopController pivotController;
@@ -38,18 +36,14 @@ public class IntakeSubsystem extends SubsystemBase {
 	private final RelativeEncoder pivotEncoder;
 	private final RelativeEncoder rollerEncoder;
 
-	// Control state
+	// ==================== Control State ====================
 	private Angle targetPivotAngle = PIVOT_RETRACTED_ANGLE;
 	private AngularVelocity targetRollerVelocity = RPM.of(0);
 	private final Debouncer atPositionDebouncer;
 
-	// Mechanism2d visualization
-	private static final double VIZ_WIDTH = 0.6;
-	private static final double VIZ_HEIGHT = 0.6;
-	private final Mechanism2d mechanism2d;
-	private final MechanismLigament2d pivotLigament;
-	private final MechanismLigament2d setpointLigament;
-	private final MechanismLigament2d rollerLigament;
+	// ==================== Visualization & Telemetry ====================
+	private final IntakeVisualization visualization;
+	private final IntakeTelemetry telemetry;
 
 	public IntakeSubsystem() {
 		pivotMotor = new SparkMax(PIVOT_MOTOR_ID, MotorType.kBrushless);
@@ -64,24 +58,8 @@ public class IntakeSubsystem extends SubsystemBase {
 
 		atPositionDebouncer = new Debouncer(AT_POSITION_DEBOUNCE_TIME, DebounceType.kRising);
 
-		// Setup Mechanism2d visualization
-		mechanism2d = new Mechanism2d(VIZ_WIDTH, VIZ_HEIGHT);
-
-		MechanismRoot2d root = mechanism2d.getRoot("IntakeRoot", VIZ_WIDTH / 2, 0.1);
-
-		// Setpoint indicator (thin white line showing target angle)
-		setpointLigament = root.append(
-				new MechanismLigament2d("Setpoint", PIVOT_ARM_LENGTH.in(Meters), 0, 2, new Color8Bit(Color.kWhite)));
-
-		// Main pivot arm (thick, color changes based on state)
-		pivotLigament = root.append(
-				new MechanismLigament2d("Pivot", PIVOT_ARM_LENGTH.in(Meters), 0, 6, new Color8Bit(Color.kCyan)));
-
-		// Roller indicator at end of pivot (shows roller activity)
-		rollerLigament = pivotLigament.append(
-				new MechanismLigament2d("Roller", 0.05, 90, 8, new Color8Bit(Color.kGray)));
-
-		SmartDashboard.putData("Intake/Mechanism", mechanism2d);
+		visualization = new IntakeVisualization();
+		telemetry = new IntakeTelemetry(pivotMotor, rollerMotor);
 	}
 
 	private void configurePivotMotor() {
@@ -91,6 +69,7 @@ public class IntakeSubsystem extends SubsystemBase {
 				.smartCurrentLimit(PIVOT_CURRENT_LIMIT)
 				.inverted(PIVOT_INVERTED);
 		config.encoder
+				// Converts encoder rotations to degrees: (360 deg/rot) / gear_ratio
 				.positionConversionFactor(360.0 / PIVOT_GEAR_RATIO);
 		config.closedLoop
 				.pid(PIVOT_KP, PIVOT_KI, PIVOT_KD)
@@ -115,56 +94,24 @@ public class IntakeSubsystem extends SubsystemBase {
 
 	@Override
 	public void periodic() {
-		updateVisualization();
+		visualization.update(
+				getPivotAngle().in(Degrees),
+				targetPivotAngle.in(Degrees),
+				isPivotAtPosition(),
+				targetRollerVelocity,
+				isRollerAtSpeed());
 
-		// Status for LED strip
-		DogLog.forceNt.log("Intake/Status", getStatusColor().toHexString());
-
-		// Pivot tracking
-		DogLog.log("Intake/PivotAngleDeg", getPivotAngle().in(Degrees));
-		DogLog.log("Intake/PivotTargetAngleDeg", targetPivotAngle.in(Degrees));
-		DogLog.log("Intake/PivotErrorDeg", targetPivotAngle.in(Degrees) - getPivotAngle().in(Degrees));
-		DogLog.log("Intake/PivotAtPosition", isPivotAtPosition());
-		DogLog.log("Intake/IsExtended", isExtended());
-		DogLog.log("Intake/IsRetracted", isRetracted());
-
-		// Roller tracking
-		DogLog.log("Intake/RollerVelocityRPM", getRollerVelocity().in(RPM));
-		DogLog.log("Intake/RollerTargetRPM", targetRollerVelocity.in(RPM));
-		DogLog.log("Intake/RollerErrorRPM", targetRollerVelocity.in(RPM) - getRollerVelocity().in(RPM));
-		DogLog.log("Intake/RollerRunning", isRollerRunning());
-		DogLog.log("Intake/RollerAtSpeed", isRollerAtSpeed());
-
-		// Motor data
-		DogLog.log("Intake/PivotCurrentAmps", pivotMotor.getOutputCurrent());
-		DogLog.log("Intake/PivotVoltage", pivotMotor.getBusVoltage() * pivotMotor.getAppliedOutput());
-		DogLog.log("Intake/RollerCurrentAmps", rollerMotor.getOutputCurrent());
-		DogLog.log("Intake/RollerVoltage", rollerMotor.getBusVoltage() * rollerMotor.getAppliedOutput());
-	}
-
-	private void updateVisualization() {
-		double currentAngle = getPivotAngle().in(Degrees);
-		double targetAngle = targetPivotAngle.in(Degrees);
-
-		// Update ligament angles
-		pivotLigament.setAngle(currentAngle);
-		setpointLigament.setAngle(targetAngle);
-
-		// Pivot color based on state
-		if (isPivotAtPosition()) {
-			pivotLigament.setColor(new Color8Bit(Color.kGreen));
-		} else {
-			pivotLigament.setColor(new Color8Bit(Color.kYellow));
-		}
-
-		// Roller color based on activity
-		if (targetRollerVelocity.in(RPM) > 0) {
-			rollerLigament.setColor(new Color8Bit(isRollerAtSpeed() ? Color.kLime : Color.kOrange));
-		} else if (targetRollerVelocity.in(RPM) < 0) {
-			rollerLigament.setColor(new Color8Bit(Color.kRed));
-		} else {
-			rollerLigament.setColor(new Color8Bit(Color.kGray));
-		}
+		telemetry.log(
+				getPivotAngle().in(Degrees),
+				targetPivotAngle.in(Degrees),
+				isPivotAtPosition(),
+				isExtended(),
+				isRetracted(),
+				getRollerVelocity().in(RPM),
+				targetRollerVelocity.in(RPM),
+				isRollerRunning(),
+				isRollerAtSpeed(),
+				getStatusColor());
 	}
 
 	// ==================== State Query Methods ====================
