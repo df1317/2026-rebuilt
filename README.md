@@ -68,6 +68,10 @@ Make branches early and often! If you are working on a new feature that isn't di
 make a new branch and open a PR as quick as possible. Be wary of working on too many branches at once though; it can get
 confusing. Aim to merge the branch once you have verified that the code works on the robot.
 
+### Github Issues
+
+Make issues for any current/near term tasks and identified bugs. Issues should not be created for tasks planned for too far in the future.
+
 ### Logging with DogLog
 
 We use [DogLog](https://doglog.dev) for telemetry and logging. It automatically writes to DataLog files (`.wpilog`) for
