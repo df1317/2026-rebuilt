@@ -175,4 +175,16 @@ public final class Constants {
 		public static final double KG = 0.49;
 		public static final double KV = 4.7;
 	}
+
+	public static class HopperConstants {
+
+		// Motor configuration
+		public static final int MOTOR_ID = 30;
+		public static final int CURRENT_LIMIT = 35;
+		public static final boolean INVERTED = false;
+
+		// Feed speed (duty cycle, -1.0 to 1.0)
+		public static final double FEED_SPEED = 0.5;
+		public static final double REVERSE_SPEED = -0.3;
+	}
 }
