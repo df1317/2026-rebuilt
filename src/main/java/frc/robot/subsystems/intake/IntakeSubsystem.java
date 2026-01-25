@@ -14,7 +14,6 @@ import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
-import edu.wpi.first.wpilibj.util.Color;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -28,17 +27,17 @@ import static frc.robot.Constants.IntakeConstants.*;
  */
 public class IntakeSubsystem extends SubsystemBase {
 
-	// ==================== Hardware ====================
-	private final SparkMax pivotMotor;
-	private final SparkMax rollerMotor;
+	// ==================== Hardware (package-private for telemetry/visualization) ====================
+	final SparkMax pivotMotor;
+	final SparkMax rollerMotor;
 	private final SparkClosedLoopController pivotController;
 	private final SparkClosedLoopController rollerController;
-	private final RelativeEncoder pivotEncoder;
-	private final RelativeEncoder rollerEncoder;
+	final RelativeEncoder pivotEncoder;
+	final RelativeEncoder rollerEncoder;
 
-	// ==================== Control State ====================
-	private Angle targetPivotAngle = PIVOT_RETRACTED_ANGLE;
-	private AngularVelocity targetRollerVelocity = RPM.of(0);
+	// ==================== Control State (package-private for telemetry/visualization) ====================
+	Angle targetPivotAngle = PIVOT_RETRACTED_ANGLE;
+	AngularVelocity targetRollerVelocity = RPM.of(0);
 	private final Debouncer atPositionDebouncer;
 
 	// ==================== Visualization & Telemetry ====================
@@ -58,8 +57,8 @@ public class IntakeSubsystem extends SubsystemBase {
 
 		atPositionDebouncer = new Debouncer(AT_POSITION_DEBOUNCE_TIME, DebounceType.kRising);
 
-		visualization = new IntakeVisualization();
-		telemetry = new IntakeTelemetry(pivotMotor, rollerMotor);
+		visualization = new IntakeVisualization(this);
+		telemetry = new IntakeTelemetry(this);
 	}
 
 	private void configurePivotMotor() {
@@ -94,71 +93,20 @@ public class IntakeSubsystem extends SubsystemBase {
 
 	@Override
 	public void periodic() {
-		visualization.update(
-				getPivotAngle().in(Degrees),
-				targetPivotAngle.in(Degrees),
-				isPivotAtPosition(),
-				targetRollerVelocity,
-				isRollerAtSpeed());
-
-		telemetry.log(
-				getPivotAngle().in(Degrees),
-				targetPivotAngle.in(Degrees),
-				isPivotAtPosition(),
-				isExtended(),
-				isRetracted(),
-				getRollerVelocity().in(RPM),
-				targetRollerVelocity.in(RPM),
-				isRollerRunning(),
-				isRollerAtSpeed(),
-				getStatusColor());
+		visualization.update();
+		telemetry.log();
 	}
 
 	// ==================== State Query Methods ====================
 
-	public Angle getPivotAngle() {
-		return Degrees.of(pivotEncoder.getPosition());
-	}
-
-	public AngularVelocity getRollerVelocity() {
-		return RPM.of(rollerEncoder.getVelocity());
-	}
-
-	public boolean isPivotAtPositionRaw() {
-		return Math.abs(getPivotAngle().in(Degrees) - targetPivotAngle.in(Degrees)) < PIVOT_ANGLE_TOLERANCE.in(Degrees);
-	}
-
 	public boolean isPivotAtPosition() {
-		return atPositionDebouncer.calculate(isPivotAtPositionRaw());
+		boolean atPositionRaw = Math.abs(pivotEncoder.getPosition() - targetPivotAngle.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
+				.in(Degrees);
+		return atPositionDebouncer.calculate(atPositionRaw);
 	}
 
-	public boolean isExtended() {
-		return isPivotAtPosition()
-				&& Math.abs(targetPivotAngle.in(Degrees) - PIVOT_EXTENDED_ANGLE.in(Degrees)) < 1.0;
-	}
-
-	public boolean isRetracted() {
-		return isPivotAtPosition()
-				&& Math.abs(targetPivotAngle.in(Degrees) - PIVOT_RETRACTED_ANGLE.in(Degrees)) < 1.0;
-	}
-
-	public boolean isRollerRunning() {
-		return Math.abs(targetRollerVelocity.in(RPM)) > ROLLER_VELOCITY_TOLERANCE.in(RPM);
-	}
-
-	public boolean isRollerAtSpeed() {
-		return Math.abs(getRollerVelocity().in(RPM) - targetRollerVelocity.in(RPM)) < ROLLER_VELOCITY_TOLERANCE.in(RPM);
-	}
-
-	public Color getStatusColor() {
-		if (targetRollerVelocity.in(RPM) > 0 && isExtended()) {
-			return isRollerAtSpeed() ? Color.kGreen : Color.kYellow;
-		} else if (targetRollerVelocity.in(RPM) < 0) {
-			return Color.kOrange;
-		} else if (!isRetracted()) {
-			return Color.kYellow;
-		}
-		return Color.kRed;
+	boolean isRollerAtSpeed() {
+		return Math.abs(rollerEncoder.getVelocity() - targetRollerVelocity.in(RPM)) < ROLLER_VELOCITY_TOLERANCE.in(RPM);
 	}
 
 	// ==================== Control Methods ====================
