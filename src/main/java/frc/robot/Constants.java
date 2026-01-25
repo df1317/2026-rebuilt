@@ -1,5 +1,11 @@
 package frc.robot;
 
+import static edu.wpi.first.units.Units.*;
+
+import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.units.measure.Distance;
+
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.*;
@@ -120,6 +126,45 @@ public final class Constants {
 
 		// Joystick Deadband
 		public static final double DEADBAND = 0.1;
+	}
+
+	public static class IntakeConstants {
+
+		// Motor CAN IDs
+		public static final int PIVOT_MOTOR_ID = 20;
+		public static final int ROLLER_MOTOR_ID = 21;
+
+		// Motor configuration
+		public static final boolean PIVOT_INVERTED = false;
+		public static final boolean ROLLER_INVERTED = false;
+		public static final int PIVOT_CURRENT_LIMIT = 15;
+		public static final int ROLLER_CURRENT_LIMIT = 35;
+
+		// Pivot geometry
+		public static final Angle PIVOT_EXTENDED_ANGLE = Degrees.of(90);
+		public static final Angle PIVOT_RETRACTED_ANGLE = Degrees.of(0);
+		public static final Angle PIVOT_ANGLE_TOLERANCE = Degrees.of(3);
+		public static final double PIVOT_GEAR_RATIO = 25.0; // motor rotations per pivot rotation
+		public static final Distance PIVOT_ARM_LENGTH = Inches.of(12);
+
+		// Pivot PID constants
+		public static final double PIVOT_KP = 0.1;
+		public static final double PIVOT_KI = 0.0;
+		public static final double PIVOT_KD = 0.0;
+
+		// Roller velocity control
+		public static final AngularVelocity ROLLER_INTAKE_VELOCITY = RPM.of(2000);
+		public static final AngularVelocity ROLLER_EJECT_VELOCITY = RPM.of(-1500);
+		public static final AngularVelocity ROLLER_VELOCITY_TOLERANCE = RPM.of(100);
+
+		// Roller PID constants
+		public static final double ROLLER_KP = 0.0002;
+		public static final double ROLLER_KI = 0.0;
+		public static final double ROLLER_KD = 0.0;
+		public static final double ROLLER_KV = 0.000175;
+
+		// Debounce time for state checks
+		public static final double AT_POSITION_DEBOUNCE_TIME = 0.1;
 	}
 
 	public static class ShooterConstants {
