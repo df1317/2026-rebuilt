@@ -1,7 +1,5 @@
 package frc.robot;
 
-import com.studica.frc.AHRS;
-import com.studica.frc.jni.AHRSJNI;
 import dev.doglog.DogLog;
 import dev.doglog.DogLogOptions;
 import edu.wpi.first.net.WebServer;
@@ -68,9 +66,6 @@ public class Robot extends TimedRobot {
 		if (isSimulation()) {
 			DriverStation.silenceJoystickConnectionWarning(true);
 		}
-
-		// Initiate new NavX to type kUSB1
-		AHRSJNI.c_AHRS_create(AHRS.NavXComType.kUSB1);
 	}
 
 	/**
@@ -139,11 +134,6 @@ public class Robot extends TimedRobot {
 		DogLog.forceNt.log("Dash/MatchTime", DriverStation.getMatchTime());
 		DogLog.forceNt.log("Dash/RobotRelative", m_robotContainer.robotRelative);
 		DogLog.forceNt.log("Dash/HubStatusColor", HubState.getHubStatusColor().toHexString());
-
-		// Log NavX gyro values
-		DogLog.log("gyro yaw", AHRSJNI.c_AHRS_GetYaw());
-		DogLog.log("gyro roll", AHRSJNI.c_AHRS_GetRoll());
-		DogLog.log("gyro pitch", AHRSJNI.c_AHRS_GetPitch());
 	}
 
 	/**
