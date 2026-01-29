@@ -29,6 +29,7 @@ import com.pathplanner.lib.util.swerve.SwerveSetpoint;
 import com.pathplanner.lib.util.swerve.SwerveSetpointGenerator;
 import dev.doglog.DogLog;
 import edu.wpi.first.epilogue.NotLogged;
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.filter.SlewRateLimiter;
@@ -200,19 +201,24 @@ public class SwerveSubsystem extends SubsystemBase {
   ProfiledPIDController m_controller;
 
   private final double ks = 0, kg = 0, kv = 0;
-  private final double kp = 0, ki = 0.7, kd = 0;
-
-  private double currentMaxVel = Constants.MAX_ANGULAR_SPEED;
-  private TrapezoidProfile.Constraints ffc =
-      new TrapezoidProfile.Constraints(Constants.MAX_ANGULAR_SPEED, Constants.MAX_ACCELERATION);
-  private TrapezoidProfile.State ffState = new TrapezoidProfile.State();
-  private TrapezoidProfile.State preRenfernce = new TrapezoidProfile.State();
-  private TrapezoidProfile Profiler = new TrapezoidProfile(ffc);
-
-  private ProfiledPIDController pidController = new ProfiledPIDController(kp, ki, kd, ffc);
+  private final double kp = 0.3, ki = 0.0, kd = 0.05;
+  /*
+   *
+   * private double currentMaxVel = Constants.MAX_ANGULAR_SPEED; private
+   * TrapezoidProfile.Constraints ffc = new
+   * TrapezoidProfile.Constraints(Constants.MAX_ANGULAR_SPEED, Constants.MAX_ACCELERATION); private
+   * TrapezoidProfile.State ffState = new TrapezoidProfile.State(); private TrapezoidProfile.State
+   * preRenfernce = new TrapezoidProfile.State(); private TrapezoidProfile Profiler = new
+   * TrapezoidProfile(ffc);
+   *
+   * private ProfiledPIDController pidController = new ProfiledPIDController(kp, ki, kd, ffc);
+   */
+  private PIDController pidController = new PIDController(kp, ki, kd);
 
   public Command aimAt(DoubleSupplier translateX, DoubleSupplier translateY, Pose2d target) {
     return run(() -> {
+      pidController.enableContinuousInput(-Math.PI, Math.PI);
+
       Pose2d currentPose = this.getPose();
       Double desieredAngle = null;
 
@@ -221,9 +227,10 @@ public class SwerveSubsystem extends SubsystemBase {
 
       desieredAngle = Math.atan2(difY, difX);
 
-      pidController.setGoal(desieredAngle);
+      // pidController.setSetpoint(desieredAngle);
 
-      double moveAmount = pidController.calculate(currentPose.getRotation().getRadians());
+      double moveAmount =
+          pidController.calculate(currentPose.getRotation().getRadians(), desieredAngle * 3);
 
       ChassisSpeeds speeds = SwerveInputStream.of(this.getSwerveDrive(),
           () -> translateY.getAsDouble() * -1, () -> translateX.getAsDouble() * -1).get();
