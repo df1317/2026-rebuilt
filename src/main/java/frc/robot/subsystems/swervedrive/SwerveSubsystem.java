@@ -201,7 +201,7 @@ public class SwerveSubsystem extends SubsystemBase {
   ProfiledPIDController m_controller;
 
   private final double ks = 0, kg = 0, kv = 0;
-  private final double kp = 0.5, ki = 0.0, kd = 0.0;
+  private final double kp = 1.5, ki = 0.0, kd = 0.0;
   /*
    *
    * private double currentMaxVel = Constants.MAX_ANGULAR_SPEED; private
@@ -220,7 +220,7 @@ public class SwerveSubsystem extends SubsystemBase {
 
   public Command aimAt(DoubleSupplier translateX, DoubleSupplier translateY, Pose2d target) {
     return run(() -> {
-      timeCount = System.currentTimeMillis();
+
       pidController.enableContinuousInput(-Math.PI, Math.PI);
 
       Pose2d currentPose = this.getPose();
@@ -235,12 +235,17 @@ public class SwerveSubsystem extends SubsystemBase {
       pidController.reset();
 
       double moveAmount =
-          pidController.calculate(currentPose.getRotation().getRadians(), desieredAngle * 3);
+          pidController.calculate(currentPose.getRotation().getRadians(), desieredAngle);
 
-      ChassisSpeeds speeds = SwerveInputStream.of(this.getSwerveDrive(),
-          () -> translateY.getAsDouble() * -1, () -> translateX.getAsDouble() * -1).get();
+      ChassisSpeeds speeds =
+          SwerveInputStream.of(this.getSwerveDrive(), () -> translateY.getAsDouble() * -1,
+              () -> translateX.getAsDouble() * -1).allianceRelativeControl(true).get();
 
       speeds.omegaRadiansPerSecond = moveAmount;
+
+      DogLog.log("PID/desired angle", desieredAngle);
+      DogLog.log("PID/move amout", moveAmount);
+      DogLog.log("PID/current angle", currentPose.getRotation().getRadians());
 
       // System.out.println("current! " + moveAmount);
 
@@ -248,6 +253,7 @@ public class SwerveSubsystem extends SubsystemBase {
         DogLog.log("PPS", iterations);
         System.out.println("PPS " + iterations);
         iterations = 0;
+        timeCount = System.currentTimeMillis();
       }
 
       iterations++;
