@@ -200,7 +200,7 @@ public class SwerveSubsystem extends SubsystemBase {
   ProfiledPIDController m_controller;
 
   private final double ks = 0, kg = 0, kv = 0;
-  private final double kp = 0, ki = 0, kd = 0;
+  private final double kp = 1.3, ki = 0, kd = 0;
 
   private double currentMaxVel = Constants.MAX_ANGULAR_SPEED;
   private TrapezoidProfile.Constraints ffc =
@@ -593,7 +593,7 @@ public class SwerveSubsystem extends SubsystemBase {
     });
   }
 
-  public Command robotDriveCommand(OurSwerveInputStream velocity, BooleanSupplier robotRelative) {
+  public Command robotDriveCommand(SwerveInputStream velocity, BooleanSupplier robotRelative) {
     return run(() -> {
       Optional<Alliance> ally = DriverStation.getAlliance();
 
