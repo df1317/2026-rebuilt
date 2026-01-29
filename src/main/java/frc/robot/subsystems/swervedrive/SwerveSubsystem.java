@@ -200,7 +200,7 @@ public class SwerveSubsystem extends SubsystemBase {
   ProfiledPIDController m_controller;
 
   private final double ks = 0, kg = 0, kv = 0;
-  private final double kp = 1.3, ki = 0, kd = 0;
+  private final double kp = 0, ki = 0.7, kd = 0;
 
   private double currentMaxVel = Constants.MAX_ANGULAR_SPEED;
   private TrapezoidProfile.Constraints ffc =
