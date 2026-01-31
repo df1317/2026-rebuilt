@@ -68,18 +68,6 @@ public class RobotContainer {
 			.scaleTranslation(DrivebaseConstants.TRANSLATION_SCALE).allianceRelativeControl(true);
 
 	/**
-	 * Clone's the angular velocity input stream and converts it to a fieldRelative input stream.
-	 */
-	SwerveInputStream driveDirectAngle = driveAngularVelocity.copy()
-			.withControllerHeadingAxis(driverXbox::getRightX, driverXbox::getRightY).headingWhile(true);
-	/**
-	 * Clone's the angular velocity input stream and converts it to a robotRelative input stream.
-	 */
-	SwerveInputStream driveRobotOriented = driveAngularVelocity.copy().robotRelative(true).allianceRelativeControl(false);
-	Command driveAimedAt = drivebase.aimAt(() -> driverXbox.getLeftY(), () -> driverXbox.getLeftX(),
-			FieldZones.HUB_POSE_BLUE);
-
-	/**
 	 * The container for the robot. Contains subsystems, input devices, and commands.
 	 */
 	public RobotContainer() {
@@ -94,23 +82,11 @@ public class RobotContainer {
 	 * Configure the button bindings for driver and operator controls.
 	 */
 	private void configureBindings() {
-		Command driveFieldOrientedAnglularVelocity = drivebase.robotDriveCommand(driveAngularVelocity, () -> robotRelative);
+		drivebase.setDefaultCommand(drivebase.robotDriveCommand(driveAngularVelocity, () -> robotRelative));
 
-		drivebase.setDefaultCommand(driveFieldOrientedAnglularVelocity);
-
-		driverXbox.x().onTrue(Commands.runOnce(() -> {
-			drivebase.getDefaultCommand().cancel();
-			drivebase.removeDefaultCommand();
-			drivebase.setDefaultCommand(driveAimedAt);
-			System.out.println("PID aiming command");
-		}));
-
-		driverXbox.x().onFalse(Commands.runOnce(() -> {
-			drivebase.getDefaultCommand().cancel();
-			drivebase.removeDefaultCommand();
-			drivebase.setDefaultCommand(driveFieldOrientedAnglularVelocity);
-			System.out.println("Normal driving command");
-		}));
+		// Hold X to aim at the target (overrides default drive command while held)
+		driverXbox.x().whileTrue(drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY,
+				FieldZones.HUB_POSE_BLUE));
 
 		// Zero gyro
 		driverXbox.a().onTrue(Commands.runOnce(drivebase::zeroGyro));
@@ -184,7 +160,7 @@ public class RobotContainer {
 	 * Sets brake mode on all swerve drive motors.
 	 *
 	 * @param brake
-	 * 		true to enable brake mode, false for coast mode
+	 *          true to enable brake mode, false for coast mode
 	 */
 	public void setMotorBrake(boolean brake) {
 		drivebase.setMotorBrake(brake);
@@ -196,7 +172,7 @@ public class RobotContainer {
 	private Distance getDistanceToTarget() {
 		Pose2d hubPose = DriverStation.getAlliance()
 				.orElse(DriverStation.Alliance.Blue) == DriverStation.Alliance.Red ? FieldZones.HUB_POSE_RED
-				: FieldZones.HUB_POSE_BLUE;
+						: FieldZones.HUB_POSE_BLUE;
 		return Meters.of(drivebase.getPose().getTranslation().getDistance(hubPose.getTranslation()));
 	}
 }

@@ -61,8 +61,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
-import static edu.wpi.first.units.Units.Meter;
-import static edu.wpi.first.units.Units.Volts;
+import static edu.wpi.first.units.Units.*;
 
 public class SwerveSubsystem extends SubsystemBase {
 
@@ -238,10 +237,11 @@ public class SwerveSubsystem extends SubsystemBase {
 
 			speeds.omegaRadiansPerSecond = setpoint.velocity;
 
-			DogLog.log("PID/desired angle", desiredAngle);
-			DogLog.log("PID/setpoint velocity", setpoint.velocity);
-			DogLog.log("PID/setpoint position", setpoint.position);
-			DogLog.log("PID/actual velocity", getSwerveDrive().getRobotVelocity().omegaRadiansPerSecond);
+			DogLog.log("PID/desired angle", desiredAngle * 360, Rotation);
+			DogLog.log("PID/setpoint velocity", setpoint.velocity * 360, RotationsPerSecond);
+			DogLog.log("PID/setpoint position", setpoint.position * 360, Rotation);
+			DogLog.log("PID/actual velocity", Math.toDegrees(getSwerveDrive().getRobotVelocity().omegaRadiansPerSecond),
+					RadiansPerSecond);
 
 			drive(speeds);
 		});
