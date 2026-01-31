@@ -13,7 +13,7 @@ import com.pathplanner.lib.util.swerve.SwerveSetpoint;
 import com.pathplanner.lib.util.swerve.SwerveSetpointGenerator;
 import dev.doglog.DogLog;
 import edu.wpi.first.epilogue.NotLogged;
-import edu.wpi.first.math.controller.ProfiledPIDController;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -61,7 +61,8 @@ import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
-import static edu.wpi.first.units.Units.*;
+import static edu.wpi.first.units.Units.Meter;
+import static edu.wpi.first.units.Units.Volts;
 
 public class SwerveSubsystem extends SubsystemBase {
 
@@ -75,19 +76,28 @@ public class SwerveSubsystem extends SubsystemBase {
 	private final BooleanSubscriber visionEnabled = DogLog.tunable("Swerve/VisionEnabled", true);
 
 	/**
-	 * PID controller gains for angular velocity control.
+	 * Aim controller tuning - profile phase (large errors).
 	 */
-	private final DoubleSubscriber aimKp = DogLog.tunable("Swerve/Aim/kP", 0.5);
-	private final DoubleSubscriber aimKi = DogLog.tunable("Swerve/Aim/kI", 0.1);
-	private final DoubleSubscriber aimKd = DogLog.tunable("Swerve/Aim/kD", 0.05);
-	private final TrapezoidProfile.Constraints constraints = new TrapezoidProfile.Constraints(
-			Constants.MAX_ANGULAR_SPEED / 2,
-			Constants.MAX_ANGULAR_ACCELERATION / 2);
-	private final ProfiledPIDController pidController = new ProfiledPIDController(0.5, 0.1, 0.05, constraints);
+	private final DoubleSubscriber aimProfileKp = DogLog.tunable("Swerve/Aim/Profile/kP", 0.2);
+	private final DoubleSubscriber aimProfileKv = DogLog.tunable("Swerve/Aim/Profile/kV", 2.0);
+	/**
+	 * Aim controller tuning - tracking phase (small errors).
+	 */
+	private final DoubleSubscriber aimTrackingKp = DogLog.tunable("Swerve/Aim/Tracking/kP", 1.5);
+	private final DoubleSubscriber aimTrackingKd = DogLog.tunable("Swerve/Aim/Tracking/kD", 0.0);
+	private final DoubleSubscriber aimTrackingThreshold = DogLog.tunable("Swerve/Aim/Tracking/threshold", 5.0); // degrees
+	private final double aimDeadband = Math.toRadians(1.0); // 1 degree deadband
+	private final TrapezoidProfile.Constraints aimConstraints = new TrapezoidProfile.Constraints(
+			Constants.MAX_ANGULAR_SPEED,
+			Constants.MAX_ANGULAR_ACCELERATION);
+	private final TrapezoidProfile aimProfile = new TrapezoidProfile(aimConstraints);
 	/**
 	 * Previous alliance color, used for vision odometry.
 	 */
 	Optional<Alliance> prevAlliance = Optional.empty();
+	private TrapezoidProfile.State aimProfileState = new TrapezoidProfile.State();
+	private TrapezoidProfile.State aimGoalState = new TrapezoidProfile.State();
+	private boolean aimProfileComplete = false;
 	/**
 	 * PhotonVision class to keep an accurate odometry.
 	 */
@@ -97,10 +107,6 @@ public class SwerveSubsystem extends SubsystemBase {
 	 * tracking.
 	 */
 	private AutopilotController autopilotController;
-
-	{
-		pidController.enableContinuousInput(-Math.PI, Math.PI);
-	}
 
 	/**
 	 * Initialize {@link SwerveDrive} with the directory provided.
@@ -213,20 +219,58 @@ public class SwerveSubsystem extends SubsystemBase {
 
 	public Command aimAt(DoubleSupplier translateX, DoubleSupplier translateY, Pose2d target) {
 		return startRun(() -> {
-			pidController.enableContinuousInput(-Math.PI, Math.PI);
-			pidController.setPID(aimKp.get(), aimKi.get(), aimKd.get());
-			pidController.reset(getPose().getRotation().getRadians(),
-					getSwerveDrive().getRobotVelocity().omegaRadiansPerSecond);
+			// Initialize profile from current robot state
+			double currentAngle = getPose().getRotation().getRadians();
+			double currentVelocity = getSwerveDrive().getRobotVelocity().omegaRadiansPerSecond;
+			aimProfileState = new TrapezoidProfile.State(currentAngle, currentVelocity);
+			aimProfileComplete = false;
 		}, () -> {
 			Pose2d currentPose = this.getPose();
+			double currentAngle = currentPose.getRotation().getRadians();
 
+			// Calculate desired angle to target
 			double difX = target.getX() - currentPose.getX();
 			double difY = target.getY() - currentPose.getY();
-
 			double desiredAngle = Math.atan2(difY, difX);
 
-			pidController.calculate(currentPose.getRotation().getRadians(), desiredAngle);
-			TrapezoidProfile.State setpoint = pidController.getSetpoint();
+			// Error from current angle to desired (shortest path)
+			double error = MathUtil.angleModulus(desiredAngle - currentAngle);
+
+			double output;
+
+			// Use profile until we're close, then switch to tracking mode
+			if (!aimProfileComplete && Math.abs(error) > Math.toRadians(aimTrackingThreshold.get())) {
+				// Profile phase: accelerate smoothly toward target
+				// Set goal relative to profile state (not actual) so profile runs continuously
+				double profileError = MathUtil.angleModulus(desiredAngle - aimProfileState.position);
+				aimGoalState = new TrapezoidProfile.State(aimProfileState.position + profileError, 0.0);
+
+				// Step profile forward
+				aimProfileState = aimProfile.calculate(0.02, aimProfileState, aimGoalState);
+
+				// Use profile velocity as feedforward + P correction for tracking error
+				double trackingError = MathUtil.angleModulus(aimProfileState.position - currentAngle);
+
+				// Scale kV linearly: 1.0 at 180°, 0.0 at 0°
+				double kvScale = Math.abs(error) / Math.PI;
+				output = (aimProfileKv.get() * kvScale * aimProfileState.velocity) + (aimProfileKp.get() * trackingError);
+
+				DogLog.log("Aim/kvScale", kvScale);
+				DogLog.log("Aim/mode", "PROFILE");
+			} else {
+				// Tracking phase: profile complete, use PD control with deadband
+				aimProfileComplete = true;
+
+				if (Math.abs(error) < aimDeadband) {
+					output = 0.0;
+				} else {
+					double currentVelocity = getSwerveDrive().getRobotVelocity().omegaRadiansPerSecond;
+					// P for position error, D to dampen (negative because we want to oppose velocity)
+					output = (aimTrackingKp.get() * error) - (aimTrackingKd.get() * currentVelocity);
+				}
+
+				DogLog.log("Aim/mode", "TRACKING");
+			}
 
 			ChassisSpeeds speeds = SwerveInputStream
 					.of(
@@ -235,17 +279,15 @@ public class SwerveSubsystem extends SubsystemBase {
 							() -> translateY.getAsDouble() * -1)
 					.allianceRelativeControl(true).get();
 
-			speeds.omegaRadiansPerSecond = setpoint.velocity;
+			speeds.omegaRadiansPerSecond = output;
 
-			DogLog.log("PID/desired angle", desiredAngle * 360, Rotation);
-			DogLog.log("PID/setpoint velocity", setpoint.velocity * 360, RotationsPerSecond);
-			DogLog.log("PID/setpoint position", setpoint.position * 360, Rotation);
-			DogLog.log("PID/actual velocity", Math.toDegrees(getSwerveDrive().getRobotVelocity().omegaRadiansPerSecond),
-					RadiansPerSecond);
+			DogLog.log("Aim/desiredAngle", Math.toDegrees(desiredAngle));
+			DogLog.log("Aim/actualAngle", Math.toDegrees(currentAngle));
+			DogLog.log("Aim/error", Math.toDegrees(error));
+			DogLog.log("Aim/output", Math.toDegrees(output));
 
-			drive(speeds);
+			driveFieldOriented(speeds);
 		});
-
 	}
 
 	/**
