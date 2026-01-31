@@ -38,17 +38,17 @@ import static frc.robot.Constants.ClimberConstants.*;
  */
 public class ClimberSubsystem extends SubsystemBase {
 
-	// ==================== Hardware ====================
-	private final SparkMax motorLeft;
+	// ==================== Hardware (package-private for telemetry/visualization) ====================
+	final SparkMax motorLeft;
 	private final SparkMax motorRight;
 	private final SparkClosedLoopController controller;
-	private final RelativeEncoder encoder;
+	final RelativeEncoder encoder;
 
-	// ==================== Control State ====================
+	// ==================== Control State (package-private for telemetry/visualization) ====================
 	private final TrapezoidProfile profile;
 	private final ElevatorFeedforward feedforward;
-	private TrapezoidProfile.State currentState = new TrapezoidProfile.State();
-	private TrapezoidProfile.State goalState = new TrapezoidProfile.State();
+	TrapezoidProfile.State currentState = new TrapezoidProfile.State();
+	TrapezoidProfile.State goalState = new TrapezoidProfile.State();
 	private double lastUpdateTimestamp;
 
 	// ==================== SysId ====================
@@ -117,8 +117,8 @@ public class ClimberSubsystem extends SubsystemBase {
 								.linearVelocity(velocity.mut_replace(getVelocityMetersPerSecond(), MetersPerSecond)),
 						this));
 
-		visualization = new ClimberVisualization();
-		telemetry = new ClimberTelemetry(motorLeft, encoder);
+		visualization = new ClimberVisualization(this);
+		telemetry = new ClimberTelemetry(this);
 	}
 
 	// ==================== Periodic ====================
@@ -156,24 +156,17 @@ public class ClimberSubsystem extends SubsystemBase {
 			motorLeft.stopMotor();
 		}
 
-		visualization.update(measuredHeight, goalState.position, getStatusColor());
-		telemetry.log(
-				measuredHeight,
-				goalState.position,
-				currentState.position,
-				currentState.velocity,
-				isAtGoal(),
-				isAtTop(),
-				isAtBottom(),
-				getStatusColor());
+		visualization.update();
+		telemetry.log();
 	}
 
 	// ==================== State Queries ====================
-	public double getHeightMeters() {
+
+	double getHeightMeters() {
 		return encoder.getPosition() / ROTATIONS_PER_METER;
 	}
 
-	public double getVelocityMetersPerSecond() {
+	private double getVelocityMetersPerSecond() {
 		return encoder.getVelocity() / 60.0 / ROTATIONS_PER_METER;
 	}
 
@@ -181,28 +174,29 @@ public class ClimberSubsystem extends SubsystemBase {
 		return MathUtil.isNear(goalState.position, getHeightMeters(), POSITION_TOLERANCE.in(Meters));
 	}
 
-	public boolean isAtTop() {
+	boolean isAtTop() {
 		return getHeightMeters() >= MAX_HEIGHT.in(Meters);
 	}
 
-	public boolean isAtBottom() {
+	boolean isAtBottom() {
 		return getHeightMeters() <= MIN_HEIGHT.in(Meters);
 	}
 
-	private boolean canMove(double requestedVelocity) {
-		if (isAtTop() && requestedVelocity > 0) {
-			return false;
-		}
-		return !isAtBottom() || !(requestedVelocity < 0);
-	}
-
-	public Color getStatusColor() {
+	Color getStatusColor() {
 		if (isAtGoal()) {
 			return Color.kGreen;
 		} else if (isAtTop() || isAtBottom()) {
 			return Color.kOrange;
 		}
 		return Color.kYellow;
+	}
+
+	private boolean canMove(double requestedVelocity) {
+		double height = getHeightMeters();
+		if (height >= MAX_HEIGHT.in(Meters) && requestedVelocity > 0) {
+			return false;
+		}
+		return height > MIN_HEIGHT.in(Meters) || requestedVelocity >= 0;
 	}
 
 	// ==================== Control Methods ====================
