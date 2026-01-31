@@ -25,6 +25,7 @@ import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.networktables.BooleanSubscriber;
+import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
@@ -77,12 +78,13 @@ public class SwerveSubsystem extends SubsystemBase {
 	/**
 	 * PID controller gains for angular velocity control.
 	 */
-	private final double kp = 1.0, ki = 0.1, kd = 0.0;
+	private final DoubleSubscriber aimKp = DogLog.tunable("Swerve/Aim/kP", 0.5);
+	private final DoubleSubscriber aimKi = DogLog.tunable("Swerve/Aim/kI", 0.1);
+	private final DoubleSubscriber aimKd = DogLog.tunable("Swerve/Aim/kD", 0.05);
 	private final TrapezoidProfile.Constraints constraints = new TrapezoidProfile.Constraints(
-			Constants.MAX_ANGULAR_SPEED,
-			Constants.MAX_ANGULAR_ACCELERATION);
-	private final ProfiledPIDController pidController = new ProfiledPIDController(kp, ki, kd, constraints);
-
+			Constants.MAX_ANGULAR_SPEED / 2,
+			Constants.MAX_ANGULAR_ACCELERATION / 2);
+	private final ProfiledPIDController pidController = new ProfiledPIDController(0.5, 0.1, 0.05, constraints);
 	/**
 	 * Previous alliance color, used for vision odometry.
 	 */
@@ -211,8 +213,12 @@ public class SwerveSubsystem extends SubsystemBase {
 	}
 
 	public Command aimAt(DoubleSupplier translateX, DoubleSupplier translateY, Pose2d target) {
-		return startRun(() -> pidController.reset(getPose().getRotation().getRadians(),
-				getSwerveDrive().getRobotVelocity().omegaRadiansPerSecond), () -> {
+		return startRun(() -> {
+			pidController.enableContinuousInput(-Math.PI, Math.PI);
+			pidController.setPID(aimKp.get(), aimKi.get(), aimKd.get());
+			pidController.reset(getPose().getRotation().getRadians(),
+					getSwerveDrive().getRobotVelocity().omegaRadiansPerSecond);
+		}, () -> {
 			Pose2d currentPose = this.getPose();
 
 			double difX = target.getX() - currentPose.getX();
@@ -220,7 +226,8 @@ public class SwerveSubsystem extends SubsystemBase {
 
 			double desiredAngle = Math.atan2(difY, difX);
 
-			double moveAmount = pidController.calculate(currentPose.getRotation().getRadians(), desiredAngle);
+			pidController.calculate(currentPose.getRotation().getRadians(), desiredAngle);
+			TrapezoidProfile.State setpoint = pidController.getSetpoint();
 
 			ChassisSpeeds speeds = SwerveInputStream
 					.of(
@@ -229,12 +236,12 @@ public class SwerveSubsystem extends SubsystemBase {
 							() -> translateY.getAsDouble() * -1)
 					.allianceRelativeControl(true).get();
 
-			speeds.omegaRadiansPerSecond = moveAmount;
+			speeds.omegaRadiansPerSecond = setpoint.velocity;
 
 			DogLog.log("PID/desired angle", desiredAngle);
-			DogLog.log("PID/move amount", moveAmount);
-			DogLog.log("PID/current angle", currentPose.getRotation().getRadians());
-			DogLog.log("PID/velocity", getSwerveDrive().getRobotVelocity().omegaRadiansPerSecond);
+			DogLog.log("PID/setpoint velocity", setpoint.velocity);
+			DogLog.log("PID/setpoint position", setpoint.position);
+			DogLog.log("PID/actual velocity", getSwerveDrive().getRobotVelocity().omegaRadiansPerSecond);
 
 			drive(speeds);
 		});

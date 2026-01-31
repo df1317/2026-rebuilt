@@ -1,7 +1,5 @@
 package frc.robot;
 
-import static edu.wpi.first.units.Units.Meters;
-import java.io.File;
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -22,12 +20,15 @@ import frc.robot.subsystems.swervedrive.SwerveSubsystem;
 import frc.robot.subsystems.swervedrive.avoidance.FieldZones;
 import swervelib.SwerveInputStream;
 
+import java.io.File;
+
+import static edu.wpi.first.units.Units.Meters;
+
 /**
- * ---------- RobotContainer Class --- This class is where the bulk of the robot should be declared.
- * Since Command-based is a "declarative" paradigm, very little robot logic should actually be
- * handled in the {@link Robot} periodic methods (other than the scheduler calls). Instead, the
- * structure of the robot (including subsystems, commands, and trigger mappings) should be declared
- * here. ---
+ * ---------- RobotContainer Class --- This class is where the bulk of the robot should be declared. Since Command-based
+ * is a "declarative" paradigm, very little robot logic should actually be handled in the {@link Robot} periodic methods
+ * (other than the scheduler calls). Instead, the structure of the robot (including subsystems, commands, and trigger
+ * mappings) should be declared here. ---
  */
 public class RobotContainer {
 
@@ -48,9 +49,8 @@ public class RobotContainer {
 	public boolean robotRelative = false;
 
 	/**
-	 * ---------- Swerve Drive Input Streams ------------
-	 * -------------------------------------------------- Converts driver input into a field-relative
-	 * ChassisSpeeds that is controlled by angular velocity.
+	 * ---------- Swerve Drive Input Streams ------------ -------------------------------------------------- Converts
+	 * driver input into a field-relative ChassisSpeeds that is controlled by angular velocity.
 	 */
 	SwerveInputStream driveAngularVelocity = SwerveInputStream
 			.of(drivebase.getSwerveDrive(), () -> driverXbox.getLeftY() * -1,
@@ -72,14 +72,12 @@ public class RobotContainer {
 	 */
 	SwerveInputStream driveDirectAngle = driveAngularVelocity.copy()
 			.withControllerHeadingAxis(driverXbox::getRightX, driverXbox::getRightY).headingWhile(true);
-
-	Command driveAimedAt = drivebase.aimAt(() -> driverXbox.getLeftY(), () -> driverXbox.getLeftX(),
-			FieldZones.HUB_POSE_BLUE);
-
 	/**
 	 * Clone's the angular velocity input stream and converts it to a robotRelative input stream.
 	 */
 	SwerveInputStream driveRobotOriented = driveAngularVelocity.copy().robotRelative(true).allianceRelativeControl(false);
+	Command driveAimedAt = drivebase.aimAt(() -> driverXbox.getLeftY(), () -> driverXbox.getLeftX(),
+			FieldZones.HUB_POSE_BLUE);
 
 	/**
 	 * The container for the robot. Contains subsystems, input devices, and commands.
@@ -103,15 +101,15 @@ public class RobotContainer {
 		driverXbox.x().onTrue(Commands.runOnce(() -> {
 			drivebase.getDefaultCommand().cancel();
 			drivebase.removeDefaultCommand();
-			drivebase.setDefaultCommand(driveFieldOrientedAnglularVelocity);
-			System.out.println("Normal driving command");
+			drivebase.setDefaultCommand(driveAimedAt);
+			System.out.println("PID aiming command");
 		}));
 
 		driverXbox.x().onFalse(Commands.runOnce(() -> {
 			drivebase.getDefaultCommand().cancel();
 			drivebase.removeDefaultCommand();
-			drivebase.setDefaultCommand(driveAimedAt);
-			System.out.println("PID aiming command");
+			drivebase.setDefaultCommand(driveFieldOrientedAnglularVelocity);
+			System.out.println("Normal driving command");
 		}));
 
 		// Zero gyro
@@ -186,7 +184,7 @@ public class RobotContainer {
 	 * Sets brake mode on all swerve drive motors.
 	 *
 	 * @param brake
-	 *          true to enable brake mode, false for coast mode
+	 * 		true to enable brake mode, false for coast mode
 	 */
 	public void setMotorBrake(boolean brake) {
 		drivebase.setMotorBrake(brake);
@@ -198,7 +196,7 @@ public class RobotContainer {
 	private Distance getDistanceToTarget() {
 		Pose2d hubPose = DriverStation.getAlliance()
 				.orElse(DriverStation.Alliance.Blue) == DriverStation.Alliance.Red ? FieldZones.HUB_POSE_RED
-						: FieldZones.HUB_POSE_BLUE;
+				: FieldZones.HUB_POSE_BLUE;
 		return Meters.of(drivebase.getPose().getTranslation().getDistance(hubPose.getTranslation()));
 	}
 }
