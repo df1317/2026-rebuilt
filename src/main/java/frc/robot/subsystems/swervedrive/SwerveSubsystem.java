@@ -51,7 +51,7 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Config;
 import frc.robot.Constants;
 import frc.robot.Constants.DrivebaseConstants;
 import frc.robot.subsystems.swervedrive.Vision.Cameras;
-import frc.robot.subsystems.swervedrive.avoidance.FieldZones;
+import frc.robot.util.FieldZones;
 import frc.robot.util.RobotLog;
 import swervelib.SwerveController;
 import swervelib.SwerveDrive;
