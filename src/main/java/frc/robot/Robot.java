@@ -129,7 +129,7 @@ public class Robot extends TimedRobot {
 		// published even at competition (when regular NT publishing is disabled)
 		DogLog.forceNt.log("Dash/MatchTime", DriverStation.getMatchTime());
 		DogLog.forceNt.log("Dash/RobotRelative", m_robotContainer.robotRelative);
-		DogLog.forceNt.log("Dash/HubStatusColor", HubState.getHubStatusColor().toHexString());
+		DogLog.forceNt.log("Dash/HubStatusColor", HubTracker.getHubStatusColor().toHexString());
 
 		// Log NavX gyro values
 		DogLog.log("gyro yaw", AHRSJNI.c_AHRS_GetYaw());
