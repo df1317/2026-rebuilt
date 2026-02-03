@@ -63,11 +63,6 @@ import static edu.wpi.first.units.Units.*;
 
 public class SwerveSubsystem extends SubsystemBase {
 
-	/** Angular speeds for bang-bang aiming (rad/s). */
-	private static final double AIM_SPEED_FAST = Math.PI * 1.5;
-	private static final double AIM_SPEED_MID = 2.0;
-	private static final double AIM_SPEED_LOW = 0.6;
-	private static final double AIM_SPEED_LOWEST = 0.3;
 	/** Tolerance for considering the aim "on target" (rad). */
 	private static final double AIM_TOLERANCE = Math.toRadians(1);
 	/**
@@ -78,6 +73,11 @@ public class SwerveSubsystem extends SubsystemBase {
 	 * Tunable toggle for vision odometry updates. Can be changed at runtime via NetworkTables (disabled at FMS).
 	 */
 	private final BooleanSubscriber visionEnabled = DogLog.tunable("Swerve/VisionEnabled", true);
+	/** Tunable angular speeds for bang-bang aiming (rad/s). */
+	private final DoubleSubscriber aimSpeedFast = DogLog.tunable("Swerve/Aim/SpeedFast", 5.0);
+	private final DoubleSubscriber aimSpeedMid = DogLog.tunable("Swerve/Aim/SpeedMid", 1.0);
+	private final DoubleSubscriber aimSpeedLow = DogLog.tunable("Swerve/Aim/SpeedLow", 2.0);
+	private final DoubleSubscriber aimSpeedLowest = DogLog.tunable("Swerve/Aim/SpeedLowest", 0.3);
 	/**
 	 * Previous alliance color, used for vision odometry.
 	 */
@@ -255,10 +255,10 @@ public class SwerveSubsystem extends SubsystemBase {
 	 * @return Angular speed in rad/s
 	 */
 	private double getAimSpeed(double absError) {
-		if (absError > Math.PI / 2) return AIM_SPEED_FAST;
-		if (absError > Math.PI / 8) return AIM_SPEED_MID;
-		if (absError > Math.PI / 12) return AIM_SPEED_LOW;
-		return AIM_SPEED_LOWEST;
+		if (absError > Math.PI / 2) return aimSpeedFast.get();
+		if (absError > Math.PI / 8) return aimSpeedMid.get();
+		if (absError > Math.PI / 12) return aimSpeedLow.get();
+		return aimSpeedLowest.get();
 	}
 
 	/**
