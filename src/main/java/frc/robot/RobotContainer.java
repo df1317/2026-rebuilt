@@ -19,11 +19,11 @@ import frc.robot.subsystems.shooter.ShooterSubsystem;
 import frc.robot.subsystems.swervedrive.OurSwerveInputStream;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
 import frc.robot.util.FieldZones;
+import swervelib.SwerveInputStream;
 
 import java.io.File;
 
 import static edu.wpi.first.units.Units.Meters;
-import static edu.wpi.first.units.Units.RPM;
 
 /**
  * ---------- RobotContainer Class --- This class is where the bulk of the robot should be declared. Since Command-based
@@ -50,11 +50,10 @@ public class RobotContainer {
 	public boolean robotRelative = false;
 
 	/**
-	 * ---------- Swerve Drive Input Streams ------------
-	 * -------------------------------------------------- Converts driver input into a field-relative
-	 * ChassisSpeeds that is controlled by angular velocity.
+	 * ---------- Swerve Drive Input Streams ------------ -------------------------------------------------- Converts
+	 * driver input into a field-relative ChassisSpeeds that is controlled by angular velocity.
 	 */
-	OurSwerveInputStream driveAngularVelocity = OurSwerveInputStream
+	SwerveInputStream driveAngularVelocity = SwerveInputStream
 			.of(drivebase.getSwerveDrive(), () -> driverXbox.getLeftY() * -1,
 					() -> driverXbox.getLeftX() * -1)
 			.withControllerRotationAxis(() -> {
@@ -68,18 +67,6 @@ public class RobotContainer {
 			}).aim(FieldZones.HUB_POSE_RED).aimWhile(driverXbox.b())
 			.deadband(OperatorConstants.DEADBAND)
 			.scaleTranslation(DrivebaseConstants.TRANSLATION_SCALE).allianceRelativeControl(true);
-
-	/**
-	 * Clone's the angular velocity input stream and converts it to a fieldRelative input stream.
-	 */
-	OurSwerveInputStream driveDirectAngle = driveAngularVelocity.copy()
-			.withControllerHeadingAxis(driverXbox::getRightX, driverXbox::getRightY).headingWhile(true);
-
-	/**
-	 * Clone's the angular velocity input stream and converts it to a robotRelative input stream.
-	 */
-	OurSwerveInputStream driveRobotOriented = driveAngularVelocity.copy().robotRelative(true)
-			.allianceRelativeControl(false);
 
 	/**
 	 * The container for the robot. Contains subsystems, input devices, and commands.
@@ -96,9 +83,11 @@ public class RobotContainer {
 	 * Configure the button bindings for driver and operator controls.
 	 */
 	private void configureBindings() {
-		Command driveFieldOrientedAnglularVelocity = drivebase.robotDriveCommand(driveAngularVelocity, () -> robotRelative);
+		drivebase.setDefaultCommand(drivebase.robotDriveCommand(driveAngularVelocity, () -> robotRelative));
 
-		drivebase.setDefaultCommand(driveFieldOrientedAnglularVelocity);
+		// Hold X to aim at the target (overrides default drive command while held)
+		driverXbox.x().whileTrue(drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY,
+				FieldZones.HUB_POSE_BLUE));
 
 		// Zero gyro
 		driverXbox.a().onTrue(Commands.runOnce(drivebase::zeroGyro));
@@ -114,7 +103,7 @@ public class RobotContainer {
 		// X: Hold to shoot based on distance to target
 		driverXbox.x().whileTrue(shooter.shootForDistanceCommand(this::getDistanceToTarget));
 		// Y: Hold to shoot at fixed RPM
-		driverXbox.y().whileTrue(shooter.shootCommand(RPM.of(3500)));
+		// driverXbox.y().whileTrue(shooter.shootCommand(RPM.of(3500)));
 
 		// Center modules (test mode only)
 		driverXbox.back().whileTrue(
@@ -182,9 +171,9 @@ public class RobotContainer {
 	 * Gets the distance to our alliance's scoring target.
 	 */
 	private Distance getDistanceToTarget() {
-		Pose2d hubPose = DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue) == DriverStation.Alliance.Red
-				? FieldZones.HUB_POSE_RED
-				: FieldZones.HUB_POSE_BLUE;
+		Pose2d hubPose = DriverStation.getAlliance()
+				.orElse(DriverStation.Alliance.Blue) == DriverStation.Alliance.Red ? FieldZones.HUB_POSE_RED
+						: FieldZones.HUB_POSE_BLUE;
 		return Meters.of(drivebase.getPose().getTranslation().getDistance(hubPose.getTranslation()));
 	}
 }

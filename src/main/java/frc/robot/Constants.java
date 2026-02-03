@@ -1,11 +1,5 @@
 package frc.robot;
 
-import static edu.wpi.first.units.Units.*;
-
-import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.units.measure.AngularVelocity;
-import edu.wpi.first.units.measure.Distance;
-
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.*;
@@ -59,7 +53,7 @@ public final class Constants {
 	public static final double MAX_SPEED = Units.feetToMeters(14.5);
 	public static final double MAX_ANGULAR_SPEED = Math.toRadians(240.0);
 	public static final double MAX_ACCELERATION = 1.5;
-	public static final double MAX_ANGULAR_ACCELERATION = Math.toRadians(120.0);
+	public static final double MAX_ANGULAR_ACCELERATION = Math.toRadians(540.0);
 
 	/**
 	 * Swerve telemetry verbosity - automatically switches based on dev/comp mode. HIGH for development/testing, LOW for
