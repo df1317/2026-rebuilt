@@ -19,11 +19,14 @@ public class ClimberVisualization {
 	private static final double VIZ_WIDTH = 0.5;
 	private static final double VIZ_HEIGHT = MAX_HEIGHT.in(Meters) * 1.2;
 
+	private final ClimberSubsystem climber;
 	private final Mechanism2d mechanism2d;
 	private final MechanismLigament2d elevatorLigament;
 	private final MechanismLigament2d setpointLigament;
 
-	public ClimberVisualization() {
+	public ClimberVisualization(ClimberSubsystem climber) {
+		this.climber = climber;
+
 		mechanism2d = new Mechanism2d(VIZ_WIDTH, VIZ_HEIGHT);
 
 		MechanismRoot2d root = mechanism2d.getRoot("ClimberRoot", VIZ_WIDTH / 2, 0.05);
@@ -48,9 +51,9 @@ public class ClimberVisualization {
 	/**
 	 * Updates the visualization with the current state.
 	 */
-	public void update(double measuredHeight, double goalHeight, Color statusColor) {
-		elevatorLigament.setLength(measuredHeight);
-		setpointLigament.setLength(goalHeight);
-		elevatorLigament.setColor(new Color8Bit(statusColor));
+	public void update() {
+		elevatorLigament.setLength(climber.getHeightMeters());
+		setpointLigament.setLength(climber.goalState.position);
+		elevatorLigament.setColor(new Color8Bit(climber.getStatusColor()));
 	}
 }
