@@ -9,22 +9,25 @@ import edu.wpi.first.wpilibj.util.Color;
 /**
  * Stateful tracker for hub scoring eligibility based on match phase timing and which alliance won autonomous.
  *
- * <p>This class tracks the current match phase, elapsed time within each phase, and determines
+ * <p>
+ * This class tracks the current match phase, elapsed time within each phase, and determines
  * whether scoring is allowed based on the alternating shift schedule and auto winner.
  *
- * <p>Lifecycle methods must be called from Robot:
+ * <p>
+ * Lifecycle methods must be called from Robot:
  * <ul>
- *   <li>{@link #start()} - Call in autonomousInit()
- *   <li>{@link #periodic()} - Call in robotPeriodic()
- *   <li>{@link #reset()} - Call in disabledInit()
+ * <li>{@link #start()} - Call in autonomousInit()
+ * <li>{@link #periodic()} - Call in robotPeriodic()
+ * <li>{@link #reset()} - Call in disabledInit()
  * </ul>
  *
- * <p>Scoring rules:
+ * <p>
+ * Scoring rules:
  * <ul>
- *   <li>AUTO and END_GAME: Both alliances can always score
- *   <li>TRANSITION: Auto loser can score immediately; auto winner must wait MIN_SHOOT_TIME
- *   <li>SHIFT_1, SHIFT_3: Auto winner scores first, then auto loser
- *   <li>SHIFT_2, SHIFT_4: Auto loser scores first, then auto winner
+ * <li>AUTO and END_GAME: Both alliances can always score
+ * <li>TRANSITION: Auto loser can score immediately; auto winner must wait MIN_SHOOT_TIME
+ * <li>SHIFT_1, SHIFT_3: Auto winner scores first, then auto loser
+ * <li>SHIFT_2, SHIFT_4: Auto loser scores first, then auto winner
  * </ul>
  */
 public class HubTracker {
@@ -51,7 +54,8 @@ public class HubTracker {
 	/**
 	 * Starts the hub tracker. Call this in autonomousInit().
 	 *
-	 * <p>Resets and starts the phase timer and initializes the current phase.
+	 * <p>
+	 * Resets and starts the phase timer and initializes the current phase.
 	 */
 	public static void start() {
 		phaseTimer.reset();
@@ -63,7 +67,8 @@ public class HubTracker {
 	/**
 	 * Resets the hub tracker to its initial state. Call this in disabledInit().
 	 *
-	 * <p>Stops the timer and clears all tracked states including alliance and auto winner.
+	 * <p>
+	 * Stops the timer and clears all tracked states including alliance and auto winner.
 	 */
 	public static void reset() {
 		phaseTimer.stop();
@@ -77,12 +82,13 @@ public class HubTracker {
 	/**
 	 * Updates the hub tracker state. Call this in robotPeriodic().
 	 *
-	 * <p>This method:
+	 * <p>
+	 * This method:
 	 * <ul>
-	 *   <li>Updates the alliance from DriverStation
-	 *   <li>Determines the auto winner from the game-specific message (first char: 'R' or 'B')
-	 *   <li>Tracks phase transitions and resets the phase timer on change
-	 *   <li>Logs hub status to NetworkTables for dashboard display
+	 * <li>Updates the alliance from DriverStation
+	 * <li>Determines the auto winner from the game-specific message (first char: 'R' or 'B')
+	 * <li>Tracks phase transitions and resets the phase timer on change
+	 * <li>Logs hub status to NetworkTables for dashboard display
 	 * </ul>
 	 */
 	public static void periodic() {
@@ -119,7 +125,8 @@ public class HubTracker {
 	/**
 	 * Returns whether scoring is currently allowed for our alliance.
 	 *
-	 * <p>Takes into account the current phase, time elapsed in the phase, and whether we won auto.
+	 * <p>
+	 * Takes into account the current phase, time elapsed in the phase, and whether we won auto.
 	 * Includes a MIN_SHOOT_TIME buffer at phase boundaries to avoid edge cases.
 	 *
 	 * @return true if scoring is allowed now, false otherwise
@@ -134,7 +141,8 @@ public class HubTracker {
 	/**
 	 * Returns whether scoring will be allowed soon (within a 3-second buffer).
 	 *
-	 * <p>Useful for pre-positioning or preparing to score before the window opens.
+	 * <p>
+	 * Useful for pre-positioning or preparing to score before the window opens.
 	 * It looks ahead across phase boundaries if needed.
 	 *
 	 * @return true if scoring is allowed now or will be within BUFFER_TIME seconds
@@ -152,7 +160,7 @@ public class HubTracker {
 	 * Checks if scoring is possible at a future time within the current or next phase.
 	 *
 	 * @param futurePhaseTime
-	 * 		the future elapsed time to check (may exceed current phase duration)
+	 *          the future elapsed time to check (may exceed current phase duration)
 	 * @return true if scoring will be allowed at that time
 	 */
 	private static boolean willBeAbleToScoreAt(double futurePhaseTime) {
@@ -179,11 +187,11 @@ public class HubTracker {
 	 * Determines if scoring is allowed in a specific phase at a specific time.
 	 *
 	 * @param phase
-	 * 		the match phase to check
+	 *          the match phase to check
 	 * @param phaseTime
-	 * 		the elapsed time within that phase
+	 *          the elapsed time within that phase
 	 * @param weWonAuto
-	 * 		whether our alliance won autonomous
+	 *          whether our alliance won autonomous
 	 * @return true if scoring is allowed under these conditions
 	 */
 	private static boolean canScoreInPhase(MatchPhase phase, double phaseTime, boolean weWonAuto) {

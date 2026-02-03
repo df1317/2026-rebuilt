@@ -9,16 +9,20 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 /**
  * Field zone detection for 2026 REBUILT.
  *
- * <p>Field dimensions: 650.12" x 316.64" (16.52m x 8.04m)
+ * <p>
+ * Field dimensions: 650.12" x 316.64" (16.52m x 8.04m)
  *
- * <p>Zone layout (X measured from the blue alliance wall):
+ * <p>
+ * Zone layout (X measured from the blue alliance wall):
  * <ul>
- *   <li>Blue Alliance Zone: 0" to 158.32"</li>
- *   <li>Neutral Zone: 158.32" to 491.8"</li>
- *   <li>Red Alliance Zone: 491.8" to 650.12"</li>
+ * <li>Blue Alliance Zone: 0" to 158.32"</li>
+ * <li>Neutral Zone: 158.32" to 491.8"</li>
+ * <li>Red Alliance Zone: 491.8" to 650.12"</li>
  * </ul>
  *
- * <p>Each alliance zone contains obstacle strips running parallel to the center line:
+ * <p>
+ * Each alliance zone contains obstacle strips running parallel to the center line:
+ *
  * <pre>
  * Y=FIELD_WIDTH (top guardrail)
  * |----[TRENCH]----|
@@ -104,7 +108,7 @@ public final class FieldZones {
 	 * Determines which zone contains the given pose.
 	 *
 	 * @param pose
-	 * 		the robot pose to check
+	 *          the robot pose to check
 	 * @return the zone containing the pose
 	 */
 	public static Zone getZone(Pose2d pose) {
@@ -114,10 +118,11 @@ public final class FieldZones {
 	/**
 	 * Determines which zone contains the given position.
 	 *
-	 * <p>Checks obstacles (bumps, trenches) before general alliance zones.
+	 * <p>
+	 * Checks obstacles (bumps, trenches) before general alliance zones.
 	 *
 	 * @param position
-	 * 		the field position to check
+	 *          the field position to check
 	 * @return the zone containing the position
 	 */
 	public static Zone getZone(Translation2d position) {
@@ -189,9 +194,9 @@ public final class FieldZones {
 	 * Checks if the robot is in its own alliance zone (excluding obstacles).
 	 *
 	 * @param pose
-	 * 		the robot pose
+	 *          the robot pose
 	 * @param alliance
-	 * 		the robot's alliance
+	 *          the robot's alliance
 	 * @return true if in own alliance zone
 	 */
 	public static boolean isInOwnAllianceZone(Pose2d pose, Alliance alliance) {
@@ -202,9 +207,9 @@ public final class FieldZones {
 	 * Checks if the robot is in the opponent's alliance zone.
 	 *
 	 * @param pose
-	 * 		the robot pose
+	 *          the robot pose
 	 * @param alliance
-	 * 		the robot's alliance
+	 *          the robot's alliance
 	 * @return true if in opponent's alliance zone
 	 */
 	public static boolean isInOpponentAllianceZone(Pose2d pose, Alliance alliance) {
@@ -216,7 +221,7 @@ public final class FieldZones {
 	 * Checks if the robot is in the neutral zone.
 	 *
 	 * @param pose
-	 * 		the robot pose
+	 *          the robot pose
 	 * @return true if in the neutral zone
 	 */
 	public static boolean isInNeutralZone(Pose2d pose) {
@@ -227,7 +232,7 @@ public final class FieldZones {
 	 * Checks if the robot is on a bump (should slow down).
 	 *
 	 * @param pose
-	 * 		the robot pose
+	 *          the robot pose
 	 * @return true if on any bump
 	 */
 	public static boolean isOnBump(Pose2d pose) {
@@ -238,7 +243,7 @@ public final class FieldZones {
 	 * Checks if the robot is in a trench.
 	 *
 	 * @param pose
-	 * 		the robot pose
+	 *          the robot pose
 	 * @return true if in any trench
 	 */
 	public static boolean isInTrench(Pose2d pose) {
@@ -249,7 +254,7 @@ public final class FieldZones {
 	 * Checks if the robot is on any obstacle (bump or trench).
 	 *
 	 * @param pose
-	 * 		the robot pose
+	 *          the robot pose
 	 * @return true if on any obstacle
 	 */
 	public static boolean isOnObstacle(Pose2d pose) {
@@ -260,7 +265,7 @@ public final class FieldZones {
 	 * Calculates the distance to the nearest zone boundary line.
 	 *
 	 * @param pose
-	 * 		the robot pose
+	 *          the robot pose
 	 * @return distance in meters to the nearest zone boundary
 	 */
 	public static double getDistanceToNearestZoneBoundary(Pose2d pose) {
@@ -277,9 +282,9 @@ public final class FieldZones {
 	 * Checks if the robot has crossed the center line into the opponent's half.
 	 *
 	 * @param pose
-	 * 		the robot pose
+	 *          the robot pose
 	 * @param alliance
-	 * 		the robot's alliance
+	 *          the robot's alliance
 	 * @return true if on the opponent's side of center line
 	 */
 	public static boolean hasCrossedCenterLine(Pose2d pose, Alliance alliance) {
@@ -291,7 +296,7 @@ public final class FieldZones {
 	 * Returns the hub pose for the given alliance.
 	 *
 	 * @param alliance
-	 * 		the alliance
+	 *          the alliance
 	 * @return the hub pose for that alliance
 	 */
 	public static Pose2d getHubPose(Alliance alliance) {
@@ -301,7 +306,8 @@ public final class FieldZones {
 	/**
 	 * Represents distinct zones on the field.
 	 *
-	 * <p>Each zone knows which alliance it belongs to (if any) and whether it's an obstacle.
+	 * <p>
+	 * Each zone knows which alliance it belongs to (if any) and whether it's an obstacle.
 	 */
 	public enum Zone {
 		/** Blue alliance zone (clear area). */
@@ -351,7 +357,7 @@ public final class FieldZones {
 		 * Checks if this zone belongs to the specified alliance.
 		 *
 		 * @param alliance
-		 * 		the alliance to check
+		 *          the alliance to check
 		 * @return true if this zone belongs to that alliance
 		 */
 		public boolean belongsTo(Alliance alliance) {

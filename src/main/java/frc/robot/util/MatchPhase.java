@@ -5,10 +5,12 @@ import edu.wpi.first.wpilibj.DriverStation;
 /**
  * Stateless enum representing match phases with their time boundaries.
  *
- * <p>Each phase defines its start time, end time, and the next phase in sequence.
+ * <p>
+ * Each phase defines its start time, end time, and the next phase in sequence.
  * Times are in seconds remaining on the match clock (counting down from 150).
  *
- * <p>Phase sequence: AUTO -> TRANSITION -> SHIFT_1 -> SHIFT_2 -> SHIFT_3 -> SHIFT_4 -> END_GAME
+ * <p>
+ * Phase sequence: AUTO -> TRANSITION -> SHIFT_1 -> SHIFT_2 -> SHIFT_3 -> SHIFT_4 -> END_GAME
  */
 public enum MatchPhase {
 	/** Unknown/invalid phase when match time is negative. */
@@ -43,11 +45,11 @@ public enum MatchPhase {
 	 * Creates a match phase with the specified time boundaries.
 	 *
 	 * @param startTime
-	 * 		the match time (seconds remaining) when this phase starts
+	 *          the match time (seconds remaining) when this phase starts
 	 * @param endTime
-	 * 		the match time (seconds remaining) when this phase ends
+	 *          the match time (seconds remaining) when this phase ends
 	 * @param next
-	 * 		the phase that follows this one or null if this is a terminal phase
+	 *          the phase that follows this one or null if this is a terminal phase
 	 */
 	MatchPhase(int startTime, int endTime, MatchPhase next) {
 		this.startTimeSeconds = startTime;
@@ -59,7 +61,7 @@ public enum MatchPhase {
 	 * Determines the match phase for a given match time.
 	 *
 	 * @param matchTime
-	 * 		the match time in seconds remaining
+	 *          the match time in seconds remaining
 	 * @return the corresponding phase, or UNKNOWN if matchTime is negative
 	 */
 	public static MatchPhase fromMatchTime(double matchTime) {
