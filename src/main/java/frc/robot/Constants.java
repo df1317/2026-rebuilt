@@ -146,7 +146,7 @@ public final class Constants {
     public static final boolean PIVOT_INVERTED = false;
     public static final boolean ROLLER_INVERTED = false;
     public static final int PIVOT_CURRENT_LIMIT = 15;
-    public static final int ROLLER_CURRENT_LIMIT = 10;
+    public static final int ROLLER_CURRENT_LIMIT = 20;
 
     // Pivot geometry
     public static final Angle PIVOT_EXTENDED_ANGLE = Degrees.of(90);
@@ -166,10 +166,11 @@ public final class Constants {
     public static final AngularVelocity ROLLER_VELOCITY_TOLERANCE = RPM.of(100);
 
     // Roller PID constants
-    public static final double ROLLER_KP = 0.0;
-    public static final double ROLLER_KI = 0.0;
+    public static final double ROLLER_KP = 2E-4;
+    public static final double ROLLER_KI = 1E-5;
     public static final double ROLLER_KD = 0.0;
-    public static final double ROLLER_KV = 1 / 473; // derived from the REV NEO website
+    public static final double ROLLER_KV = 1.8E-4; // derived from the REV NEO website * 5.5/2
+    public static final double ROLLER_I_ZONE = 1E-3;
 
     // Debounce time for state checks
     public static final double AT_POSITION_DEBOUNCE_TIME = 0.1;
