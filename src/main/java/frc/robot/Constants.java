@@ -139,8 +139,8 @@ public final class Constants {
   public static class IntakeConstants {
 
     // Motor CAN IDs
-    public static final int PIVOT_MOTOR_ID = 20;
-    public static final int ROLLER_MOTOR_ID = 28;
+    public static final int PIVOT_MOTOR_ID = 28;
+    public static final int ROLLER_MOTOR_ID = 20;
 
     // Motor configuration
     public static final boolean PIVOT_INVERTED = false;
@@ -152,11 +152,11 @@ public final class Constants {
     public static final Angle PIVOT_EXTENDED_ANGLE = Degrees.of(90);
     public static final Angle PIVOT_RETRACTED_ANGLE = Degrees.of(0);
     public static final Angle PIVOT_ANGLE_TOLERANCE = Degrees.of(3);
-    public static final double PIVOT_GEAR_RATIO = 25.0; // motor rotations per pivot rotation
+    public static final double PIVOT_GEAR_RATIO = 12.0; // motor rotations per pivot rotation
     public static final Distance PIVOT_ARM_LENGTH = Inches.of(12);
 
     // Pivot PID constants
-    public static final double PIVOT_KP = 0.1;
+    public static final double PIVOT_KP = 0.01;
     public static final double PIVOT_KI = 0.0;
     public static final double PIVOT_KD = 0.0;
 

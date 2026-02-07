@@ -119,8 +119,11 @@ public class RobotContainer {
     // m_JoystickL.trigger().whileTrue(
     // climber.manualControlCommand(() -> MathUtil.applyDeadband(-m_JoystickL.getY(), 0.1)));
 
-    driverXbox.y().onTrue(intake.runRollerCommand());
-    driverXbox.y().onFalse(intake.stopRollerCommand());
+    // driverXbox.y().onTrue(intake.runRollerCommand());
+    // driverXbox.y().onFalse(intake.stopRollerCommand());
+
+    driverXbox.y().onTrue(intake.extendCommand());
+    driverXbox.y().onFalse(intake.retractCommand());
 
     // ========== Autopilot Examples ==========
     // Uncomment these to enable Autopilot drive-to-pose commands during testing
