@@ -122,7 +122,7 @@ public class RobotContainer {
 		// ========== Autopilot Examples ==========
 		// Uncomment these to enable Autopilot drive-to-pose commands during testing
 		//
-		// Example 1: Drive to scoring position (field coordinates)
+		// Example 1: Drive to scoring pos ition (field coordinates)
 		// driverXbox.x().whileTrue(
 		// drivebase.driveToPoseAutopilot(() -> new Pose2d(5.0, 3.0, Rotation2d.fromDegrees(0)))
 		// );
