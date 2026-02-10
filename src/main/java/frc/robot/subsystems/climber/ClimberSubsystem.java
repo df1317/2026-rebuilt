@@ -55,8 +55,8 @@ public class ClimberSubsystem extends SubsystemBase {
   // private final SparkClosedLoopController controller;
   // final RelativeEncoder encoder;
 
-  private final TalonFX motorLeft;
-  private final TalonFX motorRight;
+  final TalonFX motorLeft;
+  final TalonFX motorRight;
 
   // ==================== Control State (package-private for telemetry/visualization)
   // ====================
@@ -73,8 +73,8 @@ public class ClimberSubsystem extends SubsystemBase {
   private final SysIdRoutine sysIdRoutine;
 
   // ==================== Visualization & Telemetry ====================
-  private final ClimberVisualization visualization;
-  private final ClimberTelemetry telemetry;
+  // private final ClimberVisualization visualization;
+  // private final ClimberTelemetry telemetry;
 
   /**
    * Creates a new ClimberSubsystem.
@@ -145,8 +145,8 @@ public class ClimberSubsystem extends SubsystemBase {
                     velocity.mut_replace(getVelocityMetersPerSecond(), MetersPerSecond)),
             this));
 
-    visualization = new ClimberVisualization(this);
-    telemetry = new ClimberTelemetry(this);
+    // visualization = new ClimberVisualization(this);
+    // telemetry = new ClimberTelemetry(this);
   }
 
   // ==================== Periodic ====================
@@ -155,13 +155,14 @@ public class ClimberSubsystem extends SubsystemBase {
     double now = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
     double dt = now - lastUpdateTimestamp;
     lastUpdateTimestamp = now;
+    // System.out.println("dt: " + dt);
 
     double measuredHeight = getHeightMeters();
-
+    // System.out.println("before clamp: " + currentState.position);
     goalState.position =
         MathUtil.clamp(goalState.position, MIN_HEIGHT.in(Meters), MAX_HEIGHT.in(Meters));
 
-    if (!MathUtil.isNear(goalState.position, measuredHeight, POSITION_TOLERANCE.in(Meters) * 5)) {
+    if (MathUtil.isNear(goalState.position, measuredHeight, POSITION_TOLERANCE.in(Meters) * 5)) {
       currentState.position = measuredHeight;
       currentState.velocity = 0.0;
     } else {
@@ -174,9 +175,14 @@ public class ClimberSubsystem extends SubsystemBase {
     if (canMove(currentState.velocity)) {
       double ff = feedforward.calculate(currentState.velocity);
 
+      // currentState.position += 0.1;
+
       motorLeft.setControl(
           new PositionVoltage(currentState.position * ROTATIONS_PER_METER).withFeedForward(ff));
+      // motorLeft.setControl(new PositionVoltage(currentState.position * ROTATIONS_PER_METER));
       motorRight.setControl(new Follower(MOTOR_LEFT_ID, MotorAlignmentValue.Opposed));
+      // System.out.println("position: " + currentState.position);
+      // System.out.println("goal pos: " + goalState.position);
 
       // controller.setSetpoint(currentState.position * ROTATIONS_PER_METER, ControlType.kPosition,
       // ClosedLoopSlot.kSlot0, ff);
@@ -187,8 +193,8 @@ public class ClimberSubsystem extends SubsystemBase {
       motorLeft.stopMotor();
     }
 
-    visualization.update();
-    telemetry.log();
+    // visualization.update();
+    // telemetry.log();
   }
 
   // ==================== State Queries ====================
@@ -223,11 +229,12 @@ public class ClimberSubsystem extends SubsystemBase {
   }
 
   private boolean canMove(double requestedVelocity) {
-    double height = getHeightMeters();
-    if (height >= MAX_HEIGHT.in(Meters) && requestedVelocity > 0) {
-      return false;
-    }
-    return height > MIN_HEIGHT.in(Meters) || requestedVelocity >= 0;
+    return true;
+    // double height = getHeightMeters();
+    // if (height >= MAX_HEIGHT.in(Meters) && requestedVelocity > 0) {
+    // return false;
+    // }
+    // return height > MIN_HEIGHT.in(Meters) || requestedVelocity >= 0;
   }
 
   // ==================== Control Methods ====================
