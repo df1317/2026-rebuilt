@@ -209,8 +209,8 @@ public final class Constants {
     public static final int CURRENT_LIMIT = 40;
 
     // Mechanism geometry
-    public static final Distance MAX_HEIGHT = Meters.of(10);
-    public static final Distance MIN_HEIGHT = Meters.of(0.0);
+    public static final Distance MAX_HEIGHT = Meters.of(100.0);
+    public static final Distance MIN_HEIGHT = Meters.of(-100.0);
     public static final double ROTATIONS_PER_METER = 42.4;
     public static final Distance POSITION_TOLERANCE = Centimeters.of(2);
 

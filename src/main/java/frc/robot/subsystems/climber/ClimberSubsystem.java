@@ -73,8 +73,8 @@ public class ClimberSubsystem extends SubsystemBase {
   private final SysIdRoutine sysIdRoutine;
 
   // ==================== Visualization & Telemetry ====================
-  // private final ClimberVisualization visualization;
-  // private final ClimberTelemetry telemetry;
+  private final ClimberVisualization visualization;
+  private final ClimberTelemetry telemetry;
 
   /**
    * Creates a new ClimberSubsystem.
@@ -145,8 +145,11 @@ public class ClimberSubsystem extends SubsystemBase {
                     velocity.mut_replace(getVelocityMetersPerSecond(), MetersPerSecond)),
             this));
 
-    // visualization = new ClimberVisualization(this);
-    // telemetry = new ClimberTelemetry(this);
+    visualization = new ClimberVisualization(this);
+    telemetry = new ClimberTelemetry(this);
+    currentState.position = goalState.position;
+    currentState.velocity = 0.0;
+    goalState.velocity = 0.0;
   }
 
   // ==================== Periodic ====================
@@ -159,8 +162,8 @@ public class ClimberSubsystem extends SubsystemBase {
 
     double measuredHeight = getHeightMeters();
     // System.out.println("before clamp: " + currentState.position);
-    goalState.position =
-        MathUtil.clamp(goalState.position, MIN_HEIGHT.in(Meters), MAX_HEIGHT.in(Meters));
+    // goalState.position =
+    // MathUtil.clamp(goalState.position, MIN_HEIGHT.in(Meters), MAX_HEIGHT.in(Meters));
 
     if (MathUtil.isNear(goalState.position, measuredHeight, POSITION_TOLERANCE.in(Meters) * 5)) {
       currentState.position = measuredHeight;
