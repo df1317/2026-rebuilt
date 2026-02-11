@@ -32,6 +32,7 @@ import edu.wpi.first.units.measure.MutDistance;
 import edu.wpi.first.units.measure.MutLinearVelocity;
 import edu.wpi.first.units.measure.MutVoltage;
 import edu.wpi.first.units.measure.Voltage;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.util.Color;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -48,278 +49,296 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
  */
 public class ClimberSubsystem extends SubsystemBase {
 
-  // ==================== Hardware (package-private for telemetry/visualization)
-  // ====================
-  // final SparkMax motorLeft;
-  // private final SparkMax motorRight;
-  // private final SparkClosedLoopController controller;
-  // final RelativeEncoder encoder;
+	// ==================== Hardware (package-private for telemetry/visualization)
+	// ====================
+	// final SparkMax motorLeft;
+	// private final SparkMax motorRight;
+	// private final SparkClosedLoopController controller;
+	// final RelativeEncoder encoder;
 
-  final TalonFX motorLeft;
-  final TalonFX motorRight;
+	final TalonFX motorLeft;
+	final TalonFX motorRight;
 
-  // ==================== Control State (package-private for telemetry/visualization)
-  // ====================
-  private final TrapezoidProfile profile;
-  private final ElevatorFeedforward feedforward;
-  TrapezoidProfile.State currentState = new TrapezoidProfile.State();
-  TrapezoidProfile.State goalState = new TrapezoidProfile.State();
-  private double lastUpdateTimestamp;
+	// ==================== Control State (package-private for telemetry/visualization)
+	// ====================
+	private final TrapezoidProfile profile;
+	private final ElevatorFeedforward feedforward;
+	TrapezoidProfile.State currentState = new TrapezoidProfile.State();
+	TrapezoidProfile.State goalState = new TrapezoidProfile.State();
+	private double lastUpdateTimestamp;
 
-  // ==================== SysId ====================
-  private final MutVoltage appliedVoltage = Volts.mutable(0);
-  private final MutDistance distance = Meters.mutable(0);
-  private final MutLinearVelocity velocity = MetersPerSecond.mutable(0);
-  private final SysIdRoutine sysIdRoutine;
+	// ==================== SysId ====================
+	private final MutVoltage appliedVoltage = Volts.mutable(0);
+	private final MutDistance distance = Meters.mutable(0);
+	private final MutLinearVelocity velocity = MetersPerSecond.mutable(0);
+	private final SysIdRoutine sysIdRoutine;
 
-  // ==================== Visualization & Telemetry ====================
-  private final ClimberVisualization visualization;
-  private final ClimberTelemetry telemetry;
+	// ==================== Visualization & Telemetry ====================
+	private final ClimberVisualization visualization;
+	private final ClimberTelemetry telemetry;
 
-  /**
-   * Creates a new ClimberSubsystem.
-   *
-   * <p>
-   * <b>Important:</b> The encoder position is not initialized on construction and will retain
-   * values from previous power cycles or be zero after a fresh boot. Call {@link #resetEncoders()}
-   * during robot initialization or before first use if the climber is not at the zero position.
-   */
-  public ClimberSubsystem() {
-    motorLeft = new TalonFX(MOTOR_LEFT_ID);
-    motorRight = new TalonFX(MOTOR_RIGHT_ID);
+	/**
+	 * Creates a new ClimberSubsystem.
+	 *
+	 * <p>
+	 * <b>Important:</b> The encoder position is not initialized on construction and will retain
+	 * values from previous power cycles or be zero after a fresh boot. Call {@link #resetEncoders()}
+	 * during robot initialization or before first use if the climber is not at the zero position.
+	 */
+	public ClimberSubsystem() {
+		motorLeft = new TalonFX(MOTOR_LEFT_ID);
+		motorRight = new TalonFX(MOTOR_RIGHT_ID);
 
-    // Configure the TalonFX for basic use
-    TalonFXConfiguration configs = new TalonFXConfiguration();
-    // This TalonFX should be configured with a kP of 1, a kI of 0, a kD of 10, and a kV of 2 on
-    // slot 0
-    configs.Slot0.kP = KP;
-    configs.Slot0.kI = KI;
-    configs.Slot0.kD = KD;
-    configs.Slot0.kV = KV;
-    configs.Slot0.kA = KG;
-    configs.Slot0.kS = KS;
+		// Configure the TalonFX for basic use
+		TalonFXConfiguration configs = new TalonFXConfiguration();
+		// This TalonFX should be configured with a kP of 1, a kI of 0, a kD of 10, and a kV of 2 on
+		// slot 0
+		configs.Slot0.kP = KP;
+		configs.Slot0.kI = KI;
+		configs.Slot0.kD = KD;
+		configs.Slot0.kV = KV;
+		configs.Slot0.kA = KG;
+		configs.Slot0.kS = KS;
 
-    configs.CurrentLimits.SupplyCurrentLimit = CURRENT_LIMIT;
-    configs.CurrentLimits.SupplyCurrentLimitEnable = true;
+		configs.CurrentLimits.SupplyCurrentLimit = CURRENT_LIMIT;
+		configs.CurrentLimits.SupplyCurrentLimitEnable = true;
 
-    motorLeft.getConfigurator().apply(configs);
-    motorRight.getConfigurator().apply(configs);
+		motorLeft.getConfigurator().apply(configs);
+		motorRight.getConfigurator().apply(configs);
 
-    // SparkMaxConfig leaderConfig = new SparkMaxConfig();
-    // leaderConfig.smartCurrentLimit(CURRENT_LIMIT).idleMode(IdleMode.kBrake).inverted(INVERTED);
-    // leaderConfig.closedLoop.p(KP, ClosedLoopSlot.kSlot0).i(KI, ClosedLoopSlot.kSlot0).d(KD,
-    // ClosedLoopSlot.kSlot0);
-    // leaderConfig.signals.primaryEncoderPositionPeriodMs(10);
+		// SparkMaxConfig leaderConfig = new SparkMaxConfig();
+		// leaderConfig.smartCurrentLimit(CURRENT_LIMIT).idleMode(IdleMode.kBrake).inverted(INVERTED);
+		// leaderConfig.closedLoop.p(KP, ClosedLoopSlot.kSlot0).i(KI, ClosedLoopSlot.kSlot0).d(KD,
+		// ClosedLoopSlot.kSlot0);
+		// leaderConfig.signals.primaryEncoderPositionPeriodMs(10);
 
-    // SparkMaxConfig followerConfig = new SparkMaxConfig();
-    // followerConfig.smartCurrentLimit(CURRENT_LIMIT).idleMode(IdleMode.kBrake)
-    // // Follower inverts relative to leader. With INVERTED=false on leader,
-    // // this causes motors to spin in opposite directions (correct for elevator
-    // // with mirrored motor mounting). Verify physical mounting matches this assumption.
-    // .follow(motorLeft, true);
+		// SparkMaxConfig followerConfig = new SparkMaxConfig();
+		// followerConfig.smartCurrentLimit(CURRENT_LIMIT).idleMode(IdleMode.kBrake)
+		// // Follower inverts relative to leader. With INVERTED=false on leader,
+		// // this causes motors to spin in opposite directions (correct for elevator
+		// // with mirrored motor mounting). Verify physical mounting matches this assumption.
+		// .follow(motorLeft, true);
 
-    // motorLeft.configure(leaderConfig, ResetMode.kResetSafeParameters,
-    // PersistMode.kNoPersistParameters);
-    // motorRight.configure(followerConfig, ResetMode.kResetSafeParameters,
-    // PersistMode.kNoPersistParameters);
+		// motorLeft.configure(leaderConfig, ResetMode.kResetSafeParameters,
+		// PersistMode.kNoPersistParameters);
+		// motorRight.configure(followerConfig, ResetMode.kResetSafeParameters,
+		// PersistMode.kNoPersistParameters);
 
-    // controller = motorLeft.getClosedLoopController();
-    // encoder = motorLeft.getEncoder();
-    // encoder.setPosition(0);
+		// controller = motorLeft.getClosedLoopController();
+		// encoder = motorLeft.getEncoder();
+		// encoder.setPosition(0);
 
-    profile =
-        new TrapezoidProfile(new TrapezoidProfile.Constraints(MAX_VELOCITY.in(MetersPerSecond),
-            MAX_ACCELERATION.in(MetersPerSecondPerSecond)));
-    feedforward = new ElevatorFeedforward(KS, KG, KV);
+		profile = new TrapezoidProfile(new TrapezoidProfile.Constraints(MAX_VELOCITY.in(MetersPerSecond),
+				MAX_ACCELERATION.in(MetersPerSecondPerSecond)));
+		feedforward = new ElevatorFeedforward(KS, KG, KV);
 
-    lastUpdateTimestamp = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
+		lastUpdateTimestamp = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
 
-    sysIdRoutine = new SysIdRoutine(
-        new SysIdRoutine.Config(null, Voltage.ofBaseUnits(5, Volts), null, null),
-        new SysIdRoutine.Mechanism(
-            (Voltage volts) -> motorLeft.setVoltage(volts.baseUnitMagnitude()),
-            log -> log.motor("climber")
-                .voltage(appliedVoltage.mut_replace(motorLeft.getMotorVoltage().getValueAsDouble()
-                    * motorLeft.getDutyCycle().getValueAsDouble(), Volts))
-                .linearPosition(distance.mut_replace(getHeightMeters(), Meters)).linearVelocity(
-                    velocity.mut_replace(getVelocityMetersPerSecond(), MetersPerSecond)),
-            this));
+		sysIdRoutine = new SysIdRoutine(
+				new SysIdRoutine.Config(null, Voltage.ofBaseUnits(5, Volts), null, null),
+				new SysIdRoutine.Mechanism(
+						(Voltage volts) -> motorLeft.setVoltage(volts.baseUnitMagnitude()),
+						log -> log.motor("climber")
+								.voltage(appliedVoltage.mut_replace(motorLeft.getMotorVoltage().getValueAsDouble()
+										* motorLeft.getDutyCycle().getValueAsDouble(), Volts))
+								.linearPosition(distance.mut_replace(getHeightMeters(), Meters)).linearVelocity(
+										velocity.mut_replace(getVelocityMetersPerSecond(), MetersPerSecond)),
+						this));
 
-    visualization = new ClimberVisualization(this);
-    telemetry = new ClimberTelemetry(this);
-    currentState.position = goalState.position;
-    currentState.velocity = 0.0;
-    goalState.velocity = 0.0;
-  }
+		visualization = new ClimberVisualization(this);
+		telemetry = new ClimberTelemetry(this);
 
-  // ==================== Periodic ====================
-  @Override
-  public void periodic() {
-    double now = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
-    double dt = now - lastUpdateTimestamp;
-    lastUpdateTimestamp = now;
-    // System.out.println("dt: " + dt);
+		goalState.position = getHeightMeters();
+		currentState.position = getHeightMeters();
+		currentState.velocity = 0.0;
+		goalState.velocity = 0.0;
+	}
 
-    double measuredHeight = getHeightMeters();
-    // System.out.println("before clamp: " + currentState.position);
-    // goalState.position =
-    // MathUtil.clamp(goalState.position, MIN_HEIGHT.in(Meters), MAX_HEIGHT.in(Meters));
+	public void onEnabled() {
+		System.out.println("justed ENABLED!");
+		goalState.position = getHeightMeters();
+		currentState.position = getHeightMeters();
+		currentState.velocity = 0.0;
+		goalState.velocity = 0.0;
+	}
 
-    if (MathUtil.isNear(goalState.position, measuredHeight, POSITION_TOLERANCE.in(Meters) * 5)) {
-      currentState.position = measuredHeight;
-      currentState.velocity = 0.0;
-    } else {
-      currentState.velocity = MathUtil.clamp(currentState.velocity,
-          -MAX_VELOCITY.in(MetersPerSecond), MAX_VELOCITY.in(MetersPerSecond));
-    }
+	boolean prevEnabled = false;
 
-    currentState = profile.calculate(dt, currentState, goalState);
+	// ==================== Periodic ====================
+	@Override
+	public void periodic() {
+		if (DriverStation.isEnabled() && !prevEnabled) {
+			onEnabled();
+		}
+		prevEnabled = DriverStation.isEnabled();
 
-    if (canMove(currentState.velocity)) {
-      double ff = feedforward.calculate(currentState.velocity);
+		double now = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
+		double dt = now - lastUpdateTimestamp;
+		lastUpdateTimestamp = now;
+		// System.out.println("dt: " + dt);
 
-      // currentState.position += 0.1;
+		double measuredHeight = getHeightMeters();
+		// System.out.println("before clamp: " + currentState.position);
+		// goalState.position =
+		// MathUtil.clamp(goalState.position, MIN_HEIGHT.in(Meters), MAX_HEIGHT.in(Meters));
 
-      motorLeft.setControl(
-          new PositionVoltage(currentState.position * ROTATIONS_PER_METER).withFeedForward(ff));
-      // motorLeft.setControl(new PositionVoltage(currentState.position * ROTATIONS_PER_METER));
-      motorRight.setControl(new Follower(MOTOR_LEFT_ID, MotorAlignmentValue.Opposed));
-      // System.out.println("position: " + currentState.position);
-      // System.out.println("goal pos: " + goalState.position);
+		if (MathUtil.isNear(goalState.position, measuredHeight, POSITION_TOLERANCE.in(Meters) * 5)) {
+			currentState.position = measuredHeight;
+			currentState.velocity = 0.0;
+		} else {
+			currentState.velocity = MathUtil.clamp(currentState.velocity,
+					-MAX_VELOCITY.in(MetersPerSecond), MAX_VELOCITY.in(MetersPerSecond));
+		}
 
-      // controller.setSetpoint(currentState.position * ROTATIONS_PER_METER, ControlType.kPosition,
-      // ClosedLoopSlot.kSlot0, ff);
-    } else {
-      // Movement blocked by soft limits; realign profile state with measured position
-      currentState.position = measuredHeight;
-      currentState.velocity = 0.0;
-      motorLeft.stopMotor();
-    }
+		currentState = profile.calculate(dt, currentState, goalState);
 
-    // visualization.update();
-    // telemetry.log();
-  }
+		if (canMove(currentState.velocity)) {
+			double ff = feedforward.calculate(currentState.velocity);
 
-  // ==================== State Queries ====================
+			// currentState.position += 0.1;
 
-  double getHeightMeters() {
-    return motorLeft.getPosition().getValueAsDouble() / ROTATIONS_PER_METER;
-  }
+			motorLeft.setControl(
+					new PositionVoltage(currentState.position * ROTATIONS_PER_METER).withFeedForward(ff));
+			// motorLeft.setControl(new PositionVoltage(currentState.position * ROTATIONS_PER_METER));
+			motorRight.setControl(new Follower(MOTOR_LEFT_ID, MotorAlignmentValue.Opposed));
+			// System.out.println("position: " + currentState.position);
+			// System.out.println("goal pos: " + goalState.position);
 
-  private double getVelocityMetersPerSecond() {
-    return motorLeft.getVelocity().getValueAsDouble() / 60.0 / ROTATIONS_PER_METER;
-  }
+			// controller.setSetpoint(currentState.position * ROTATIONS_PER_METER, ControlType.kPosition,
+			// ClosedLoopSlot.kSlot0, ff);
+		} else {
+			// Movement blocked by soft limits; realign profile state with measured position
+			currentState.position = measuredHeight;
+			currentState.velocity = 0.0;
+			motorLeft.stopMotor();
+		}
 
-  public boolean isAtGoal() {
-    return MathUtil.isNear(goalState.position, getHeightMeters(), POSITION_TOLERANCE.in(Meters));
-  }
+		// visualization.update();
+		// telemetry.log();
+	}
 
-  boolean isAtTop() {
-    return getHeightMeters() >= MAX_HEIGHT.in(Meters);
-  }
+	// ==================== State Queries ====================
 
-  boolean isAtBottom() {
-    return getHeightMeters() <= MIN_HEIGHT.in(Meters);
-  }
+	double getHeightMeters() {
+		return motorLeft.getPosition().getValueAsDouble() / ROTATIONS_PER_METER;
+	}
 
-  Color getStatusColor() {
-    if (isAtGoal()) {
-      return Color.kGreen;
-    } else if (isAtTop() || isAtBottom()) {
-      return Color.kOrange;
-    }
-    return Color.kYellow;
-  }
+	private double getVelocityMetersPerSecond() {
+		return motorLeft.getVelocity().getValueAsDouble() / 60.0 / ROTATIONS_PER_METER;
+	}
 
-  private boolean canMove(double requestedVelocity) {
-    return true;
-    // double height = getHeightMeters();
-    // if (height >= MAX_HEIGHT.in(Meters) && requestedVelocity > 0) {
-    // return false;
-    // }
-    // return height > MIN_HEIGHT.in(Meters) || requestedVelocity >= 0;
-  }
+	public boolean isAtGoal() {
+		return MathUtil.isNear(goalState.position, getHeightMeters(), POSITION_TOLERANCE.in(Meters));
+	}
 
-  // ==================== Control Methods ====================
-  private void setGoalHeight(double heightMeters) {
-    goalState.position = MathUtil.clamp(heightMeters, MIN_HEIGHT.in(Meters), MAX_HEIGHT.in(Meters));
-    goalState.velocity = 0.0;
-  }
+	boolean isAtTop() {
+		return getHeightMeters() >= MAX_HEIGHT.in(Meters);
+	}
 
-  private void stop() {
-    goalState.position = currentState.position;
-    goalState.velocity = 0.0;
-    motorLeft.stopMotor();
-  }
+	boolean isAtBottom() {
+		return getHeightMeters() <= MIN_HEIGHT.in(Meters);
+	}
 
-  public void resetEncoders() {
-    motorLeft.setPosition(0);
-    motorRight.setPosition(0);
-    currentState = new TrapezoidProfile.State(0, 0);
-    goalState = new TrapezoidProfile.State(0, 0);
-  }
+	Color getStatusColor() {
+		if (isAtGoal()) {
+			return Color.kGreen;
+		} else if (isAtTop() || isAtBottom()) {
+			return Color.kOrange;
+		}
+		return Color.kYellow;
+	}
 
-  // ==================== Commands ====================
-  private static final double GO_TO_HEIGHT_TIMEOUT_SECONDS = 5.0;
+	private boolean canMove(double requestedVelocity) {
+		return true;
+		// double height = getHeightMeters();
+		// if (height >= MAX_HEIGHT.in(Meters) && requestedVelocity > 0) {
+		// return false;
+		// }
+		// return height > MIN_HEIGHT.in(Meters) || requestedVelocity >= 0;
+	}
 
-  public Command goToHeightCommand(double heightMeters) {
-    return Commands.runOnce(() -> setGoalHeight(heightMeters), this)
-        .andThen(Commands.waitUntil(this::isAtGoal)).withTimeout(GO_TO_HEIGHT_TIMEOUT_SECONDS);
-  }
+	// ==================== Control Methods ====================
+	private void setGoalHeight(double heightMeters) {
+		goalState.position = MathUtil.clamp(heightMeters, MIN_HEIGHT.in(Meters), MAX_HEIGHT.in(Meters));
+		goalState.velocity = 0.0;
+	}
 
-  public Command goToHeightCommand(DoubleSupplier heightMeters) {
-    return Commands.runOnce(() -> setGoalHeight(heightMeters.getAsDouble()), this)
-        .andThen(Commands.waitUntil(this::isAtGoal)).withTimeout(GO_TO_HEIGHT_TIMEOUT_SECONDS);
-  }
+	private void stop() {
+		goalState.position = currentState.position;
+		goalState.velocity = 0.0;
+		motorLeft.stopMotor();
+	}
 
-  /**
-   * Creates a command for manual climber control.
-   *
-   * <p>
-   * When the command ends (button released), the climber holds its current position by setting the
-   * goal to the current profile state.
-   *
-   * @param speedInput supplier for joystick input (-1 to 1)
-   * @return command for manual control
-   */
-  public Command manualControlCommand(DoubleSupplier speedInput) {
-    return Commands.run(() -> {
-      double input = speedInput.getAsDouble();
-      double targetHeight = input > 0 ? MAX_HEIGHT.in(Meters)
-          : (input < 0 ? MIN_HEIGHT.in(Meters) : currentState.position);
-      setGoalHeight(targetHeight);
-    }, this).finallyDo(this::stop);
-  }
+	public void resetEncoders() {
+		motorLeft.setPosition(0);
+		motorRight.setPosition(0);
+		currentState = new TrapezoidProfile.State(0, 0);
+		goalState = new TrapezoidProfile.State(0, 0);
+	}
 
-  public Command extendCommand() {
-    return goToHeightCommand(MAX_HEIGHT.in(Meters)).withName("Climber Extend");
-  }
+	// ==================== Commands ====================
+	private static final double GO_TO_HEIGHT_TIMEOUT_SECONDS = 5.0;
 
-  public Command retractCommand() {
-    return goToHeightCommand(MIN_HEIGHT.in(Meters)).withName("Climber Retract");
-  }
+	public Command goToHeightCommand(double heightMeters) {
+		return Commands.runOnce(() -> setGoalHeight(heightMeters), this)
+				.andThen(Commands.waitUntil(this::isAtGoal)).withTimeout(GO_TO_HEIGHT_TIMEOUT_SECONDS);
+	}
 
-  public Command zeroCommand() {
-    return Commands.runOnce(this::resetEncoders, this).withName("Climber Zero");
-  }
+	public Command goToHeightCommand(DoubleSupplier heightMeters) {
+		return Commands.runOnce(() -> setGoalHeight(heightMeters.getAsDouble()), this)
+				.andThen(Commands.waitUntil(this::isAtGoal)).withTimeout(GO_TO_HEIGHT_TIMEOUT_SECONDS);
+	}
 
-  // ==================== SysId ====================
-  public Command sysIdQuasistatic(Direction direction) {
-    return sysIdRoutine.quasistatic(direction);
-  }
+	/**
+	 * Creates a command for manual climber control.
+	 *
+	 * <p>
+	 * When the command ends (button released), the climber holds its current position by setting the
+	 * goal to the current profile state.
+	 *
+	 * @param speedInput
+	 *          supplier for joystick input (-1 to 1)
+	 * @return command for manual control
+	 */
+	public Command manualControlCommand(DoubleSupplier speedInput) {
+		return Commands.run(() -> {
+			double input = speedInput.getAsDouble();
+			double targetHeight = input > 0 ? MAX_HEIGHT.in(Meters)
+					: (input < 0 ? MIN_HEIGHT.in(Meters) : currentState.position);
+			// setGoalHeight(targetHeight);
+			goalState.position += input;
+		}, this).finallyDo(this::stop);
+	}
 
-  public Command sysIdDynamic(Direction direction) {
-    return sysIdRoutine.dynamic(direction);
-  }
+	public Command extendCommand() {
+		return goToHeightCommand(MAX_HEIGHT.in(Meters)).withName("Climber Extend");
+	}
 
-  public Command sysIdFullCommand(double quasiTimeout, double pauseTimeout, double dynamicTimeout) {
-    return sysIdRoutine.quasistatic(Direction.kForward).withTimeout(quasiTimeout)
-        .andThen(Commands.waitSeconds(pauseTimeout))
-        .andThen(sysIdRoutine.quasistatic(Direction.kReverse).withTimeout(quasiTimeout))
-        .andThen(Commands.waitSeconds(pauseTimeout))
-        .andThen(sysIdRoutine.dynamic(Direction.kForward).withTimeout(dynamicTimeout))
-        .andThen(Commands.waitSeconds(pauseTimeout))
-        .andThen(sysIdRoutine.dynamic(Direction.kReverse).withTimeout(dynamicTimeout))
-        .withName("Climber SysId");
-  }
+	public Command retractCommand() {
+		return goToHeightCommand(MIN_HEIGHT.in(Meters)).withName("Climber Retract");
+	}
+
+	public Command zeroCommand() {
+		return Commands.runOnce(this::resetEncoders, this).withName("Climber Zero");
+	}
+
+	// ==================== SysId ====================
+	public Command sysIdQuasistatic(Direction direction) {
+		return sysIdRoutine.quasistatic(direction);
+	}
+
+	public Command sysIdDynamic(Direction direction) {
+		return sysIdRoutine.dynamic(direction);
+	}
+
+	public Command sysIdFullCommand(double quasiTimeout, double pauseTimeout, double dynamicTimeout) {
+		return sysIdRoutine.quasistatic(Direction.kForward).withTimeout(quasiTimeout)
+				.andThen(Commands.waitSeconds(pauseTimeout))
+				.andThen(sysIdRoutine.quasistatic(Direction.kReverse).withTimeout(quasiTimeout))
+				.andThen(Commands.waitSeconds(pauseTimeout))
+				.andThen(sysIdRoutine.dynamic(Direction.kForward).withTimeout(dynamicTimeout))
+				.andThen(Commands.waitSeconds(pauseTimeout))
+				.andThen(sysIdRoutine.dynamic(Direction.kReverse).withTimeout(dynamicTimeout))
+				.withName("Climber SysId");
+	}
 }
