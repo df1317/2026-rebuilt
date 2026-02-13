@@ -1,6 +1,7 @@
 package frc.robot.subsystems.intake;
 
 import static edu.wpi.first.units.Units.*;
+import static edu.wpi.first.wpilibj2.command.Commands.sequence;
 import static frc.robot.Constants.IntakeConstants.AT_POSITION_DEBOUNCE_TIME;
 import static frc.robot.Constants.IntakeConstants.PIVOT_ANGLE_TOLERANCE;
 import static frc.robot.Constants.IntakeConstants.PIVOT_CURRENT_LIMIT;
@@ -33,6 +34,7 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
+import dev.doglog.DogLog;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.units.AngleUnit;
@@ -117,8 +119,7 @@ public class IntakeSubsystem extends SubsystemBase {
 
   public boolean isPivotAtPosition() {
     boolean atPositionRaw =
-        Math.abs(pivotEncoder.getPosition() - targetPivotAngle.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
-            .in(Degrees);
+        Math.abs(pivotEncoder.getPosition() - targetPivotAngle.in(Degrees)) < PIVOT_ANGLE_TOLERANCE.in(Degrees);
     return atPositionDebouncer.calculate(atPositionRaw);
   }
 
@@ -152,8 +153,11 @@ public class IntakeSubsystem extends SubsystemBase {
 
   public Command extendCommand() {
     return runOnce(() -> setPivotAngle(PIVOT_EXTENDED_ANGLE))
-      .andThen(idle().until(this::isPivotStalled))
-      .andThen(runOnce(() -> setPivotAngle(Angle.ofBaseUnits(pivotEncoder.getPosition(), Rotations))))
+      .andThen(idle().until(() -> isPivotStalled() || isPivotAtPosition()))
+      .andThen(
+        sequence(
+          runOnce(() -> setPivotAngle(Angle.ofBaseUnits(pivotEncoder.getPosition(), Radians))),
+          runOnce(() -> System.out.println("exists"))).onlyIf(this::isPivotStalled))
       .withName("Intake Extend");
   }
 
@@ -174,13 +178,12 @@ public class IntakeSubsystem extends SubsystemBase {
   }
 
   public Command intakeCommand() {
-    return Commands
-        .sequence(extendCommand(), Commands.waitUntil(this::isPivotAtPosition), runRollerCommand())
+    return sequence(extendCommand(), Commands.waitUntil(this::isPivotAtPosition), runRollerCommand())
         .withName("Intake Full Sequence");
   }
 
   public Command stowCommand() {
-    return Commands.sequence(stopRollerCommand(), retractCommand()).withName("Intake Stow");
+    return sequence(stopRollerCommand(), retractCommand()).withName("Intake Stow");
   }
 
   public boolean isPivotStalled() {
