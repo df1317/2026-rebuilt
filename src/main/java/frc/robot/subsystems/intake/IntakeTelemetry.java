@@ -37,7 +37,7 @@ public class IntakeTelemetry {
 		DogLog.log("Intake/PivotAtPosition", intake.isPivotAtPosition());
 		DogLog.log("Intake/IsExtended", isExtended());
 		DogLog.log("Intake/IsRetracted", isRetracted());
-    DogLog.log("Intake/IsStalled", isPivotStalled());
+		DogLog.log("Intake/IsStalled", isPivotStalled());
 
 		// Roller tracking
 		DogLog.log("Intake/RollerVelocityRPM", rollerVelocityRPM);
@@ -63,9 +63,9 @@ public class IntakeTelemetry {
 				&& Math.abs(intake.targetPivotAngle.in(Degrees) - PIVOT_RETRACTED_ANGLE.in(Degrees)) < 1.0;
 	}
 
-  private boolean isPivotStalled() {
-    return intake.isPivotStalled();
-  }
+	private boolean isPivotStalled() {
+		return intake.isPivotStalled();
+	}
 
 	private boolean isRollerRunning() {
 		return Math.abs(intake.targetRollerVelocity.in(RPM)) > ROLLER_VELOCITY_TOLERANCE.in(RPM);
