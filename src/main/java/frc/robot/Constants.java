@@ -200,7 +200,7 @@ public final class Constants {
 	public static class ClimberConstants {
 
 		// Motor CAN IDs
-		public static final int MOTOR_LEFT_ID = 29;
+    public static final int MOTOR_LEFT_ID = 40;
 		public static final int MOTOR_RIGHT_ID = 25;
 
 		// Motor configuration

@@ -120,8 +120,9 @@ public class RobotContainer {
 		m_JoystickL.trigger().whileTrue(
 				climber.manualControlCommand(() -> MathUtil.applyDeadband(-m_JoystickL.getY(), 0.1)));
 
-		driverXbox.povUp().whileTrue(climber.manualControlCommand(() -> 1));
-		driverXbox.povDown().whileTrue(climber.manualControlCommand(() -> -1));
+    driverXbox.povUp().whileTrue(climber.manualControlCommand(() -> 0.5 / (1000.0 / 20.0)));
+    driverXbox.povDown().whileTrue(climber.manualControlCommand(() -> -0.5 / (1000.0 / 20.0)));
+    driverXbox.povRight().onTrue(climber.goToHeightCommand(5));
 
 		// ========== Autopilot Examples ==========
 		// Uncomment these to enable Autopilot drive-to-pose commands during testing
