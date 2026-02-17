@@ -138,7 +138,7 @@ public final class Constants {
 	public static class IntakeConstants {
 
 		// Motor CAN IDs
-		public static final int PIVOT_MOTOR_ID = 20;
+    public static final int PIVOT_MOTOR_ID = 43;
     public static final int ROLLER_MOTOR_ID = 17;
 
 		// Motor configuration
@@ -177,12 +177,14 @@ public final class Constants {
 	public static class ShooterConstants {
 
 		// Motor CAN ID
-		public static final int MOTOR_ID = 30;
-    public static final int FEEDER_ID = 18;
+    public static final int MOTOR_ID = 17;
+    public static final int FEEDER_ID = 26;
 
 		// Motor configuration
-		public static final boolean INVERTED = false;
-		public static final int CURRENT_LIMIT = 40;
+    public static final boolean INVERTED = true;
+    public static final boolean FEEDER_INVERTED = false;
+    public static final int CURRENT_LIMIT = 25;
+    public static final int FEEDER_CURRENT_LIMIT = CURRENT_LIMIT;
 
 		// PID constants (tune these for your flywheel)
 		public static final double KP = 0.0002;

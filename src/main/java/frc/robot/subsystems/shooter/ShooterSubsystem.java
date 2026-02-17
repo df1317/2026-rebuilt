@@ -78,8 +78,8 @@ public class ShooterSubsystem extends SubsystemBase {
     config.closedLoop.pid(ShooterConstants.KP, ShooterConstants.KI, ShooterConstants.KD);
     config.closedLoop.feedForward.kV(ShooterConstants.KV);
 
-    clonedConfig.idleMode(IdleMode.kCoast).smartCurrentLimit(ShooterConstants.CURRENT_LIMIT)
-        .inverted(ShooterConstants.INVERTED);
+    clonedConfig.idleMode(IdleMode.kCoast).smartCurrentLimit(ShooterConstants.FEEDER_CURRENT_LIMIT)
+        .inverted(ShooterConstants.FEEDER_INVERTED);
     clonedConfig.closedLoop.pid(ShooterConstants.KP, ShooterConstants.KI, ShooterConstants.KD);
     clonedConfig.closedLoop.feedForward.kV(ShooterConstants.KV);
 
@@ -117,6 +117,14 @@ public class ShooterSubsystem extends SubsystemBase {
     return RPM.of(distanceToRPM.get(clampedDistance));
   }
 
+  public AngularVelocity getTargetVelocity() {
+    return targetVelocity;
+  }
+
+  public AngularVelocity getTargetFeederVelocity() {
+    return targetFeederVelocity;
+  }
+
   // ==================== Control Methods ====================
 
   public void setVelocityForDistance(Distance distance) {
@@ -125,7 +133,9 @@ public class ShooterSubsystem extends SubsystemBase {
 
   public void stop() {
     targetVelocity = RPM.of(0);
+    targetFeederVelocity = RPM.of(0.0);
     motor.stopMotor();
+    feeder.stopMotor();
   }
 
   public void setVelocity(AngularVelocity velocity) {
@@ -133,7 +143,7 @@ public class ShooterSubsystem extends SubsystemBase {
     controller.setSetpoint(velocity.in(RPM), ControlType.kVelocity);
   }
 
-  public void setFeederVelocit(AngularVelocity velocity) {
+  public void setFeederVelocity(AngularVelocity velocity) {
     targetFeederVelocity = velocity;
     feedController.setSetpoint(velocity.in(RPM), ControlType.kVelocity);
   }

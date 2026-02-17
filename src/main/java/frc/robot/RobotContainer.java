@@ -125,25 +125,24 @@ public class RobotContainer {
     // driverXbox.povRight().onTrue(climber.goToHeightCommand(5));
 
     driverXbox.povRight().onTrue(Commands.runOnce(() -> {
-      intake.setRollerVelocity(RotationsPerSecond.of(1000.0 / 60.0));
-      System.out.println("intake set to 1000RPM");
+      shooter.setVelocity(Units.RPM.of(1000.0));
+      shooter.setFeederVelocity(Units.RPM.of(1000.0));
+      System.out.println("shooter set to 1000RPM");
     }));
     driverXbox.povLeft().onTrue(Commands.runOnce(() -> {
-      System.out.println("intake stopped");
-      intake.stop();
+      System.out.println("shooter stopped");
+      shooter.stop();
     }));
     driverXbox.povUp().onTrue(Commands.runOnce(() -> {
-      intake
-          .setRollerVelocity(intake.targetRollerVelocity.plus(RotationsPerSecond.of(100.0 / 60.0)));
+      shooter.setVelocity(shooter.getTargetVelocity().plus(Units.RPM.of(100.0)));
       System.out.println(
-          "intake increased by 100rpm to " + (intake.targetRollerVelocity.baseUnitMagnitude()));
+          "shooter increased by 100rpm to " + (shooter.getTargetVelocity().baseUnitMagnitude()));
 
     }));
     driverXbox.povDown().onTrue(Commands.runOnce(() -> {
-      intake.setRollerVelocity(
-          intake.targetRollerVelocity.minus(RotationsPerSecond.of(100.0 / 60.0)));
+      shooter.setVelocity(shooter.getTargetVelocity().minus(Units.RPM.of(100.0)));
       System.out.println(
-          "intake decreased by 100rpm to " + (intake.targetRollerVelocity.baseUnitMagnitude()));
+          "shooter decreased by 100rpm to " + (shooter.getTargetVelocity().baseUnitMagnitude()));
 
     }));
 
