@@ -120,9 +120,32 @@ public class RobotContainer {
 		m_JoystickL.trigger().whileTrue(
 				climber.manualControlCommand(() -> MathUtil.applyDeadband(-m_JoystickL.getY(), 0.1)));
 
-    driverXbox.povUp().whileTrue(climber.manualControlCommand(() -> 0.5 / (1000.0 / 20.0)));
-    driverXbox.povDown().whileTrue(climber.manualControlCommand(() -> -0.5 / (1000.0 / 20.0)));
-    driverXbox.povRight().onTrue(climber.goToHeightCommand(5));
+    // driverXbox.povUp().whileTrue(climber.manualControlCommand(() -> 0.5 / (1000.0 / 20.0)));
+    // driverXbox.povDown().whileTrue(climber.manualControlCommand(() -> -0.5 / (1000.0 / 20.0)));
+    // driverXbox.povRight().onTrue(climber.goToHeightCommand(5));
+
+    driverXbox.povRight().onTrue(Commands.runOnce(() -> {
+      intake.setRollerVelocity(RotationsPerSecond.of(1000.0 / 60.0));
+      System.out.println("intake set to 1000RPM");
+    }));
+    driverXbox.povLeft().onTrue(Commands.runOnce(() -> {
+      System.out.println("intake stopped");
+      intake.stop();
+    }));
+    driverXbox.povUp().onTrue(Commands.runOnce(() -> {
+      intake
+          .setRollerVelocity(intake.targetRollerVelocity.plus(RotationsPerSecond.of(100.0 / 60.0)));
+      System.out.println(
+          "intake increased by 100rpm to " + (intake.targetRollerVelocity.baseUnitMagnitude()));
+
+    }));
+    driverXbox.povDown().onTrue(Commands.runOnce(() -> {
+      intake.setRollerVelocity(
+          intake.targetRollerVelocity.minus(RotationsPerSecond.of(100.0 / 60.0)));
+      System.out.println(
+          "intake decreased by 100rpm to " + (intake.targetRollerVelocity.baseUnitMagnitude()));
+
+    }));
 
 		// ========== Autopilot Examples ==========
 		// Uncomment these to enable Autopilot drive-to-pose commands during testing

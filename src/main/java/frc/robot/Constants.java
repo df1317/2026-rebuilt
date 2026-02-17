@@ -139,11 +139,11 @@ public final class Constants {
 
 		// Motor CAN IDs
 		public static final int PIVOT_MOTOR_ID = 20;
-		public static final int ROLLER_MOTOR_ID = 21;
+    public static final int ROLLER_MOTOR_ID = 17;
 
 		// Motor configuration
 		public static final boolean PIVOT_INVERTED = false;
-		public static final boolean ROLLER_INVERTED = false;
+    public static final boolean ROLLER_INVERTED = true;
 		public static final int PIVOT_CURRENT_LIMIT = 15;
 		public static final int ROLLER_CURRENT_LIMIT = 35;
 
@@ -178,6 +178,7 @@ public final class Constants {
 
 		// Motor CAN ID
 		public static final int MOTOR_ID = 30;
+    public static final int FEEDER_ID = 18;
 
 		// Motor configuration
 		public static final boolean INVERTED = false;
