@@ -1,5 +1,6 @@
 package frc.robot.subsystems.shooter;
 
+import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.Volts;
@@ -7,6 +8,7 @@ import java.util.function.Supplier;
 import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.ResetMode;
+import com.revrobotics.spark.ClosedLoopSlot;
 import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
@@ -17,6 +19,7 @@ import dev.doglog.DogLog;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
+import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -33,11 +36,14 @@ public class ShooterSubsystem extends SubsystemBase {
   // ==================== Hardware (package-private for telemetry) ====================
   final SparkMax motor;
   final SparkMax feeder;
+  final SparkMax hood;
   final RelativeEncoder encoder;
   final RelativeEncoder feederEncoder;
+  final RelativeEncoder hoodEncoder;
 
   private final SparkClosedLoopController controller;
   private final SparkClosedLoopController feedController;
+  private final SparkClosedLoopController hoodController;
   private final Debouncer atSpeedDebouncer;
   private final InterpolatingDoubleTreeMap distanceToRPM = new InterpolatingDoubleTreeMap();
   private final SysIdRoutine sysIdRoutine;
@@ -45,6 +51,7 @@ public class ShooterSubsystem extends SubsystemBase {
   // ==================== Control State (package-private for telemetry) ====================
   AngularVelocity targetVelocity = RPM.of(0);
   AngularVelocity targetFeederVelocity = RPM.of(0);
+  Angle targetHoodAngle = Degrees.of(0);
 
   // ==================== Telemetry ====================
   private final ShooterTelemetry telemetry;
@@ -52,13 +59,17 @@ public class ShooterSubsystem extends SubsystemBase {
   public ShooterSubsystem() {
     feeder = new SparkMax(ShooterConstants.FEEDER_ID, MotorType.kBrushless);
     motor = new SparkMax(ShooterConstants.MOTOR_ID, MotorType.kBrushless);
+    hood = new SparkMax(ShooterConstants.HOOD_ID, MotorType.kBrushless);
     encoder = motor.getEncoder();
     feederEncoder = feeder.getEncoder();
+    hoodEncoder = hood.getEncoder();
     controller = motor.getClosedLoopController();
     feedController = feeder.getClosedLoopController();
+    hoodController = hood.getClosedLoopController();
     atSpeedDebouncer = new Debouncer(ShooterConstants.AT_SPEED_DEBOUNCE_TIME, DebounceType.kRising);
 
     configureMotor();
+    configureHood();
     populateLookupTable();
 
     sysIdRoutine = new SysIdRoutine(
@@ -86,6 +97,19 @@ public class ShooterSubsystem extends SubsystemBase {
     motor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
     feeder.configure(clonedConfig, ResetMode.kResetSafeParameters,
         PersistMode.kNoPersistParameters);
+  }
+
+  private void configureHood() {
+    SparkMaxConfig config = new SparkMaxConfig();
+    config.idleMode(IdleMode.kBrake).smartCurrentLimit(ShooterConstants.HOOD_CURRENT_LIMIT)
+        .inverted(ShooterConstants.HOOD_INVERTED);
+    config.encoder
+        // Converts encoder rotations to degrees: (360 deg/rot) / gear_ratio
+        .positionConversionFactor(360.0 / ShooterConstants.HOOD_GEAR_RATIO);
+    config.closedLoop.pid(ShooterConstants.KP, ShooterConstants.KI, ShooterConstants.KD)
+        .allowedClosedLoopError(ShooterConstants.HOOD_TOLERANCE.in(Degrees), ClosedLoopSlot.kSlot0);
+
+    hood.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
   }
 
   private void populateLookupTable() {
@@ -136,6 +160,7 @@ public class ShooterSubsystem extends SubsystemBase {
     targetFeederVelocity = RPM.of(0.0);
     motor.stopMotor();
     feeder.stopMotor();
+    hood.stopMotor();
   }
 
   public void setVelocity(AngularVelocity velocity) {
@@ -146,6 +171,11 @@ public class ShooterSubsystem extends SubsystemBase {
   public void setFeederVelocity(AngularVelocity velocity) {
     targetFeederVelocity = velocity;
     feedController.setSetpoint(velocity.in(RPM), ControlType.kVelocity);
+  }
+
+  public void setHoodAngle(Angle angle) {
+    targetHoodAngle = angle;
+    hoodController.setSetpoint(angle.in(Degrees), ControlType.kPosition);
   }
 
   // ==================== Commands ====================
@@ -174,6 +204,9 @@ public class ShooterSubsystem extends SubsystemBase {
     return Commands.run(() -> setVelocityForDistance(distance.get()), this).finallyDo(this::stop);
   }
 
+  public Command hoodSetpoint(Angle angle) {
+    return Commands.runOnce(() -> setHoodAngle(angle));
+  }
   // ==================== SysId ====================
 
   public Command sysIdQuasistatic(SysIdRoutine.Direction direction) {

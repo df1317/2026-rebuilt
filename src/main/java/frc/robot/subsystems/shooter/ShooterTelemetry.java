@@ -41,6 +41,9 @@ public class ShooterTelemetry {
     DogLog.log("Shooter/MotorCurrentAmps", shooter.motor.getOutputCurrent());
     DogLog.log("Shooter/MotorVoltage",
         shooter.motor.getBusVoltage() * shooter.motor.getAppliedOutput());
+
+    DogLog.log("Shooter/Hood/CurrentPosition", shooter.hoodEncoder.getPosition());
+    DogLog.log("Shooter/Hood/TargetPosition", shooter.targetHoodAngle);
   }
 
   private Color getStatusColor() {
