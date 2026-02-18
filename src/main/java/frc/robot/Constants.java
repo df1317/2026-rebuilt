@@ -233,13 +233,13 @@ public final class Constants {
   public static class HopperConstants {
 
     // Motor configuration
-    public static final int HOPPER_MOTOR_ID = 30;
+    public static final int HOPPER_MOTOR_ID = 0;
     public static final int HOPPER_CURRENT_LIMIT = 35;
     public static final boolean INVERTED = false;
 
     // Feed speed (duty cycle, -1.0 to 1.0)
-    public static final AngularVelocity FEED_SPEED = RPM.of(0.5);
-    public static final AngularVelocity REVERSE_SPEED = RPM.of(-0.3);
+    public static final AngularVelocity FEED_SPEED = RPM.of(2000);
+    public static final AngularVelocity REVERSE_SPEED = RPM.of(-2000);
     public static final AngularVelocity HOPPER_VELOCITY_TOLERANCE = RPM.of(100);
 
     // Hopper PID constants
