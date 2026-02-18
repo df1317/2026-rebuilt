@@ -1,113 +1,94 @@
 package frc.robot.subsystems.hopper;
 
+import static edu.wpi.first.units.Units.RPM;
+import static frc.robot.Constants.HopperConstants.*;
 import com.revrobotics.PersistMode;
+import com.revrobotics.RelativeEncoder;
 import com.revrobotics.ResetMode;
+import com.revrobotics.spark.SparkBase.ControlType;
+import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
-import edu.wpi.first.wpilibj.util.Color;
+import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
-import static frc.robot.Constants.HopperConstants.*;
-
 /**
- * Subsystem controlling the hopper feed wheel.
- *
- * <p>
- * A simple wheel in a circular funnel that feeds balls one by one into the shooter.
- * Uses duty cycle control (not velocity) since precise speed isn't required.
+ * Hopper subsystem
  */
 public class HopperSubsystem extends SubsystemBase {
 
-	private final SparkMax motor;
-	private final HopperTelemetry telemetry;
+  // ==================== Hardware (package-private for telemetry/visualization)
+  // ====================
+  final SparkMax hopperMotor;
+  private final SparkClosedLoopController hopperController;
+  final RelativeEncoder hopperEncoder;
 
-	private double currentSpeed = 0.0;
+  // ==================== Control State (package-private for telemetry/visualization)
+  // ====================
+  AngularVelocity targetHopperVelocity = RPM.of(0);
 
-	public HopperSubsystem() {
-		motor = new SparkMax(MOTOR_ID, MotorType.kBrushless);
-		configureMotor();
-		telemetry = new HopperTelemetry(motor);
-	}
+  // ==================== Visualization & Telemetry ====================
+  private final HopperTelemetry telemetry;
 
-	private void configureMotor() {
-		SparkMaxConfig config = new SparkMaxConfig();
-		config
-				.idleMode(IdleMode.kCoast)
-				.smartCurrentLimit(CURRENT_LIMIT)
-				.inverted(INVERTED);
+  public HopperSubsystem() {
+    hopperMotor = new SparkMax(HOPPER_MOTOR_ID, MotorType.kBrushless);
+    hopperController = hopperMotor.getClosedLoopController();
+    hopperEncoder = hopperMotor.getEncoder();
 
-		motor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
-	}
+    configureHopperMotor();
 
-	@Override
-	public void periodic() {
-		telemetry.log(currentSpeed, isRunning(), getStatusColor());
-	}
+    telemetry = new HopperTelemetry(this);
+  }
 
-	// ==================== State Query Methods ====================
 
-	public boolean isRunning() {
-		return Math.abs(currentSpeed) > 0.01;
-	}
+  private void configureHopperMotor() {
+    SparkMaxConfig config = new SparkMaxConfig();
+    config.idleMode(IdleMode.kCoast).smartCurrentLimit(HOPPER_CURRENT_LIMIT)
+      .inverted(INVERTED);
+    config.closedLoop.pid(HOPPER_KP, HOPPER_KI, HOPPER_KD).iZone(HOPPER_I_ZONE);
+    config.closedLoop.feedForward.kV(HOPPER_KV);
 
-	public boolean isReversing() {
-		return currentSpeed < -0.01;
-	}
+    hopperMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
+  }
 
-	public Color getStatusColor() {
-		if (isReversing()) {
-			return Color.kOrange;
-		} else if (isRunning()) {
-			return Color.kGreen;
-		}
-		return Color.kRed;
-	}
+  @Override
+  public void periodic() {
+    telemetry.log();
+  }
 
-	// ==================== Control Methods ====================
+  // ==================== State Query Methods ====================
+  public boolean isHopperAtSpeed() {
+    return Math.abs(hopperEncoder.getVelocity()
+      - targetHopperVelocity.in(RPM)) < HOPPER_VELOCITY_TOLERANCE.in(RPM);
+  }
 
-	public void setSpeed(double speed) {
-		currentSpeed = speed;
-		motor.set(speed);
-	}
+  // ==================== Control Methods ====================
 
-	public void feed() {
-		setSpeed(FEED_SPEED);
-	}
+  public void setHopperVelocity(AngularVelocity velocity) {
+    targetHopperVelocity = velocity;
+    hopperController.setSetpoint(velocity.in(RPM), ControlType.kVelocity);
+  }
 
-	public void reverse() {
-		setSpeed(REVERSE_SPEED);
-	}
+  public void stopHopper() {
+    setHopperVelocity(RPM.of(0));
+  }
 
-	public void stop() {
-		setSpeed(0);
-	}
 
-	// ==================== Commands ====================
 
-	/**
-	 * Runs the hopper to feed balls into the shooter.
-	 * Stops when the command ends.
-	 */
-	public Command feedCommand() {
-		return Commands.startEnd(this::feed, this::stop, this)
-				.withName("Hopper Feed");
-	}
+  // ==================== Command Factory Methods ====================
 
-	/**
-	 * Reverses the hopper to unjam or eject balls.
-	 * Stops when the command ends.
-	 */
-	public Command reverseCommand() {
-		return Commands.startEnd(this::reverse, this::stop, this)
-				.withName("Hopper Reverse");
-	}
+  public Command forwardCommand() {
+    return runOnce(() -> setHopperVelocity(REVERSE_SPEED)).withName("Hopper Forward");
+  }
 
-	public Command stopCommand() {
-		return Commands.runOnce(this::stop, this)
-				.withName("Hopper Stop");
-	}
+  public Command reverseCommand() {
+    return runOnce(() -> setHopperVelocity(FEED_SPEED)).withName("Hopper Back");
+  }
+
+  public Command stopCommand() {
+    return runOnce(this::stopHopper).withName("Hopper Stop");
+  }
 }

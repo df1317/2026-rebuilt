@@ -63,7 +63,7 @@ public final class Constants {
    * @deprecated This constant may need revision based on actual measured loop times
    */
   @Deprecated
-  public static final double LOOP_TIME = 0.13; // s, 20ms + 110ms sprk max velocity lag
+  public static final double LOOP_TIME = 0.13; // s, 20ms + 110ms spark max velocity lag
   public static final double MAX_SPEED = Units.feetToMeters(14.5);
   public static final double MAX_ANGULAR_SPEED = Math.toRadians(240.0);
   public static final double MAX_ACCELERATION = 1.5;
@@ -233,12 +233,20 @@ public final class Constants {
   public static class HopperConstants {
 
     // Motor configuration
-    public static final int MOTOR_ID = 30;
-    public static final int CURRENT_LIMIT = 35;
+    public static final int HOPPER_MOTOR_ID = 30;
+    public static final int HOPPER_CURRENT_LIMIT = 35;
     public static final boolean INVERTED = false;
 
     // Feed speed (duty cycle, -1.0 to 1.0)
-    public static final double FEED_SPEED = 0.5;
-    public static final double REVERSE_SPEED = -0.3;
+    public static final AngularVelocity FEED_SPEED = RPM.of(0.5);
+    public static final AngularVelocity REVERSE_SPEED = RPM.of(-0.3);
+    public static final AngularVelocity HOPPER_VELOCITY_TOLERANCE = RPM.of(100);
+
+    // Hopper PID constants
+    public static final double HOPPER_KP = 2E-4;
+    public static final double HOPPER_KI = 1E-5;
+    public static final double HOPPER_KD = 0.0;
+    public static final double HOPPER_KV = 1.8E-4; // derived from the REV NEO website * 5.5/2
+    public static final double HOPPER_I_ZONE = 1E-3;
   }
 }
