@@ -1,9 +1,14 @@
 package frc.robot.subsystems.shooter;
 
 import static edu.wpi.first.units.Units.Degrees;
+import static edu.wpi.first.units.Units.DegreesPerSecond;
+import static edu.wpi.first.units.Units.DegreesPerSecondPerSecond;
 import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.Volts;
+import static frc.robot.Constants.ShooterConstants.KG;
+import static frc.robot.Constants.ShooterConstants.KS;
+import static frc.robot.Constants.ShooterConstants.KV;
 import java.util.function.Supplier;
 import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
@@ -16,9 +21,11 @@ import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import dev.doglog.DogLog;
+import edu.wpi.first.math.controller.ElevatorFeedforward;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
+import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Distance;
@@ -47,6 +54,13 @@ public class ShooterSubsystem extends SubsystemBase {
   private final Debouncer atSpeedDebouncer;
   private final InterpolatingDoubleTreeMap distanceToRPM = new InterpolatingDoubleTreeMap();
   private final SysIdRoutine sysIdRoutine;
+
+
+  private final TrapezoidProfile profile;
+  private final ElevatorFeedforward feedforward;
+  TrapezoidProfile.State currentState = new TrapezoidProfile.State();
+  TrapezoidProfile.State goalState = new TrapezoidProfile.State();
+  private double lastUpdateTimestamp;
 
   // ==================== Control State (package-private for telemetry) ====================
   AngularVelocity targetVelocity = RPM.of(0);
@@ -77,6 +91,11 @@ public class ShooterSubsystem extends SubsystemBase {
             state -> DogLog.log("Shooter/SysIdState", state.toString())),
         new SysIdRoutine.Mechanism(voltage -> motor.setVoltage(voltage.in(Volts)), null, this));
 
+    profile = new TrapezoidProfile(
+        new TrapezoidProfile.Constraints(ShooterConstants.MAX_VELOCITY.in(DegreesPerSecond),
+            ShooterConstants.MAX_ACCELERATION.in(DegreesPerSecondPerSecond)));
+    feedforward = new ElevatorFeedforward(KS, KG, KV);
+
     telemetry = new ShooterTelemetry(this);
   }
 
@@ -106,7 +125,8 @@ public class ShooterSubsystem extends SubsystemBase {
     config.encoder
         // Converts encoder rotations to degrees: (360 deg/rot) / gear_ratio
         .positionConversionFactor(360.0 / ShooterConstants.HOOD_GEAR_RATIO);
-    config.closedLoop.pid(ShooterConstants.KP, ShooterConstants.KI, ShooterConstants.KD)
+    config.closedLoop
+        .pid(ShooterConstants.HOOD_KP, ShooterConstants.HOOD_KI, ShooterConstants.HOOD_KD)
         .allowedClosedLoopError(ShooterConstants.HOOD_TOLERANCE.in(Degrees), ClosedLoopSlot.kSlot0);
 
     hood.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
@@ -124,6 +144,20 @@ public class ShooterSubsystem extends SubsystemBase {
   @Override
   public void periodic() {
     telemetry.log();
+    goalState.position = targetHoodAngle.in(Degrees);
+    double now = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
+    double dt = now - lastUpdateTimestamp;
+    lastUpdateTimestamp = now;
+
+    double measuredHeight = hoodEncoder.getPosition();
+
+    currentState = profile.calculate(dt, currentState, goalState);
+
+
+    double ff = feedforward.calculate(currentState.velocity);
+
+    hoodController.setSetpoint(currentState.position, ControlType.kPosition, ClosedLoopSlot.kSlot0,
+        ff);
   }
 
   // ==================== State Queries ====================
@@ -174,8 +208,9 @@ public class ShooterSubsystem extends SubsystemBase {
   }
 
   public void setHoodAngle(Angle angle) {
+    System.out.println("hood should move!");
     targetHoodAngle = angle;
-    hoodController.setSetpoint(angle.in(Degrees), ControlType.kPosition);
+    // hoodController.setSetpoint(angle.in(Degrees), ControlType.kPosition);
   }
 
   // ==================== Commands ====================

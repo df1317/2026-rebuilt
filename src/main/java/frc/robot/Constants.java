@@ -2,6 +2,8 @@ package frc.robot;
 
 import static edu.wpi.first.units.Units.Centimeters;
 import static edu.wpi.first.units.Units.Degrees;
+import static edu.wpi.first.units.Units.DegreesPerSecond;
+import static edu.wpi.first.units.Units.DegreesPerSecondPerSecond;
 import static edu.wpi.first.units.Units.Inches;
 import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.MetersPerSecond;
@@ -11,6 +13,7 @@ import static edu.wpi.first.units.Units.Volts;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.AngularAcceleration;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.LinearAcceleration;
@@ -140,7 +143,7 @@ public final class Constants {
 
     // Motor CAN IDs
     public static final int PIVOT_MOTOR_ID = 43;
-    public static final int ROLLER_MOTOR_ID = 17;
+    public static final int ROLLER_MOTOR_ID = 41;
 
     // Motor configuration
     public static final boolean PIVOT_INVERTED = false;
@@ -195,6 +198,9 @@ public final class Constants {
     public static final Angle MAX_HOOD = Degrees.of(180.0);
     public static final Angle MIN_HOOD = Degrees.of(0.0);
 
+    public static final AngularVelocity MAX_VELOCITY = DegreesPerSecond.of(1440);
+    public static final AngularAcceleration MAX_ACCELERATION = DegreesPerSecondPerSecond.of(1440);
+
     public static final Angle HOOD_TOLERANCE = Degrees.of(3);
 
     // PID constants (tune these for your flywheel)
@@ -202,6 +208,12 @@ public final class Constants {
     public static final double KI = 0.0;
     public static final double KD = 0.0;
     public static final double KV = 0.000175;
+    public static final double KG = 0.0;
+    public static final double KS = 0.0;
+
+    public static final double HOOD_KP = 0.0012;
+    public static final double HOOD_KI = 0.0;
+    public static final double HOOD_KD = 0.000;
 
     // Velocity control
     public static final AngularVelocity VELOCITY_TOLERANCE = RPM.of(100);
