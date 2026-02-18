@@ -157,7 +157,10 @@ public class IntakeSubsystem extends SubsystemBase {
 	}
 
 	public Command retractCommand() {
-		return runOnce(() -> setPivotAngle(PIVOT_RETRACTED_ANGLE)).withName("Intake Retract");
+		return runOnce(() -> setPivotAngle(PIVOT_RETRACTED_ANGLE))
+      .andThen(idle().until(() -> isPivotStalled() || isPivotAtPosition()))
+      .andThen(runOnce(() -> setPivotAngle(Degrees.of(pivotEncoder.getPosition()))))
+      .withName("Intake Retract");
 	}
 
 	public Command runRollerCommand() {
