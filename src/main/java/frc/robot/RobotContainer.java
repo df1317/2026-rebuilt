@@ -109,34 +109,34 @@ public class RobotContainer {
     m_JoystickL.trigger().whileTrue(
         climber.manualControlCommand(() -> MathUtil.applyDeadband(-m_JoystickL.getY(), 0.1)));
 
-    // driverXbox.povUp().whileTrue(climber.manualControlCommand(() -> 0.5 / (1000.0 / 20.0)));
-    // driverXbox.povDown().whileTrue(climber.manualControlCommand(() -> -0.5 / (1000.0 / 20.0)));
-    // driverXbox.povRight().onTrue(climber.goToHeightCommand(5));
+    driverXbox.povUp().whileTrue(climber.manualControlCommand(() -> 0.5 / (1000.0 / 20.0)));
+    driverXbox.povDown().whileTrue(climber.manualControlCommand(() -> -0.5 / (1000.0 / 20.0)));
+    driverXbox.povRight().onTrue(climber.goToHeightCommand(5));
 
-    driverXbox.povRight().onTrue(Commands.runOnce(() -> {
-      shooter.setVelocity(Units.RPM.of(1000.0));
-      shooter.setFeederVelocity(Units.RPM.of(1000.0));
-      System.out.println("shooter set to 1000RPM");
-    }));
-    driverXbox.povLeft().onTrue(Commands.runOnce(() -> {
-      System.out.println("shooter stopped");
-      shooter.stop();
-    }));
-    driverXbox.povUp().onTrue(Commands.runOnce(() -> {
-      shooter.setVelocity(shooter.getTargetVelocity().plus(Units.RPM.of(100.0)));
-      System.out.println(
-          "shooter increased by 100rpm to " + (shooter.getTargetVelocity().baseUnitMagnitude()));
+    // driverXbox.povRight().onTrue(Commands.runOnce(() -> {
+    //   shooter.setVelocity(Units.RPM.of(1000.0));
+    //   shooter.setFeederVelocity(Units.RPM.of(1000.0));
+    //   System.out.println("shooter set to 1000RPM");
+    // }));
+    // driverXbox.povLeft().onTrue(Commands.runOnce(() -> {
+    //   System.out.println("shooter stopped");
+    //   shooter.stop();
+    // }));
+    // driverXbox.povUp().onTrue(Commands.runOnce(() -> {
+    //   shooter.setVelocity(shooter.getTargetVelocity().plus(Units.RPM.of(100.0)));
+    //   System.out.println(
+    //       "shooter increased by 100rpm to " + (shooter.getTargetVelocity().baseUnitMagnitude()));
 
-    }));
-    driverXbox.povDown().onTrue(Commands.runOnce(() -> {
-      shooter.setVelocity(shooter.getTargetVelocity().minus(Units.RPM.of(100.0)));
-      System.out.println(
-          "shooter decreased by 100rpm to " + (shooter.getTargetVelocity().baseUnitMagnitude()));
+    // }));
+    // driverXbox.povDown().onTrue(Commands.runOnce(() -> {
+    //   shooter.setVelocity(shooter.getTargetVelocity().minus(Units.RPM.of(100.0)));
+    //   System.out.println(
+    //       "shooter decreased by 100rpm to " + (shooter.getTargetVelocity().baseUnitMagnitude()));
 
-    }));
+    // }));
 
-    driverXbox.rightBumper().onTrue(shooter.hoodSetpoint(Degrees.of(1080.0)));
-    driverXbox.leftBumper().onTrue(shooter.hoodSetpoint(Degrees.of(0.0)));
+    // driverXbox.rightBumper().onTrue(shooter.hoodSetpoint(Degrees.of(1080.0)));
+    // driverXbox.leftBumper().onTrue(shooter.hoodSetpoint(Degrees.of(0.0)));
 
     // ========== Autopilot Examples ==========
     // Uncomment these to enable Autopilot drive-to-pose commands during testing
