@@ -60,7 +60,19 @@ def includeDesktopSupport = true
 
 // Explicitly add repositories for IntelliJ IDEA compatibility
 repositories {
+    maven { url = uri("${System.getProperty('user.home')}/wpilib/2026/maven") }
+    mavenCentral()
     maven { url = uri("https://jitpack.io") }
+    maven { url = uri("https://maven.revrobotics.com/") }
+    maven { url = uri("https://maven.photonvision.org/repository/internal") }
+    maven { url = uri("https://maven.photonvision.org/repository/snapshots") }
+    maven { url = uri("https://docs.home.thethriftybot.com") }
+    maven { url = uri("https://yet-another-software-suite.github.io/YAMS/releases/") }
+    maven { url = uri("https://yet-another-software-suite.github.io/YAGSL/releases/") }
+    maven { url = uri("https://maven.ctr-electronics.com/release/") }
+    maven { url = uri("https://maven.reduxrobotics.com/") }
+    maven { url = uri("https://3015rangerrobotics.github.io/pathplannerlib/repo") }
+    maven { url = uri("https://frcmaven.wpi.edu/artifactory/littletonrobotics-mvn-release/") }
     maven { url = uri("https://dev.studica.com/maven/release/2026/") }
 }
 
