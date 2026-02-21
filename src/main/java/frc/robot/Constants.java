@@ -73,7 +73,7 @@ public final class Constants {
 	 * @deprecated This constant may need revision based on actual measured loop times
 	 */
 	@Deprecated
-	public static final double LOOP_TIME = 0.13; // s, 20ms + 110ms sprk max velocity lag
+	public static final double LOOP_TIME = 0.13; // s, 20ms + 110ms spark max velocity lag
 	public static final double MAX_SPEED = Units.feetToMeters(14.5);
 	public static final double MAX_ANGULAR_SPEED = Math.toRadians(240.0);
 	public static final double MAX_ACCELERATION = 1.5;
@@ -149,24 +149,24 @@ public final class Constants {
 	public static class IntakeConstants {
 
 		// Motor CAN IDs
-		public static final int PIVOT_MOTOR_ID = 43;
-		public static final int ROLLER_MOTOR_ID = 41;
+		public static final int PIVOT_MOTOR_ID = 28;
+		public static final int ROLLER_MOTOR_ID = 20;
 
 		// Motor configuration
 		public static final boolean PIVOT_INVERTED = false;
-		public static final boolean ROLLER_INVERTED = true;
+		public static final boolean ROLLER_INVERTED = false;
 		public static final int PIVOT_CURRENT_LIMIT = 15;
-		public static final int ROLLER_CURRENT_LIMIT = 35;
+		public static final int ROLLER_CURRENT_LIMIT = 20;
 
 		// Pivot geometry
 		public static final Angle PIVOT_EXTENDED_ANGLE = Degrees.of(90);
 		public static final Angle PIVOT_RETRACTED_ANGLE = Degrees.of(0);
 		public static final Angle PIVOT_ANGLE_TOLERANCE = Degrees.of(3);
-		public static final double PIVOT_GEAR_RATIO = 25.0; // motor rotations per pivot rotation
+		public static final double PIVOT_GEAR_RATIO = 12.0; // motor rotations per pivot rotation
 		public static final Distance PIVOT_ARM_LENGTH = Inches.of(12);
 
 		// Pivot PID constants
-		public static final double PIVOT_KP = 0.1;
+		public static final double PIVOT_KP = 0.01;
 		public static final double PIVOT_KI = 0.0;
 		public static final double PIVOT_KD = 0.0;
 
@@ -176,10 +176,11 @@ public final class Constants {
 		public static final AngularVelocity ROLLER_VELOCITY_TOLERANCE = RPM.of(100);
 
 		// Roller PID constants
-		public static final double ROLLER_KP = 0.0002;
-		public static final double ROLLER_KI = 0.0;
+		public static final double ROLLER_KP = 2E-4;
+		public static final double ROLLER_KI = 1E-5;
 		public static final double ROLLER_KD = 0.0;
-		public static final double ROLLER_KV = 0.000175;
+		public static final double ROLLER_KV = 1.8E-4; // derived from the REV NEO website * 5.5/2
+		public static final double ROLLER_I_ZONE = 1E-3;
 
 		// Debounce time for state checks
 		public static final double AT_POSITION_DEBOUNCE_TIME = 0.1;
@@ -240,7 +241,7 @@ public final class Constants {
 	public static class ClimberConstants {
 
 		// Motor CAN IDs
-		public static final int MOTOR_LEFT_ID = 40;
+		public static final int MOTOR_LEFT_ID = 24;
 		public static final int MOTOR_RIGHT_ID = 25;
 
 		// Motor configuration
@@ -248,7 +249,7 @@ public final class Constants {
 		public static final int CURRENT_LIMIT = 40;
 
 		// Mechanism geometry
-		public static final Distance MAX_HEIGHT = Meters.of(10.0);
+		public static final Distance MAX_HEIGHT = Meters.of(1.23);
 		public static final Distance MIN_HEIGHT = Meters.of(0.0);
 		public static final double ROTATIONS_PER_METER = 42.4;
 		public static final Distance POSITION_TOLERANCE = Centimeters.of(2);
@@ -258,28 +259,33 @@ public final class Constants {
 		public static final LinearAcceleration MAX_ACCELERATION = MetersPerSecondPerSecond.of(1.0);
 
 		// PID constants (tune with SysId)
-		public static final double KP = 1.0;
+		public static final double KP = 0.00065;
 		public static final double KI = 0.0;
 		public static final double KD = 0.0;
 
 		// Feedforward constants (tune with SysId)
-		// public static final double KS = 0.37;
-		// public static final double KG = 0.49;
-		// public static final double KV = 4.7;
-		public static final double KS = 0.0;
-		public static final double KG = 0.0;
-		public static final double KV = 1.0;
+		public static final double KS = 0.37;
+		public static final double KG = 0.49;
+		public static final double KV = 4.7;
 	}
 
 	public static class HopperConstants {
 
 		// Motor configuration
-		public static final int MOTOR_ID = 30;
-		public static final int CURRENT_LIMIT = 35;
+		public static final int HOPPER_MOTOR_ID = 30;
+		public static final int HOPPER_CURRENT_LIMIT = 35;
 		public static final boolean INVERTED = false;
 
 		// Feed speed (duty cycle, -1.0 to 1.0)
-		public static final double FEED_SPEED = 0.5;
-		public static final double REVERSE_SPEED = -0.3;
+		public static final AngularVelocity FEED_SPEED = RPM.of(0.5);
+		public static final AngularVelocity REVERSE_SPEED = RPM.of(-0.3);
+		public static final AngularVelocity HOPPER_VELOCITY_TOLERANCE = RPM.of(100);
+
+		// Hopper PID constants
+		public static final double HOPPER_KP = 2E-4;
+		public static final double HOPPER_KI = 1E-5;
+		public static final double HOPPER_KD = 0.0;
+		public static final double HOPPER_KV = 1.8E-4; // derived from the REV NEO website * 5.5/2
+		public static final double HOPPER_I_ZONE = 1E-3;
 	}
 }

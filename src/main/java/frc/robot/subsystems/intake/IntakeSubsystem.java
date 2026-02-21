@@ -17,6 +17,7 @@ import static frc.robot.Constants.IntakeConstants.ROLLER_CURRENT_LIMIT;
 import static frc.robot.Constants.IntakeConstants.ROLLER_EJECT_VELOCITY;
 import static frc.robot.Constants.IntakeConstants.ROLLER_INTAKE_VELOCITY;
 import static frc.robot.Constants.IntakeConstants.ROLLER_INVERTED;
+import static frc.robot.Constants.IntakeConstants.ROLLER_I_ZONE;
 import static frc.robot.Constants.IntakeConstants.ROLLER_KD;
 import static frc.robot.Constants.IntakeConstants.ROLLER_KI;
 import static frc.robot.Constants.IntakeConstants.ROLLER_KP;
@@ -58,7 +59,7 @@ public class IntakeSubsystem extends SubsystemBase {
 	// ==================== Control State (package-private for telemetry/visualization)
 	// ====================
 	Angle targetPivotAngle = PIVOT_RETRACTED_ANGLE;
-	public AngularVelocity targetRollerVelocity = RPM.of(0);
+	AngularVelocity targetRollerVelocity = RPM.of(0);
 	private final Debouncer atPositionDebouncer;
 
 	// ==================== Visualization & Telemetry ====================
@@ -99,7 +100,7 @@ public class IntakeSubsystem extends SubsystemBase {
 		SparkMaxConfig config = new SparkMaxConfig();
 		config.idleMode(IdleMode.kCoast).smartCurrentLimit(ROLLER_CURRENT_LIMIT)
 				.inverted(ROLLER_INVERTED);
-		config.closedLoop.pid(ROLLER_KP, ROLLER_KI, ROLLER_KD);
+		config.closedLoop.pid(ROLLER_KP, ROLLER_KI, ROLLER_KD).iZone(ROLLER_I_ZONE);
 		config.closedLoop.feedForward.kV(ROLLER_KV);
 
 		rollerMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
@@ -119,7 +120,7 @@ public class IntakeSubsystem extends SubsystemBase {
 		return atPositionDebouncer.calculate(atPositionRaw);
 	}
 
-	boolean isRollerAtSpeed() {
+	public boolean isRollerAtSpeed() {
 		return Math.abs(rollerEncoder.getVelocity()
 				- targetRollerVelocity.in(RPM)) < ROLLER_VELOCITY_TOLERANCE.in(RPM);
 	}

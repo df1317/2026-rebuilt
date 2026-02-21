@@ -1,10 +1,17 @@
 package frc.robot;
 
 import static edu.wpi.first.units.Units.Degrees;
+import static edu.wpi.first.units.Units.Meters;
+import java.io.File;
+import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.units.Units;
+import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
@@ -17,10 +24,6 @@ import frc.robot.subsystems.shooter.ShooterSubsystem;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
 import frc.robot.util.FieldZones;
 import swervelib.SwerveInputStream;
-import com.pathplanner.lib.auto.AutoBuilder;
-import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import java.io.File;
 
 /**
  * ---------- RobotContainer Class --- This class is where the bulk of the robot should be declared.
@@ -160,6 +163,15 @@ public class RobotContainer {
 					climber.manualControlCommand(() -> MathUtil.applyDeadband(-m_JoystickL.getY(), 0.1)));
 		}
 
+		// ========== Intake Controls ==========
+		if (Constants.ENABLE_INTAKE) {
+			// driverXbox.y().onTrue(intake.runRollerCommand());
+			// driverXbox.y().onFalse(intake.stopRollerCommand());
+
+			driverXbox.y().onTrue(intake.extendCommand());
+			driverXbox.y().onFalse(intake.retractCommand());
+		}
+
 		// ========== Autopilot Examples ==========
 		// Uncomment these to enable Autopilot drive-to-pose commands during testing
 		//
@@ -215,10 +227,10 @@ public class RobotContainer {
 	/**
 	 * Gets the distance to our alliance's scoring target.
 	 */
-	// private Distance getDistanceToTarget() {
-	// Pose2d hubPose = DriverStation.getAlliance()
-	// .orElse(DriverStation.Alliance.Blue) == DriverStation.Alliance.Red ? FieldZones.HUB_POSE_RED
-	// : FieldZones.HUB_POSE_BLUE;
-	// return Meters.of(drivebase.getPose().getTranslation().getDistance(hubPose.getTranslation()));
-	// }
+	private Distance getDistanceToTarget() {
+		Pose2d hubPose = DriverStation.getAlliance()
+				.orElse(DriverStation.Alliance.Blue) == DriverStation.Alliance.Red ? FieldZones.HUB_POSE_RED
+						: FieldZones.HUB_POSE_BLUE;
+		return Meters.of(drivebase.getPose().getTranslation().getDistance(hubPose.getTranslation()));
+	}
 }
