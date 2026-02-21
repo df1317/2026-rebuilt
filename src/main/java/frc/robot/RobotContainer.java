@@ -1,12 +1,26 @@
 package frc.robot;
 
 import static edu.wpi.first.units.Units.Degrees;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Filesystem;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import frc.robot.Constants.DrivebaseConstants;
+import frc.robot.Constants.OperatorConstants;
+import frc.robot.subsystems.climber.ClimberSubsystem;
+import frc.robot.subsystems.intake.IntakeSubsystem;
 import frc.robot.subsystems.shooter.ShooterSubsystem;
+import frc.robot.subsystems.swervedrive.SwerveSubsystem;
+import frc.robot.util.FieldZones;
+import swervelib.SwerveInputStream;
+import com.pathplanner.lib.auto.AutoBuilder;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import java.io.File;
 
 /**
  * ---------- RobotContainer Class --- This class is where the bulk of the robot should be declared.
@@ -17,7 +31,7 @@ import frc.robot.subsystems.shooter.ShooterSubsystem;
  */
 public class RobotContainer {
 
-  // private final SendableChooser<Command> autoChooser;
+  private SendableChooser<Command> autoChooser;
   /**
    * ---------- HID Initialization ------------
    */
@@ -27,125 +41,128 @@ public class RobotContainer {
   /**
    * ---------- Subsystems ------------
    */
-  // private final SwerveSubsystem drivebase = new SwerveSubsystem(
-  // new File(Filesystem.getDeployDirectory(), "swerve/neo"));
-  // private final ClimberSubsystem climber = new ClimberSubsystem();
-  private final ShooterSubsystem shooter = new ShooterSubsystem();
-  // private final IntakeSubsystem intake = new IntakeSubsystem();
+  private final SwerveSubsystem drivebase =
+      Constants.ENABLE_SWERVE ? new SwerveSubsystem(new File(Filesystem.getDeployDirectory(), "swerve/neo")) : null;
+  private final ClimberSubsystem climber = Constants.ENABLE_CLIMBER ? new ClimberSubsystem() : null;
+  private final ShooterSubsystem shooter = Constants.ENABLE_SHOOTER ? new ShooterSubsystem() : null;
+  private final IntakeSubsystem intake = Constants.ENABLE_INTAKE ? new IntakeSubsystem() : null;
   public boolean robotRelative = false;
 
   /**
    * ---------- Swerve Drive Input Streams ------------
-   * -------------------------------------------------- Converts driver input into a field-relative
-   * ChassisSpeeds that is controlled by angular velocity.
+   * Converts driver input into a field-relative ChassisSpeeds controlled by angular velocity.
    */
-  // SwerveInputStream driveAngularVelocity =
-  // SwerveInputStream.of(drivebase.getSwerveDrive(), () -> driverXbox.getLeftY() * -1,
-  // () -> driverXbox.getLeftX() * -1).withControllerRotationAxis(() -> {
-  // Right stick X for rotation, plus triggers for fine-tuning (cubic scaling)
-  // Right trigger = clockwise (negative), Left trigger = counter-clockwise (positive)
-  // double stickRotation = driverXbox.getRightX() * -1;
-  // double leftTrigger = Math.pow(driverXbox.getLeftTriggerAxis(), 3);
-  // double rightTrigger = Math.pow(driverXbox.getRightTriggerAxis(), 3);
-  // double triggerRotation = (leftTrigger - rightTrigger) * 0.3;
-  // return MathUtil.clamp(stickRotation + triggerRotation, -1.0, 1.0);
-  // }).aim(FieldZones.HUB_POSE_RED).aimWhile(driverXbox.b())
-  // .deadband(OperatorConstants.DEADBAND)
-  // .scaleTranslation(DrivebaseConstants.TRANSLATION_SCALE).allianceRelativeControl(true);
+  private SwerveInputStream driveAngularVelocity;
 
   /**
    * The container for the robot. Contains subsystems, input devices, and commands.
    */
   public RobotContainer() {
+    if (Constants.ENABLE_SWERVE) {
+      driveAngularVelocity = SwerveInputStream
+          .of(drivebase.getSwerveDrive(), () -> driverXbox.getLeftY() * -1,
+              () -> driverXbox.getLeftX() * -1)
+          .withControllerRotationAxis(() -> {
+            // Right stick X for rotation, plus triggers for fine-tuning (cubic scaling)
+            double stickRotation = driverXbox.getRightX() * -1;
+            double leftTrigger = Math.pow(driverXbox.getLeftTriggerAxis(), 3);
+            double rightTrigger = Math.pow(driverXbox.getRightTriggerAxis(), 3);
+            double triggerRotation = (leftTrigger - rightTrigger) * 0.3;
+            return MathUtil.clamp(stickRotation + triggerRotation, -1.0, 1.0);
+          }).aim(FieldZones.HUB_POSE_RED).aimWhile(driverXbox.b())
+          .deadband(OperatorConstants.DEADBAND)
+          .scaleTranslation(DrivebaseConstants.TRANSLATION_SCALE).allianceRelativeControl(true);
+
+      autoChooser = AutoBuilder.buildAutoChooser();
+      SmartDashboard.putData("misc/Auto Chooser", autoChooser);
+    }
+
     configureBindings();
     DriverStation.silenceJoystickConnectionWarning(true);
-
-    // autoChooser = AutoBuilder.buildAutoChooser();
-    // SmartDashboard.putData("misc/Auto Chooser", autoChooser);
   }
 
   /**
    * Configure the button bindings for driver and operator controls.
    */
   private void configureBindings() {
-    // drivebase
-    // .setDefaultCommand(drivebase.robotDriveCommand(driveAngularVelocity, () -> robotRelative));
+    // ========== Swerve Controls ==========
+    if (Constants.ENABLE_SWERVE) {
+      drivebase
+          .setDefaultCommand(drivebase.robotDriveCommand(driveAngularVelocity, () -> robotRelative));
 
-    // Hold X to aim at the target (overrides default drive command while held)
-    // driverXbox.x().whileTrue(
-    // drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY, FieldZones.HUB_POSE_BLUE));
+      // Hold X to aim at the target
+      driverXbox.x().whileTrue(
+          drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY, FieldZones.HUB_POSE_BLUE));
 
-    // Zero gyro
-    // driverXbox.a().onTrue(Commands.runOnce(drivebase::zeroGyro));
+      // Zero gyro
+      driverXbox.a().onTrue(Commands.runOnce(drivebase::zeroGyro));
 
-    // Toggle robot relative
-    // driverXbox.rightBumper().onTrue(Commands.runOnce(() -> robotRelative = !robotRelative))
-    // .and(DriverStation::isTeleop);
+      // Toggle robot relative
+      driverXbox.rightBumper().onTrue(Commands.runOnce(() -> robotRelative = !robotRelative))
+          .and(DriverStation::isTeleop);
 
-    // Lock drivebase
-    // driverXbox.leftBumper().whileTrue(Commands.runOnce(drivebase::lock, drivebase).repeatedly());
+      // Lock drivebase
+      driverXbox.leftBumper().whileTrue(Commands.runOnce(drivebase::lock, drivebase).repeatedly());
+
+      // Center modules (test mode only)
+      driverXbox.back().whileTrue(
+          Commands.either(drivebase.centerModulesCommand(), Commands.none(), DriverStation::isTest));
+    }
 
     // ========== Shooter Controls ==========
-    // X: Hold to shoot based on distance to target
-    // driverXbox.x().whileTrue(shooter.shootForDistanceCommand(this::getDistanceToTarget));
-    // Y: Hold to shoot at fixed RPM
-    // driverXbox.y().whileTrue(shooter.shootCommand(RPM.of(3500)));
+    if (Constants.ENABLE_SHOOTER) {
+      // X: Hold to shoot based on distance to target
+      // driverXbox.x().whileTrue(shooter.shootForDistanceCommand(this::getDistanceToTarget));
+      // Y: Hold to shoot at fixed RPM
+      // driverXbox.y().whileTrue(shooter.shootCommand(RPM.of(3500)));
 
-    // Center modules (test mode only)
-    // driverXbox.back().whileTrue(
-    // Commands.either(drivebase.centerModulesCommand(), Commands.none(), DriverStation::isTest));
+      driverXbox.povRight().onTrue(Commands.runOnce(() -> {
+        shooter.setVelocity(Units.RPM.of(1000.0));
+        shooter.setFeederVelocity(Units.RPM.of(1000.0));
+        System.out.println("shooter set to 1000RPM");
+      }));
+      driverXbox.povLeft().onTrue(Commands.runOnce(() -> {
+        System.out.println("shooter stopped");
+        shooter.stop();
+      }));
+      driverXbox.povUp().onTrue(Commands.runOnce(() -> {
+        shooter.setVelocity(shooter.getTargetVelocity().plus(Units.RPM.of(100.0)));
+        shooter.setFeederVelocity(shooter.getTargetVelocity());
+        System.out.println(
+            "shooter increased by 100rpm to " + (shooter.getTargetVelocity().baseUnitMagnitude()));
+      }));
+      driverXbox.povDown().onTrue(Commands.runOnce(() -> {
+        shooter.setVelocity(shooter.getTargetVelocity().minus(Units.RPM.of(100.0)));
+        shooter.setFeederVelocity(shooter.getTargetVelocity());
+        System.out.println(
+            "shooter decreased by 100rpm to " + (shooter.getTargetVelocity().baseUnitMagnitude()));
+      }));
+
+      driverXbox.rightBumper().onTrue(Commands.runOnce(() -> {
+        shooter.setHoodAngle(shooter.getTargetHoodAngle().plus(Degrees.of(10)));
+      }));
+      driverXbox.leftBumper().onTrue(Commands.runOnce(() -> {
+        shooter.setHoodAngle(shooter.getTargetHoodAngle().minus(Degrees.of(10)));
+      }));
+    }
 
     // ========== Climber Controls (Left Joystick) ==========
-    // Thumb cluster top: Extend climber
-    // m_JoystickL.button(3).whileTrue(climber.extendCommand());
+    if (Constants.ENABLE_CLIMBER) {
+      // Thumb cluster top: Extend climber
+      m_JoystickL.button(3).whileTrue(climber.extendCommand());
 
-    // Thumb cluster bottom: Retract climber
-    // m_JoystickL.button(4).whileTrue(climber.retractCommand());
+      // Thumb cluster bottom: Retract climber
+      m_JoystickL.button(4).whileTrue(climber.retractCommand());
 
-    // Trigger: Manual control with joystick Y axis
-    // m_JoystickL.trigger().whileTrue(
-    // climber.manualControlCommand(() -> MathUtil.applyDeadband(-m_JoystickL.getY(), 0.1)));
-
-    // driverXbox.povUp().whileTrue(climber.manualControlCommand(() -> 0.5 / (1000.0 / 20.0)));
-    // driverXbox.povDown().whileTrue(climber.manualControlCommand(() -> -0.5 / (1000.0 / 20.0)));
-    // driverXbox.povRight().onTrue(climber.goToHeightCommand(5));
-
-    driverXbox.povRight().onTrue(Commands.runOnce(() -> {
-      shooter.setVelocity(Units.RPM.of(1000.0));
-      shooter.setFeederVelocity(Units.RPM.of(1000.0));
-      System.out.println("shooter set to 1000RPM");
-    }));
-    driverXbox.povLeft().onTrue(Commands.runOnce(() -> {
-      System.out.println("shooter stopped");
-      shooter.stop();
-    }));
-    driverXbox.povUp().onTrue(Commands.runOnce(() -> {
-      shooter.setVelocity(shooter.getTargetVelocity().plus(Units.RPM.of(100.0)));
-      shooter.setFeederVelocity(shooter.getTargetVelocity());
-      System.out.println(
-          "shooter increased by 100rpm to " + (shooter.getTargetVelocity().baseUnitMagnitude()));
-
-    }));
-    driverXbox.povDown().onTrue(Commands.runOnce(() -> {
-      shooter.setVelocity(shooter.getTargetVelocity().minus(Units.RPM.of(100.0)));
-
-      shooter.setFeederVelocity(shooter.getTargetVelocity());
-      System.out.println(
-          "shooter decreased by 100rpm to " + (shooter.getTargetVelocity().baseUnitMagnitude()));
-
-    }));
-
-    driverXbox.rightBumper().onTrue(Commands.runOnce(() -> {
-      shooter.setHoodAngle(shooter.getTargetHoodAngle().plus(Degrees.of(10)));
-    }));
-    driverXbox.leftBumper().onTrue(Commands.runOnce(() -> {
-      shooter.setHoodAngle(shooter.getTargetHoodAngle().minus(Degrees.of(10)));
-    }));
+      // Trigger: Manual control with joystick Y axis
+      m_JoystickL.trigger().whileTrue(
+          climber.manualControlCommand(() -> MathUtil.applyDeadband(-m_JoystickL.getY(), 0.1)));
+    }
 
     // ========== Autopilot Examples ==========
     // Uncomment these to enable Autopilot drive-to-pose commands during testing
     //
-    // Example 1: Drive to scoring pos ition (field coordinates)()
+    // Example 1: Drive to scoring position (field coordinates)
     // driverXbox.x().whileTrue(
     // drivebase.driveToPoseAutopilot(() -> new Pose2d(5.0, 3.0, Rotation2d.fromDegrees(0)))
     // );
@@ -175,9 +192,12 @@ public class RobotContainer {
    *
    * @return the command to run in autonomous
    */
-  // public Command getAutonomousCommand() {
-  // return autoChooser.getSelected();
-  // }
+  public Command getAutonomousCommand() {
+    if (Constants.ENABLE_SWERVE && autoChooser != null) {
+      return autoChooser.getSelected();
+    }
+    return Commands.none();
+  }
 
   /**
    * Sets brake mode on all swerve drive motors.
@@ -185,7 +205,9 @@ public class RobotContainer {
    * @param brake true to enable brake mode, false for coast mode
    */
   public void setMotorBrake(boolean brake) {
-    // drivebase.setMotorBrake(brake);
+    if (Constants.ENABLE_SWERVE) {
+      drivebase.setMotorBrake(brake);
+    }
   }
 
   /**

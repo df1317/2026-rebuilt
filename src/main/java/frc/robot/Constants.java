@@ -35,6 +35,14 @@ import swervelib.telemetry.SwerveDriveTelemetry.TelemetryVerbosity;
  */
 public final class Constants {
 
+  /**
+   * Subsystem enable flags — set to false when hardware is not connected.
+   */
+  public static final boolean ENABLE_SWERVE = false;
+  public static final boolean ENABLE_CLIMBER = false;
+  public static final boolean ENABLE_INTAKE = false;
+  public static final boolean ENABLE_SHOOTER = true;
+
   public static final double ROBOT_MASS = 60 * 0.453592; // 60lbs * kg per pound
   public static final Matter CHASSIS =
       new Matter(new Translation3d(0, 0, Inches.of(8).in(Meters)), ROBOT_MASS);
