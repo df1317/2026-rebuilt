@@ -26,6 +26,7 @@ import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
+import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Distance;
@@ -54,6 +55,8 @@ public class ShooterSubsystem extends SubsystemBase {
   private final Debouncer atSpeedDebouncer;
   private final InterpolatingDoubleTreeMap distanceToRPM = new InterpolatingDoubleTreeMap();
   private final SysIdRoutine sysIdRoutine;
+  private final DoubleSubscriber feederRPMTunable =
+      DogLog.tunable("Shooter/feederRPMTunable", 0.0, RPM);
 
 
   private final TrapezoidProfile profile;
@@ -158,6 +161,8 @@ public class ShooterSubsystem extends SubsystemBase {
 
     hoodController.setSetpoint(currentState.position, ControlType.kPosition, ClosedLoopSlot.kSlot0,
         ff);
+
+    // setFeederVelocity(RPM.of(feederRPMTunable.get()));
   }
 
   // ==================== State Queries ====================
@@ -181,6 +186,10 @@ public class ShooterSubsystem extends SubsystemBase {
 
   public AngularVelocity getTargetFeederVelocity() {
     return targetFeederVelocity;
+  }
+
+  public Angle getTargetHoodAngle() {
+    return targetHoodAngle;
   }
 
   // ==================== Control Methods ====================

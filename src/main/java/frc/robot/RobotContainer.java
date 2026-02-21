@@ -1,14 +1,11 @@
 package frc.robot;
 
 import static edu.wpi.first.units.Units.Degrees;
-import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import frc.robot.subsystems.climber.ClimberSubsystem;
-import frc.robot.subsystems.intake.IntakeSubsystem;
 import frc.robot.subsystems.shooter.ShooterSubsystem;
 
 /**
@@ -32,9 +29,9 @@ public class RobotContainer {
    */
   // private final SwerveSubsystem drivebase = new SwerveSubsystem(
   // new File(Filesystem.getDeployDirectory(), "swerve/neo"));
-  private final ClimberSubsystem climber = new ClimberSubsystem();
+  // private final ClimberSubsystem climber = new ClimberSubsystem();
   private final ShooterSubsystem shooter = new ShooterSubsystem();
-  private final IntakeSubsystem intake = new IntakeSubsystem();
+  // private final IntakeSubsystem intake = new IntakeSubsystem();
   public boolean robotRelative = false;
 
   /**
@@ -100,43 +97,50 @@ public class RobotContainer {
 
     // ========== Climber Controls (Left Joystick) ==========
     // Thumb cluster top: Extend climber
-    m_JoystickL.button(3).whileTrue(climber.extendCommand());
+    // m_JoystickL.button(3).whileTrue(climber.extendCommand());
 
     // Thumb cluster bottom: Retract climber
-    m_JoystickL.button(4).whileTrue(climber.retractCommand());
+    // m_JoystickL.button(4).whileTrue(climber.retractCommand());
 
     // Trigger: Manual control with joystick Y axis
-    m_JoystickL.trigger().whileTrue(
-        climber.manualControlCommand(() -> MathUtil.applyDeadband(-m_JoystickL.getY(), 0.1)));
+    // m_JoystickL.trigger().whileTrue(
+    // climber.manualControlCommand(() -> MathUtil.applyDeadband(-m_JoystickL.getY(), 0.1)));
 
-    driverXbox.povUp().whileTrue(climber.manualControlCommand(() -> 0.5 / (1000.0 / 20.0)));
-    driverXbox.povDown().whileTrue(climber.manualControlCommand(() -> -0.5 / (1000.0 / 20.0)));
-    driverXbox.povRight().onTrue(climber.goToHeightCommand(5));
+    // driverXbox.povUp().whileTrue(climber.manualControlCommand(() -> 0.5 / (1000.0 / 20.0)));
+    // driverXbox.povDown().whileTrue(climber.manualControlCommand(() -> -0.5 / (1000.0 / 20.0)));
+    // driverXbox.povRight().onTrue(climber.goToHeightCommand(5));
 
-    // driverXbox.povRight().onTrue(Commands.runOnce(() -> {
-    //   shooter.setVelocity(Units.RPM.of(1000.0));
-    //   shooter.setFeederVelocity(Units.RPM.of(1000.0));
-    //   System.out.println("shooter set to 1000RPM");
-    // }));
-    // driverXbox.povLeft().onTrue(Commands.runOnce(() -> {
-    //   System.out.println("shooter stopped");
-    //   shooter.stop();
-    // }));
-    // driverXbox.povUp().onTrue(Commands.runOnce(() -> {
-    //   shooter.setVelocity(shooter.getTargetVelocity().plus(Units.RPM.of(100.0)));
-    //   System.out.println(
-    //       "shooter increased by 100rpm to " + (shooter.getTargetVelocity().baseUnitMagnitude()));
+    driverXbox.povRight().onTrue(Commands.runOnce(() -> {
+      shooter.setVelocity(Units.RPM.of(1000.0));
+      shooter.setFeederVelocity(Units.RPM.of(1000.0));
+      System.out.println("shooter set to 1000RPM");
+    }));
+    driverXbox.povLeft().onTrue(Commands.runOnce(() -> {
+      System.out.println("shooter stopped");
+      shooter.stop();
+    }));
+    driverXbox.povUp().onTrue(Commands.runOnce(() -> {
+      shooter.setVelocity(shooter.getTargetVelocity().plus(Units.RPM.of(100.0)));
+      shooter.setFeederVelocity(shooter.getTargetVelocity());
+      System.out.println(
+          "shooter increased by 100rpm to " + (shooter.getTargetVelocity().baseUnitMagnitude()));
 
-    // }));
-    // driverXbox.povDown().onTrue(Commands.runOnce(() -> {
-    //   shooter.setVelocity(shooter.getTargetVelocity().minus(Units.RPM.of(100.0)));
-    //   System.out.println(
-    //       "shooter decreased by 100rpm to " + (shooter.getTargetVelocity().baseUnitMagnitude()));
+    }));
+    driverXbox.povDown().onTrue(Commands.runOnce(() -> {
+      shooter.setVelocity(shooter.getTargetVelocity().minus(Units.RPM.of(100.0)));
 
-    // }));
+      shooter.setFeederVelocity(shooter.getTargetVelocity());
+      System.out.println(
+          "shooter decreased by 100rpm to " + (shooter.getTargetVelocity().baseUnitMagnitude()));
 
-    // driverXbox.rightBumper().onTrue(shooter.hoodSetpoint(Degrees.of(1080.0)));
-    // driverXbox.leftBumper().onTrue(shooter.hoodSetpoint(Degrees.of(0.0)));
+    }));
+
+    driverXbox.rightBumper().onTrue(Commands.runOnce(() -> {
+      shooter.setHoodAngle(shooter.getTargetHoodAngle().plus(Degrees.of(10)));
+    }));
+    driverXbox.leftBumper().onTrue(Commands.runOnce(() -> {
+      shooter.setHoodAngle(shooter.getTargetHoodAngle().minus(Degrees.of(10)));
+    }));
 
     // ========== Autopilot Examples ==========
     // Uncomment these to enable Autopilot drive-to-pose commands during testing

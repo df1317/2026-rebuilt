@@ -181,12 +181,12 @@ public final class Constants {
   public static class ShooterConstants {
 
     // Motor CAN ID
-    public static final int MOTOR_ID = 17;
+    public static final int MOTOR_ID = 28;
     public static final int FEEDER_ID = 26;
-    public static final int HOOD_ID = 28;
+    public static final int HOOD_ID = 17;
 
     // Motor configuration
-    public static final boolean INVERTED = true;
+    public static final boolean INVERTED = false;
     public static final boolean FEEDER_INVERTED = false;
     public static final boolean HOOD_INVERTED = false;
     public static final int CURRENT_LIMIT = 25;
