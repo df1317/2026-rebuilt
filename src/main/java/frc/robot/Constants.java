@@ -229,6 +229,13 @@ public final class Constants {
 
     // SysId configuration
     public static final Voltage SYSID_STEP_VOLTAGE = Volts.of(7);
+
+    //Hood debouncer
+    public static final double AT_POSITION_DEBOUNCE_TIME = 0.1; //seconds
+
+    //Hood stall constants
+    public static final double HOOD_STALL_RPM = 2.0;
+    public static final double CURRENT_DEBOUNCE_TIME = 0.1;
   }
 
   public static class ClimberConstants {

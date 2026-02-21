@@ -6,9 +6,8 @@ import static edu.wpi.first.units.Units.DegreesPerSecondPerSecond;
 import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.Volts;
-import static frc.robot.Constants.ShooterConstants.KG;
-import static frc.robot.Constants.ShooterConstants.KS;
-import static frc.robot.Constants.ShooterConstants.KV;
+import static frc.robot.Constants.ShooterConstants.*;
+
 import java.util.function.Supplier;
 import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
@@ -53,6 +52,8 @@ public class ShooterSubsystem extends SubsystemBase {
   private final SparkClosedLoopController feedController;
   private final SparkClosedLoopController hoodController;
   private final Debouncer atSpeedDebouncer;
+  private final Debouncer stallDebouncer;
+  private final Debouncer atPositionDebouncer;
   private final InterpolatingDoubleTreeMap distanceToRPM = new InterpolatingDoubleTreeMap();
   private final SysIdRoutine sysIdRoutine;
   private final DoubleSubscriber feederRPMTunable =
@@ -83,8 +84,9 @@ public class ShooterSubsystem extends SubsystemBase {
     controller = motor.getClosedLoopController();
     feedController = feeder.getClosedLoopController();
     hoodController = hood.getClosedLoopController();
-    atSpeedDebouncer = new Debouncer(ShooterConstants.AT_SPEED_DEBOUNCE_TIME, DebounceType.kRising);
-
+    atSpeedDebouncer = new Debouncer(AT_SPEED_DEBOUNCE_TIME, DebounceType.kRising);
+    stallDebouncer = new Debouncer(CURRENT_DEBOUNCE_TIME, DebounceType.kRising);
+    atPositionDebouncer = new Debouncer(AT_POSITION_DEBOUNCE_TIME, DebounceType.kRising);
     configureMotor();
     configureHood();
     populateLookupTable();
@@ -123,7 +125,7 @@ public class ShooterSubsystem extends SubsystemBase {
 
   private void configureHood() {
     SparkMaxConfig config = new SparkMaxConfig();
-    config.idleMode(IdleMode.kBrake).smartCurrentLimit(ShooterConstants.HOOD_CURRENT_LIMIT)
+    config.idleMode(IdleMode.kBrake).smartCurrentLimit(HOOD_CURRENT_LIMIT)
         .inverted(ShooterConstants.HOOD_INVERTED);
     config.encoder
         // Converts encoder rotations to degrees: (360 deg/rot) / gear_ratio
@@ -173,6 +175,19 @@ public class ShooterSubsystem extends SubsystemBase {
         error < ShooterConstants.VELOCITY_TOLERANCE.in(RPM) && targetVelocity.in(RPM) > 0;
     return atSpeedDebouncer.calculate(withinTolerance);
   }
+
+  public boolean isHoodAtPosition() {
+    boolean atPositionRaw = Math.abs(hoodEncoder.getPosition() - targetHoodAngle.in(Degrees)) < HOOD_TOLERANCE
+      .in(Degrees);
+    return atPositionDebouncer.calculate(atPositionRaw);
+  }
+
+  public boolean isHoodStalled() {
+      double hoodMotorCurrent = hood.getOutputCurrent();
+      double hoodMotorRPM = hood.getEncoder().getVelocity(); // RPM
+      boolean isHoodStalled = Math.abs(hoodMotorRPM) < HOOD_STALL_RPM && hoodMotorCurrent > HOOD_CURRENT_LIMIT * 0.5;
+      return stallDebouncer.calculate(isHoodStalled);
+    }
 
   public AngularVelocity getRPMForDistance(Distance distance) {
     double distanceMeters = distance.in(Meters);
@@ -249,7 +264,10 @@ public class ShooterSubsystem extends SubsystemBase {
   }
 
   public Command hoodSetpoint(Angle angle) {
-    return Commands.runOnce(() -> setHoodAngle(angle));
+    return Commands.runOnce(() -> setHoodAngle(angle))
+      .andThen(idle().until(() -> isHoodStalled() || isHoodAtPosition()))
+      .andThen(runOnce(() -> setHoodAngle(Degrees.of(hoodEncoder.getPosition()))))
+      ;
   }
   // ==================== SysId ====================
 
@@ -267,4 +285,5 @@ public class ShooterSubsystem extends SubsystemBase {
         Commands.waitSeconds(1), sysIdDynamic(SysIdRoutine.Direction.kForward),
         Commands.waitSeconds(1), sysIdDynamic(SysIdRoutine.Direction.kReverse));
   }
+
 }
