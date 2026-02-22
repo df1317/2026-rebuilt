@@ -117,6 +117,10 @@ public final class Constants {
 		 * {@code Math.pow(input, 3)}) for smooth control.
 		 */
 		public static final double TRANSLATION_SCALE = 0.8;
+
+		// Robot half-dimensions for Repulsor obstacle avoidance (meters)
+		public static final double ROBOT_HALF_LENGTH = 0.4;
+		public static final double ROBOT_HALF_WIDTH = 0.4;
 	}
 
 	public static final class VisionConstants {

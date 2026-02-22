@@ -3,7 +3,6 @@ package frc.robot;
 import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.Meters;
 import java.io.File;
-import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.units.Units;
@@ -18,32 +17,33 @@ import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Constants.DrivebaseConstants;
 import frc.robot.Constants.OperatorConstants;
+import frc.robot.commands.TeleopZoneAutomation;
+import frc.robot.repulsor.Repulsor;
+import frc.robot.repulsor.Fields.FieldMapBuilder.CategorySpec;
+import frc.robot.repulsor.Setpoints.HeightSetpoint;
+import frc.robot.repulsor.Setpoints.RepulsorSetpoint;
+import frc.robot.repulsor.Setpoints.Setpoints;
+import frc.robot.repulsor.Setpoints.Specific._Rebuilt2026;
+import frc.robot.repulsor.Tracking.FieldTrackerCore;
+import frc.robot.repulsor.Tracking.Vision.FieldVision;
 import frc.robot.subsystems.climber.ClimberSubsystem;
 import frc.robot.subsystems.intake.IntakeSubsystem;
 import frc.robot.subsystems.shooter.ShooterSubsystem;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
 import frc.robot.util.FieldZones;
+import frc.robot.util.GamePieceTracker;
 import swervelib.SwerveInputStream;
 
-/**
- * ---------- RobotContainer Class --- This class is where the bulk of the robot should be declared.
- * Since Command-based is a "declarative" paradigm, very little robot logic should actually be
- * handled in the {@link Robot} periodic methods (other than the scheduler calls). Instead, the
- * structure of the robot (including subsystems, commands, and trigger mappings) should be declared
- * here. ---
- */
 public class RobotContainer {
 
 	private SendableChooser<Command> autoChooser;
-	/**
-	 * ---------- HID Initialization ------------
-	 */
+
+	// HID
 	private final CommandXboxController driverXbox = new CommandXboxController(0);
 	private final CommandJoystick m_JoystickL = new CommandJoystick(1);
 	private final CommandJoystick m_JoystickR = new CommandJoystick(2);
-	/**
-	 * ---------- Subsystems ------------
-	 */
+
+	// Subsystems
 	private final SwerveSubsystem drivebase = Constants.ENABLE_SWERVE
 			? new SwerveSubsystem(new File(Filesystem.getDeployDirectory(), "swerve/neo"))
 			: null;
@@ -52,22 +52,51 @@ public class RobotContainer {
 	private final IntakeSubsystem intake = Constants.ENABLE_INTAKE ? new IntakeSubsystem() : null;
 	public boolean robotRelative = false;
 
-	/**
-	 * ---------- Swerve Drive Input Streams ------------
-	 * Converts driver input into a field-relative ChassisSpeeds controlled by angular velocity.
-	 */
+	// Repulsor
+	private Repulsor repulsor;
 	private SwerveInputStream driveAngularVelocity;
 
-	/**
-	 * The container for the robot. Contains subsystems, input devices, and commands.
-	 */
+	// Game piece tracking
+	private final GamePieceTracker gamePieceTracker = new GamePieceTracker();
+
+	// Ball camera vision
+	private FieldVision ballCamera;
+
+	// Teleop automation
+	private TeleopZoneAutomation teleopAutomation;
+
+	// Scoring setpoints (pose-specific)
+	private static final RepulsorSetpoint SCORE_FRONT = new RepulsorSetpoint(
+			_Rebuilt2026.HUB_SCORE_FRONT, HeightSetpoint.NET);
+	private static final RepulsorSetpoint SCORE_FRONT_LEFT = new RepulsorSetpoint(
+			_Rebuilt2026.HUB_SCORE_FRONT_LEFT, HeightSetpoint.NET);
+	private static final RepulsorSetpoint SCORE_FRONT_RIGHT = new RepulsorSetpoint(
+			_Rebuilt2026.HUB_SCORE_FRONT_RIGHT, HeightSetpoint.NET);
+	private static final RepulsorSetpoint SCORE_REAR_LEFT = new RepulsorSetpoint(
+			_Rebuilt2026.HUB_SCORE_REAR_LEFT, HeightSetpoint.NET);
+	private static final RepulsorSetpoint SCORE_REAR_RIGHT = new RepulsorSetpoint(
+			_Rebuilt2026.HUB_SCORE_REAR_RIGHT, HeightSetpoint.NET);
+
+	// Climb setpoints
+	private static final RepulsorSetpoint CLIMB_LEFT = new RepulsorSetpoint(
+			_Rebuilt2026.CLIMB_LEFT, HeightSetpoint.NONE);
+	private static final RepulsorSetpoint CLIMB_RIGHT = new RepulsorSetpoint(
+			_Rebuilt2026.CLIMB_RIGHT, HeightSetpoint.NONE);
+
+	// Legacy setpoints
+	private static final RepulsorSetpoint SHOOT_SETPOINT = new RepulsorSetpoint(
+			Setpoints.Rebuilt2026.HUB_SHOOT, HeightSetpoint.NET);
+	private static final RepulsorSetpoint COLLECT_SETPOINT = new RepulsorSetpoint(
+			Setpoints.Rebuilt2026.CENTER_COLLECT, HeightSetpoint.NONE);
+	private static final RepulsorSetpoint CENTRE_DEFENCE = new RepulsorSetpoint(
+			Setpoints.Rebuilt2026.CENTER_COLLECT, HeightSetpoint.NONE);
+
 	public RobotContainer() {
 		if (Constants.ENABLE_SWERVE) {
 			driveAngularVelocity = SwerveInputStream
 					.of(drivebase.getSwerveDrive(), () -> driverXbox.getLeftY() * -1,
 							() -> driverXbox.getLeftX() * -1)
 					.withControllerRotationAxis(() -> {
-						// Right stick X for rotation, plus triggers for fine-tuning (cubic scaling)
 						double stickRotation = driverXbox.getRightX() * -1;
 						double leftTrigger = Math.pow(driverXbox.getLeftTriggerAxis(), 3);
 						double rightTrigger = Math.pow(driverXbox.getRightTriggerAxis(), 3);
@@ -77,7 +106,35 @@ public class RobotContainer {
 					.deadband(OperatorConstants.DEADBAND)
 					.scaleTranslation(DrivebaseConstants.TRANSLATION_SCALE).allianceRelativeControl(true);
 
-			autoChooser = AutoBuilder.buildAutoChooser();
+			// Initialize Repulsor path planner
+			repulsor = new Repulsor(drivebase, Repulsor.UsageType.kAutoDrive,
+					DrivebaseConstants.ROBOT_HALF_LENGTH, DrivebaseConstants.ROBOT_HALF_WIDTH,
+					0.0, 0.0, gamePieceTracker);
+			if (Constants.ENABLE_SHOOTER && shooter != null) {
+				repulsor.withShooterReleaseHeightMetersSupplier(
+						() -> shooter.getTargetHoodAngle().in(Units.Radians) * 0.3);
+			}
+
+			// Create FieldVision for YOLO camera
+			ballCamera = FieldTrackerCore.getInstance().createFieldVision("yolo");
+
+			// Setup teleop automation
+			teleopAutomation = new TeleopZoneAutomation(
+					repulsor, intake, shooter, gamePieceTracker,
+					() -> drivebase.getPose());
+			teleopAutomation.configureTriggers();
+
+			// Build expanded auto chooser
+			autoChooser = new SendableChooser<>();
+			autoChooser.setDefaultOption("Score Front + Cycle", buildScoreCycleAuto(SCORE_FRONT));
+			autoChooser.addOption("Score Front-Left + Cycle", buildScoreCycleAuto(SCORE_FRONT_LEFT));
+			autoChooser.addOption("Score Front-Right + Cycle", buildScoreCycleAuto(SCORE_FRONT_RIGHT));
+			autoChooser.addOption("Score Rear-Left + Cycle", buildScoreCycleAuto(SCORE_REAR_LEFT));
+			autoChooser.addOption("Score Rear-Right + Cycle", buildScoreCycleAuto(SCORE_REAR_RIGHT));
+			autoChooser.addOption("Score + Climb Left", buildScoreAndClimbAuto(CLIMB_LEFT));
+			autoChooser.addOption("Score + Climb Right", buildScoreAndClimbAuto(CLIMB_RIGHT));
+			autoChooser.addOption("Defence Only", buildDefenceOnlyAuto());
+			autoChooser.addOption("Do Nothing", Commands.none());
 			SmartDashboard.putData("misc/Auto Chooser", autoChooser);
 		}
 
@@ -85,41 +142,38 @@ public class RobotContainer {
 		DriverStation.silenceJoystickConnectionWarning(true);
 	}
 
-	/**
-	 * Configure the button bindings for driver and operator controls.
-	 */
 	private void configureBindings() {
 		// ========== Swerve Controls ==========
 		if (Constants.ENABLE_SWERVE) {
 			drivebase
 					.setDefaultCommand(drivebase.robotDriveCommand(driveAngularVelocity, () -> robotRelative));
 
-			// Hold X to aim at the target
 			driverXbox.x().whileTrue(
 					drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY, FieldZones.HUB_POSE_BLUE));
 
-			// Zero gyro
 			driverXbox.a().onTrue(Commands.runOnce(drivebase::zeroGyro));
 
-			// Toggle robot relative
 			driverXbox.rightBumper().onTrue(Commands.runOnce(() -> robotRelative = !robotRelative))
 					.and(DriverStation::isTeleop);
 
-			// Lock drivebase
 			driverXbox.leftBumper().whileTrue(Commands.runOnce(drivebase::lock, drivebase).repeatedly());
 
-			// Center modules (test mode only)
 			driverXbox.back().whileTrue(
 					Commands.either(drivebase.centerModulesCommand(), Commands.none(), DriverStation::isTest));
+
+			// Repulsor teleop buttons - navigate to nearest scoring pose
+			driverXbox.b().whileTrue(Commands.defer(() -> {
+				var nearest = _Rebuilt2026.nearestScoringPose(drivebase.getPose().getTranslation());
+				var sp = new RepulsorSetpoint(nearest, HeightSetpoint.NET);
+				return repulsor.alignTo(sp, CategorySpec.kScore);
+			}, java.util.Set.of(drivebase)));
+
+			// Navigate to collect position
+			driverXbox.start().whileTrue(repulsor.alignTo(COLLECT_SETPOINT, CategorySpec.kEndgame));
 		}
 
 		// ========== Shooter Controls ==========
 		if (Constants.ENABLE_SHOOTER) {
-			// X: Hold to shoot based on distance to target
-			// driverXbox.x().whileTrue(shooter.shootForDistanceCommand(this::getDistanceToTarget));
-			// Y: Hold to shoot at fixed RPM
-			// driverXbox.y().whileTrue(shooter.shootCommand(RPM.of(3500)));
-
 			driverXbox.povRight().onTrue(Commands.runOnce(() -> {
 				shooter.setVelocity(Units.RPM.of(1000.0));
 				shooter.setFeederVelocity(Units.RPM.of(1000.0));
@@ -152,59 +206,53 @@ public class RobotContainer {
 
 		// ========== Climber Controls (Left Joystick) ==========
 		if (Constants.ENABLE_CLIMBER) {
-			// Thumb cluster top: Extend climber
 			m_JoystickL.button(3).whileTrue(climber.extendCommand());
-
-			// Thumb cluster bottom: Retract climber
 			m_JoystickL.button(4).whileTrue(climber.retractCommand());
-
-			// Trigger: Manual control with joystick Y axis
 			m_JoystickL.trigger().whileTrue(
 					climber.manualControlCommand(() -> MathUtil.applyDeadband(-m_JoystickL.getY(), 0.1)));
 		}
 
 		// ========== Intake Controls ==========
 		if (Constants.ENABLE_INTAKE) {
-			// driverXbox.y().onTrue(intake.runRollerCommand());
-			// driverXbox.y().onFalse(intake.stopRollerCommand());
-
-			driverXbox.y().onTrue(intake.extendCommand());
-			driverXbox.y().onFalse(intake.retractCommand());
+			driverXbox.y().onTrue(Commands.sequence(
+					intake.extendCommand(),
+					Commands.runOnce(gamePieceTracker::startIntake)));
+			driverXbox.y().onFalse(Commands.sequence(
+					Commands.runOnce(gamePieceTracker::stopIntake),
+					intake.retractCommand()));
 		}
-
-		// ========== Autopilot Examples ==========
-		// Uncomment these to enable Autopilot drive-to-pose commands during testing
-		//
-		// Example 1: Drive to scoring position (field coordinates)
-		// driverXbox.x().whileTrue(
-		// drivebase.driveToPoseAutopilot(() -> new Pose2d(5.0, 3.0, Rotation2d.fromDegrees(0)))
-		// );
-		//
-		// Example 2: Drive to amp with entry angle (approach from specific direction)
-		// driverXbox.y().whileTrue(
-		// drivebase.driveToPoseAutopilot(() -> FieldConstants.ampPose, true)
-		// );
-		//
-		// Example 3: Drive to pose and finish (command completes when at target)
-		// driverXbox.b().whileTrue(
-		// drivebase.driveToPoseAutopilotUntilFinished(
-		// () -> new Pose2d(2.0, 2.0, Rotation2d.fromDegrees(45)),
-		// 0.05, // 5cm tolerance
-		// Math.toRadians(2) // 2 degree tolerance
-		// )
-		// );
-		//
-		// Example 4: Static target convenience method
-		// driverXbox.povUp().whileTrue(
-		// drivebase.driveToPoseAutopilot(new Pose2d(1.0, 1.0, new Rotation2d()))
-		// );
 	}
 
-	/**
-	 * Use this to pass the autonomous command to the main {@link Robot} class.
-	 *
-	 * @return the command to run in autonomous
-	 */
+	// ===== Auto Routines =====
+
+	private Command buildScoreCycleAuto(RepulsorSetpoint scoreSetpoint) {
+		return Commands.sequence(
+				// Score preloaded piece
+				repulsor.alignTo(scoreSetpoint, CategorySpec.kScore)
+						.until(repulsor.within(Meters.of(0.15))),
+				Commands.waitSeconds(0.5),
+				// Collect
+				repulsor.alignTo(COLLECT_SETPOINT, CategorySpec.kCollect)
+						.until(repulsor.within(Meters.of(0.15))),
+				Commands.waitSeconds(1.0),
+				// Score again
+				repulsor.alignTo(scoreSetpoint, CategorySpec.kScore)
+						.until(repulsor.within(Meters.of(0.15))),
+				Commands.waitSeconds(0.5));
+	}
+
+	private Command buildScoreAndClimbAuto(RepulsorSetpoint climbSetpoint) {
+		return Commands.sequence(
+				repulsor.alignTo(SCORE_FRONT, CategorySpec.kScore)
+						.until(repulsor.within(Meters.of(0.15))),
+				Commands.waitSeconds(1.0),
+				repulsor.alignTo(climbSetpoint, CategorySpec.kEndgame));
+	}
+
+	private Command buildDefenceOnlyAuto() {
+		return repulsor.alignTo(CENTRE_DEFENCE, CategorySpec.kEndgame);
+	}
+
 	public Command getAutonomousCommand() {
 		if (Constants.ENABLE_SWERVE && autoChooser != null) {
 			return autoChooser.getSelected();
@@ -212,21 +260,27 @@ public class RobotContainer {
 		return Commands.none();
 	}
 
-	/**
-	 * Sets brake mode on all swerve drive motors.
-	 *
-	 * @param brake
-	 *          true to enable brake mode, false for coast mode
-	 */
+	public void updateRepulsor() {
+		if (repulsor != null) {
+			repulsor.update();
+		}
+		if (ballCamera != null && drivebase != null) {
+			ballCamera.update(drivebase.getPose());
+		}
+		gamePieceTracker.update();
+	}
+
+	public void autonomousInit() {
+		gamePieceTracker.setHasPiece(true);
+		FieldTrackerCore.getInstance().resetAll();
+	}
+
 	public void setMotorBrake(boolean brake) {
 		if (Constants.ENABLE_SWERVE) {
 			drivebase.setMotorBrake(brake);
 		}
 	}
 
-	/**
-	 * Gets the distance to our alliance's scoring target.
-	 */
 	private Distance getDistanceToTarget() {
 		Pose2d hubPose = DriverStation.getAlliance()
 				.orElse(DriverStation.Alliance.Blue) == DriverStation.Alliance.Red ? FieldZones.HUB_POSE_RED

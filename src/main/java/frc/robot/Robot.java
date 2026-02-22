@@ -109,6 +109,9 @@ public class Robot extends TimedRobot {
 		// Update shift tracker for phase-aware scoring
 		HubTracker.periodic();
 
+		// Update Repulsor path planner state before CommandScheduler
+		m_robotContainer.updateRepulsor();
+
 		/*
 		 * ---------- Runs the Scheduler. This is responsible for polling buttons, adding newly
 		 * scheduled commands, running already-scheduled commands, removing finished or interrupted
@@ -169,6 +172,7 @@ public class Robot extends TimedRobot {
 	@Override
 	public void autonomousInit() {
 		m_robotContainer.setMotorBrake(true);
+		m_robotContainer.autonomousInit();
 		m_autonomousCommand = m_robotContainer.getAutonomousCommand();
 		HubTracker.start();
 
