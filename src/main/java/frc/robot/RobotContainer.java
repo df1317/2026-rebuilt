@@ -5,6 +5,9 @@ import static edu.wpi.first.units.Units.Meters;
 import java.io.File;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -116,7 +119,11 @@ public class RobotContainer {
 			}
 
 			// Create FieldVision for YOLO camera
-			ballCamera = FieldTrackerCore.getInstance().createFieldVision("yolo");
+			// TODO: measure actual camera mount position and angle on robot
+			ballCamera = FieldTrackerCore.getInstance().createFieldVision("yolo",
+					new Transform3d(
+							new Translation3d(0.3, 0.0, 0.4),
+							new Rotation3d(0.0, Math.toRadians(-15.0), 0.0)));
 
 			// Setup teleop automation
 			teleopAutomation = new TeleopZoneAutomation(

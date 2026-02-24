@@ -4,97 +4,82 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
-import edu.wpi.first.math.geometry.Translation3d;
-import edu.wpi.first.networktables.NetworkTable;
-import edu.wpi.first.networktables.NetworkTableInstance;
-import java.util.Set;
+import java.util.List;
+import org.photonvision.PhotonCamera;
+import org.photonvision.targeting.PhotonPipelineResult;
+import org.photonvision.targeting.PhotonTrackedTarget;
 import frc.robot.repulsor.Tracking.FieldTrackerCore;
 
 public class FieldVision {
-	private static final int MAX_OBJECTS_PER_TICK = 256;
+	private static final String OBJECT_TYPE = "fuel";
+	private static final double OBJECT_HEIGHT_METERS = 0.12;
 
 	private final FieldTrackerCore owner;
-	private final String name;
-	private final NetworkTable table;
+	private final PhotonCamera camera;
+	private final Transform3d robotToCamera;
 
-	public FieldVision(FieldTrackerCore owner, String name) {
+	public FieldVision(FieldTrackerCore owner, String cameraName, Transform3d robotToCamera) {
 		if (owner == null)
 			throw new IllegalArgumentException("owner cannot be null");
-		if (name == null || name.isEmpty())
-			throw new IllegalArgumentException("name cannot be null/empty");
+		if (cameraName == null || cameraName.isEmpty())
+			throw new IllegalArgumentException("cameraName cannot be null/empty");
 		this.owner = owner;
-		this.name = name;
-		this.table = NetworkTableInstance.getDefault().getTable("FieldVision/" + name);
+		this.camera = new PhotonCamera(cameraName);
+		this.robotToCamera = robotToCamera;
 	}
 
 	public String getName() {
-		return name;
+		return camera.getName();
 	}
 
 	public void update(Pose2d currentPose) {
 		if (currentPose == null)
 			return;
 
-		Pose3d field_T_robot = new Pose3d(
+		List<PhotonPipelineResult> results = camera.getAllUnreadResults();
+		if (results.isEmpty())
+			return;
+
+		PhotonPipelineResult latest = results.get(results.size() - 1);
+		if (!latest.hasTargets())
+			return;
+
+		Pose3d fieldToRobot = new Pose3d(
 				currentPose.getX(), currentPose.getY(), 0.0,
 				new Rotation3d(0.0, 0.0, currentPose.getRotation().getRadians()));
 
-		double ex = table.getEntry("extrinsics/x").getDouble(0.0);
-		double ey = table.getEntry("extrinsics/y").getDouble(0.0);
-		double ez = table.getEntry("extrinsics/z").getDouble(0.0);
-		double eroll = table.getEntry("extrinsics/roll").getDouble(0.0);
-		double epitch = table.getEntry("extrinsics/pitch").getDouble(0.0);
-		double eyaw = table.getEntry("extrinsics/yaw").getDouble(0.0);
+		Pose3d fieldToCamera = fieldToRobot.transformBy(robotToCamera);
+		double cameraZ = fieldToCamera.getZ();
+		double cameraPitch = fieldToCamera.getRotation().getY();
 
-		Transform3d robot_T_camera = new Transform3d(
-				new Translation3d(ex, ey, ez), new Rotation3d(eroll, epitch, eyaw));
-
-		Pose3d field_T_camera = field_T_robot.transformBy(
-				new Transform3d(robot_T_camera.getTranslation(), robot_T_camera.getRotation()));
-
-		Set<String> keys = table.getKeys();
-		int seen = 0;
 		long nowNs = System.nanoTime();
+		int idx = 0;
 
-		for (String key : keys) {
-			if (seen >= MAX_OBJECTS_PER_TICK)
-				break;
-			if (!key.startsWith("object_"))
+		for (PhotonTrackedTarget target : latest.getTargets()) {
+			double yawRad = Math.toRadians(target.getYaw());
+			double pitchRad = Math.toRadians(target.getPitch());
+
+			// Ray angle downward from camera optical axis
+			double totalPitch = cameraPitch + pitchRad;
+
+			// Distance along ground from camera to object
+			double heightAboveObject = cameraZ - OBJECT_HEIGHT_METERS;
+			if (heightAboveObject <= 0 || totalPitch >= 0)
 				continue;
 
-			String frame = table.getEntry(key + "/frame").getString("field");
-			Rotation3d localRot = new Rotation3d(
-					table.getEntry(key + "/roll").getDouble(0.0),
-					table.getEntry(key + "/pitch").getDouble(0.0),
-					table.getEntry(key + "/yaw").getDouble(0.0));
+			double groundDist = heightAboveObject / Math.tan(-totalPitch);
+			if (groundDist <= 0 || groundDist > 8.0)
+				continue;
 
-			String rawType = table.getEntry(key + "/type").getString("unknown");
+			// Object position in field frame
+			double cameraYaw = fieldToCamera.getRotation().getZ();
+			double objectYaw = cameraYaw + yawRad;
+			double fieldX = fieldToCamera.getX() + groundDist * Math.cos(objectYaw);
+			double fieldY = fieldToCamera.getY() + groundDist * Math.sin(objectYaw);
 
-			Pose3d fieldPose;
-
-			if ("camera".equalsIgnoreCase(frame)) {
-				double px = table.getEntry(key + "/px").getDouble(0.0);
-				double py = table.getEntry(key + "/py").getDouble(0.0);
-				double pz = table.getEntry(key + "/pz").getDouble(0.0);
-				Pose3d camera_T_object = new Pose3d(px, py, pz, localRot);
-				fieldPose = field_T_camera.transformBy(
-						new Transform3d(camera_T_object.getTranslation(), camera_T_object.getRotation()));
-			} else if ("robot".equalsIgnoreCase(frame)) {
-				double px = table.getEntry(key + "/px").getDouble(0.0);
-				double py = table.getEntry(key + "/py").getDouble(0.0);
-				double pz = table.getEntry(key + "/pz").getDouble(0.0);
-				Pose3d robot_T_object = new Pose3d(px, py, pz, localRot);
-				fieldPose = field_T_robot.transformBy(
-						new Transform3d(robot_T_object.getTranslation(), robot_T_object.getRotation()));
-			} else {
-				double x = table.getEntry(key + "/x").getDouble(0.0);
-				double y = table.getEntry(key + "/y").getDouble(0.0);
-				double z = table.getEntry(key + "/z").getDouble(0.0);
-				fieldPose = new Pose3d(x, y, z, localRot);
-			}
-
-			owner.ingestTracked(key.substring(7), rawType, fieldPose, nowNs);
-			seen++;
+			Pose3d fieldPose = new Pose3d(fieldX, fieldY, OBJECT_HEIGHT_METERS, new Rotation3d());
+			owner.ingestTracked("pv_" + idx, OBJECT_TYPE, fieldPose, nowNs);
+			idx++;
 		}
 	}
 }

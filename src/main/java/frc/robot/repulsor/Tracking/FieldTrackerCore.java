@@ -22,6 +22,7 @@ package frc.robot.repulsor.Tracking;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -82,8 +83,8 @@ public final class FieldTrackerCore {
 		dynamicTracker.clear();
 	}
 
-	public FieldVision createFieldVision(String name) {
-		return new FieldVision(this, name);
+	public FieldVision createFieldVision(String cameraName, Transform3d robotToCamera) {
+		return new FieldVision(this, cameraName, robotToCamera);
 	}
 
 	public List<RepulsorSetpoint> getPredictedSetpoints(
