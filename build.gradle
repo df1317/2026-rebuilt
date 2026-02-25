@@ -58,30 +58,9 @@ wpi.java.debugJni = false
 // Set this to true to enable desktop support.
 def includeDesktopSupport = true
 
-// Explicitly add repositories for IntelliJ IDEA compatibility
-repositories {
-    maven { url = uri("${System.getProperty('user.home')}/wpilib/2026/maven") }
-    mavenCentral()
-    maven { url = uri("https://jitpack.io") }
-    maven { url = uri("https://maven.revrobotics.com/") }
-    maven { url = uri("https://maven.photonvision.org/repository/internal") }
-    maven { url = uri("https://maven.photonvision.org/repository/snapshots") }
-    maven { url = uri("https://docs.home.thethriftybot.com") }
-    maven { url = uri("https://yet-another-software-suite.github.io/YAMS/releases/") }
-    maven { url = uri("https://yet-another-software-suite.github.io/YAGSL/releases/") }
-    maven { url = uri("https://maven.ctr-electronics.com/release/") }
-    maven { url = uri("https://maven.reduxrobotics.com/") }
-    maven { url = uri("https://3015rangerrobotics.github.io/pathplannerlib/repo") }
-    maven { url = uri("https://frcmaven.wpi.edu/artifactory/littletonrobotics-mvn-release/") }
-    maven { url = uri("https://dev.studica.com/maven/release/2026/") }
-}
-
 // Defining my dependencies. In this case, WPILib (+ friends), and vendor libraries.
 // Also defines JUnit 5.
 dependencies {
-    implementation "com.github.jonahsnider:doglog:2026.3.0"
-    implementation "com.github.therekrab:autopilot:1.0.1"
-    implementation "com.studica.frc:Studica-java:2026.0.0"
     annotationProcessor wpi.java.deps.wpilibAnnotations()
     implementation wpi.java.deps.wpilib()
     implementation wpi.java.vendor.java()
