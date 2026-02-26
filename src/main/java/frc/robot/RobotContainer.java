@@ -120,32 +120,32 @@ public class RobotContainer {
 			// Y: Hold to shoot at fixed RPM
 			// driverXbox.y().whileTrue(shooter.shootCommand(RPM.of(3500)));
 
-			driverXbox.povRight().onTrue(Commands.runOnce(() -> {
+			m_JoystickL.povRight().onTrue(Commands.runOnce(() -> {
 				shooter.setVelocity(Units.RPM.of(1000.0));
 				shooter.setFeederVelocity(Units.RPM.of(1000.0));
 				System.out.println("shooter set to 1000RPM");
 			}));
-			driverXbox.povLeft().onTrue(Commands.runOnce(() -> {
+			m_JoystickL.povLeft().onTrue(Commands.runOnce(() -> {
 				System.out.println("shooter stopped");
 				shooter.stop();
 			}));
-			driverXbox.povUp().onTrue(Commands.runOnce(() -> {
+			m_JoystickL.povUp().onTrue(Commands.runOnce(() -> {
 				shooter.setVelocity(shooter.getTargetVelocity().plus(Units.RPM.of(100.0)));
 				shooter.setFeederVelocity(shooter.getTargetVelocity());
 				System.out.println(
 						"shooter increased by 100rpm to " + (shooter.getTargetVelocity().baseUnitMagnitude()));
 			}));
-			driverXbox.povDown().onTrue(Commands.runOnce(() -> {
+			m_JoystickL.povDown().onTrue(Commands.runOnce(() -> {
 				shooter.setVelocity(shooter.getTargetVelocity().minus(Units.RPM.of(100.0)));
 				shooter.setFeederVelocity(shooter.getTargetVelocity());
 				System.out.println(
 						"shooter decreased by 100rpm to " + (shooter.getTargetVelocity().baseUnitMagnitude()));
 			}));
 
-			driverXbox.rightBumper().onTrue(Commands.runOnce(() -> {
+			m_JoystickL.button(3).onTrue(Commands.runOnce(() -> {
 				shooter.setHoodAngle(shooter.getTargetHoodAngle().plus(Degrees.of(10)));
 			}));
-			driverXbox.leftBumper().onTrue(Commands.runOnce(() -> {
+			m_JoystickL.button(4).onTrue(Commands.runOnce(() -> {
 				shooter.setHoodAngle(shooter.getTargetHoodAngle().minus(Degrees.of(10)));
 			}));
 		}
@@ -153,10 +153,10 @@ public class RobotContainer {
 		// ========== Climber Controls (Left Joystick) ==========
 		if (Constants.ENABLE_CLIMBER) {
 			// Thumb cluster top: Extend climber
-			m_JoystickL.button(3).whileTrue(climber.extendCommand());
+			m_JoystickL.button(5).whileTrue(climber.extendCommand());
 
 			// Thumb cluster bottom: Retract climber
-			m_JoystickL.button(4).whileTrue(climber.retractCommand());
+			m_JoystickL.button(6).whileTrue(climber.retractCommand());
 
 			// Trigger: Manual control with joystick Y axis
 			m_JoystickL.trigger().whileTrue(
@@ -168,8 +168,8 @@ public class RobotContainer {
 			// driverXbox.y().onTrue(intake.runRollerCommand());
 			// driverXbox.y().onFalse(intake.stopRollerCommand());
 
-			driverXbox.y().onTrue(intake.extendCommand());
-			driverXbox.y().onFalse(intake.retractCommand());
+			m_JoystickL.button(8).onTrue(intake.extendCommand());
+			m_JoystickL.button(7).onFalse(intake.retractCommand());
 		}
 
 		// ========== Autopilot Examples ==========
