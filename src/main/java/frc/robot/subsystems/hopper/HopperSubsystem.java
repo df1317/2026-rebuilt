@@ -20,75 +20,72 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
  */
 public class HopperSubsystem extends SubsystemBase {
 
-  // ==================== Hardware (package-private for telemetry/visualization)
-  // ====================
-  final SparkMax hopperMotor;
-  private final SparkClosedLoopController hopperController;
-  final RelativeEncoder hopperEncoder;
+	// ==================== Hardware (package-private for telemetry/visualization)
+	// ====================
+	final SparkMax hopperMotor;
+	private final SparkClosedLoopController hopperController;
+	final RelativeEncoder hopperEncoder;
 
-  // ==================== Control State (package-private for telemetry/visualization)
-  // ====================
-  AngularVelocity targetHopperVelocity = RPM.of(0);
+	// ==================== Control State (package-private for telemetry/visualization)
+	// ====================
+	AngularVelocity targetHopperVelocity = RPM.of(0);
 
-  // ==================== Visualization & Telemetry ====================
-  private final HopperTelemetry telemetry;
+	// ==================== Visualization & Telemetry ====================
+	private final HopperTelemetry telemetry;
 
-  public HopperSubsystem() {
-    hopperMotor = new SparkMax(HOPPER_MOTOR_ID, MotorType.kBrushless);
-    hopperController = hopperMotor.getClosedLoopController();
-    hopperEncoder = hopperMotor.getEncoder();
+	public HopperSubsystem() {
+		hopperMotor = new SparkMax(HOPPER_MOTOR_ID, MotorType.kBrushless);
+		hopperController = hopperMotor.getClosedLoopController();
+		hopperEncoder = hopperMotor.getEncoder();
 
-    configureHopperMotor();
+		configureHopperMotor();
 
-    telemetry = new HopperTelemetry(this);
-  }
+		telemetry = new HopperTelemetry(this);
+	}
 
+	private void configureHopperMotor() {
+		SparkMaxConfig config = new SparkMaxConfig();
+		config.idleMode(IdleMode.kCoast).smartCurrentLimit(HOPPER_CURRENT_LIMIT)
+				.inverted(INVERTED);
+		config.closedLoop.pid(HOPPER_KP, HOPPER_KI, HOPPER_KD).iZone(HOPPER_I_ZONE);
+		config.closedLoop.feedForward.kV(HOPPER_KV);
 
-  private void configureHopperMotor() {
-    SparkMaxConfig config = new SparkMaxConfig();
-    config.idleMode(IdleMode.kCoast).smartCurrentLimit(HOPPER_CURRENT_LIMIT)
-      .inverted(INVERTED);
-    config.closedLoop.pid(HOPPER_KP, HOPPER_KI, HOPPER_KD).iZone(HOPPER_I_ZONE);
-    config.closedLoop.feedForward.kV(HOPPER_KV);
+		hopperMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
+	}
 
-    hopperMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
-  }
+	@Override
+	public void periodic() {
+		telemetry.log();
+	}
 
-  @Override
-  public void periodic() {
-    telemetry.log();
-  }
+	// ==================== State Query Methods ====================
+	public boolean isHopperAtSpeed() {
+		return Math.abs(hopperEncoder.getVelocity()
+				- targetHopperVelocity.in(RPM)) < HOPPER_VELOCITY_TOLERANCE.in(RPM);
+	}
 
-  // ==================== State Query Methods ====================
-  public boolean isHopperAtSpeed() {
-    return Math.abs(hopperEncoder.getVelocity()
-      - targetHopperVelocity.in(RPM)) < HOPPER_VELOCITY_TOLERANCE.in(RPM);
-  }
+	// ==================== Control Methods ====================
 
-  // ==================== Control Methods ====================
+	public void setHopperVelocity(AngularVelocity velocity) {
+		targetHopperVelocity = velocity;
+		hopperController.setSetpoint(velocity.in(RPM), ControlType.kVelocity);
+	}
 
-  public void setHopperVelocity(AngularVelocity velocity) {
-    targetHopperVelocity = velocity;
-    hopperController.setSetpoint(velocity.in(RPM), ControlType.kVelocity);
-  }
+	public void stopHopper() {
+		setHopperVelocity(RPM.of(0));
+	}
 
-  public void stopHopper() {
-    setHopperVelocity(RPM.of(0));
-  }
+	// ==================== Command Factory Methods ====================
 
+	public Command forwardCommand() {
+		return runOnce(() -> setHopperVelocity(REVERSE_SPEED)).withName("Hopper Forward");
+	}
 
+	public Command reverseCommand() {
+		return runOnce(() -> setHopperVelocity(FEED_SPEED)).withName("Hopper Back");
+	}
 
-  // ==================== Command Factory Methods ====================
-
-  public Command forwardCommand() {
-    return runOnce(() -> setHopperVelocity(REVERSE_SPEED)).withName("Hopper Forward");
-  }
-
-  public Command reverseCommand() {
-    return runOnce(() -> setHopperVelocity(FEED_SPEED)).withName("Hopper Back");
-  }
-
-  public Command stopCommand() {
-    return runOnce(this::stopHopper).withName("Hopper Stop");
-  }
+	public Command stopCommand() {
+		return runOnce(this::stopHopper).withName("Hopper Stop");
+	}
 }
