@@ -165,8 +165,8 @@ public class RobotContainer {
 
 		// ========== Intake Controls ==========
 		if (Constants.ENABLE_INTAKE) {
-			// driverXbox.y().onTrue(intake.runRollerCommand());
-			// driverXbox.y().onFalse(intake.stopRollerCommand());
+      driverXbox.y().toggleOnTrue(intake.runRollerCommand());
+      driverXbox.y().toggleOnFalse(intake.stopRollerCommand());
 
 			m_JoystickL.button(8).onTrue(intake.extendCommand());
 			m_JoystickL.button(7).onFalse(intake.retractCommand());

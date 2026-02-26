@@ -38,9 +38,9 @@ public final class Constants {
 	/**
 	 * Subsystem enable flags — set to false when hardware is not connected.
 	 */
-	public static final boolean ENABLE_SWERVE = false;
-	public static final boolean ENABLE_CLIMBER = false;
-	public static final boolean ENABLE_INTAKE = false;
+	public static final boolean ENABLE_SWERVE = true;
+	public static final boolean ENABLE_CLIMBER = true;
+	public static final boolean ENABLE_INTAKE = true;
 	public static final boolean ENABLE_SHOOTER = true;
 
 	public static final double ROBOT_MASS = 60 * 0.453592; // 60lbs * kg per pound
