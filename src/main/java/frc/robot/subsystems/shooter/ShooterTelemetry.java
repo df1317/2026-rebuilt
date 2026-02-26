@@ -1,9 +1,8 @@
 package frc.robot.subsystems.shooter;
 
+import static edu.wpi.first.units.Units.RPM;
 import dev.doglog.DogLog;
 import edu.wpi.first.wpilibj.util.Color;
-
-import static edu.wpi.first.units.Units.RPM;
 
 /**
  * Handles telemetry logging for the shooter subsystem.
@@ -23,6 +22,9 @@ public class ShooterTelemetry {
 		double currentRPM = shooter.encoder.getVelocity();
 		double targetRPM = shooter.targetVelocity.in(RPM);
 
+		double feederCurrentRPM = shooter.feederEncoder.getVelocity();
+		double feederTargetRPM = shooter.targetFeederVelocity.in(RPM);
+
 		// Status for LED strip
 		DogLog.forceNt.log("Shooter/Status", getStatusColor().toHexString());
 
@@ -32,9 +34,16 @@ public class ShooterTelemetry {
 		DogLog.log("Shooter/VelocityErrorRPM", targetRPM - currentRPM);
 		DogLog.log("Shooter/AtSpeed", shooter.isAtSpeed());
 
+		DogLog.log("Shooter/Feeder/VelocityRPM", feederCurrentRPM);
+		DogLog.log("Shooter/Feeder/TargetVelocityRPM", feederTargetRPM);
+		DogLog.log("Shooter/Feeder/VelocityErrorRPM", feederTargetRPM - feederCurrentRPM);
 		// Motor data
 		DogLog.log("Shooter/MotorCurrentAmps", shooter.motor.getOutputCurrent());
-		DogLog.log("Shooter/MotorVoltage", shooter.motor.getBusVoltage() * shooter.motor.getAppliedOutput());
+		DogLog.log("Shooter/MotorVoltage",
+				shooter.motor.getBusVoltage() * shooter.motor.getAppliedOutput());
+
+		DogLog.log("Shooter/Hood/CurrentPosition", shooter.hoodEncoder.getPosition());
+		DogLog.log("Shooter/Hood/TargetPosition", shooter.targetHoodAngle);
 	}
 
 	private Color getStatusColor() {
