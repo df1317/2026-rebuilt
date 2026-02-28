@@ -1,7 +1,7 @@
 package frc.robot.subsystems.intake;
 
-import static edu.wpi.first.units.Units.Degrees;
-import static edu.wpi.first.units.Units.RPM;
+import static edu.wpi.first.units.Units.*;
+import static edu.wpi.first.wpilibj2.command.Commands.sequence;
 import static frc.robot.Constants.IntakeConstants.AT_POSITION_DEBOUNCE_TIME;
 import static frc.robot.Constants.IntakeConstants.PIVOT_ANGLE_TOLERANCE;
 import static frc.robot.Constants.IntakeConstants.PIVOT_CURRENT_LIMIT;
@@ -61,6 +61,7 @@ public class IntakeSubsystem extends SubsystemBase {
 	Angle targetPivotAngle = PIVOT_RETRACTED_ANGLE;
 	AngularVelocity targetRollerVelocity = RPM.of(0);
 	private final Debouncer atPositionDebouncer;
+	private final Debouncer stallDebouncer = new Debouncer(0.1, DebounceType.kBoth);
 
 	// ==================== Visualization & Telemetry ====================
 	private final IntakeVisualization visualization;
@@ -149,11 +150,17 @@ public class IntakeSubsystem extends SubsystemBase {
 	// ==================== Command Factory Methods ====================
 
 	public Command extendCommand() {
-		return runOnce(() -> setPivotAngle(PIVOT_EXTENDED_ANGLE)).withName("Intake Extend");
+		return runOnce(() -> setPivotAngle(PIVOT_EXTENDED_ANGLE))
+				.andThen(idle().until(() -> isPivotStalled() || isPivotAtPosition()))
+				.andThen(runOnce(() -> setPivotAngle(Degrees.of(pivotEncoder.getPosition()))))
+				.withName("Intake Extend");
 	}
 
 	public Command retractCommand() {
-		return runOnce(() -> setPivotAngle(PIVOT_RETRACTED_ANGLE)).withName("Intake Retract");
+		return runOnce(() -> setPivotAngle(PIVOT_RETRACTED_ANGLE))
+				.andThen(idle().until(() -> isPivotStalled() || isPivotAtPosition()))
+				.andThen(runOnce(() -> setPivotAngle(Degrees.of(pivotEncoder.getPosition()))))
+				.withName("Intake Retract");
 	}
 
 	public Command runRollerCommand() {
@@ -175,6 +182,13 @@ public class IntakeSubsystem extends SubsystemBase {
 	}
 
 	public Command stowCommand() {
-		return Commands.sequence(stopRollerCommand(), retractCommand()).withName("Intake Stow");
+		return sequence(stopRollerCommand(), retractCommand()).withName("Intake Stow");
+	}
+
+	public boolean isPivotStalled() {
+		double pivotMotorCurrent = pivotMotor.getOutputCurrent();
+		double pivotMotorRPM = pivotMotor.getEncoder().getVelocity(); // RPM
+		boolean isPivotStalled = Math.abs(pivotMotorRPM) < 2.0 && pivotMotorCurrent > PIVOT_CURRENT_LIMIT * 0.5;
+		return stallDebouncer.calculate(isPivotStalled);
 	}
 }

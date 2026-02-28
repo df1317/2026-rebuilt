@@ -94,6 +94,7 @@ public class RobotContainer {
 	private static final RepulsorSetpoint CENTRE_DEFENCE = new RepulsorSetpoint(
 			Setpoints.Rebuilt2026.CENTER_COLLECT, HeightSetpoint.NONE);
 
+
 	public RobotContainer() {
 		if (Constants.ENABLE_SWERVE) {
 			driveAngularVelocity = SwerveInputStream
@@ -150,7 +151,6 @@ public class RobotContainer {
 	}
 
 	private void configureBindings() {
-		// ========== Swerve Controls ==========
 		if (Constants.ENABLE_SWERVE) {
 			drivebase
 					.setDefaultCommand(drivebase.robotDriveCommand(driveAngularVelocity, () -> robotRelative));
@@ -179,47 +179,44 @@ public class RobotContainer {
 			driverXbox.start().whileTrue(repulsor.alignTo(COLLECT_SETPOINT, CategorySpec.kEndgame));
 		}
 
-		// ========== Shooter Controls ==========
 		if (Constants.ENABLE_SHOOTER) {
-			driverXbox.povRight().onTrue(Commands.runOnce(() -> {
+			m_JoystickL.povRight().onTrue(Commands.runOnce(() -> {
 				shooter.setVelocity(Units.RPM.of(1000.0));
 				shooter.setFeederVelocity(Units.RPM.of(1000.0));
 				System.out.println("shooter set to 1000RPM");
 			}));
-			driverXbox.povLeft().onTrue(Commands.runOnce(() -> {
+			m_JoystickL.povLeft().onTrue(Commands.runOnce(() -> {
 				System.out.println("shooter stopped");
 				shooter.stop();
 			}));
-			driverXbox.povUp().onTrue(Commands.runOnce(() -> {
+			m_JoystickL.povUp().onTrue(Commands.runOnce(() -> {
 				shooter.setVelocity(shooter.getTargetVelocity().plus(Units.RPM.of(100.0)));
 				shooter.setFeederVelocity(shooter.getTargetVelocity());
 				System.out.println(
 						"shooter increased by 100rpm to " + (shooter.getTargetVelocity().baseUnitMagnitude()));
 			}));
-			driverXbox.povDown().onTrue(Commands.runOnce(() -> {
+			m_JoystickL.povDown().onTrue(Commands.runOnce(() -> {
 				shooter.setVelocity(shooter.getTargetVelocity().minus(Units.RPM.of(100.0)));
 				shooter.setFeederVelocity(shooter.getTargetVelocity());
 				System.out.println(
 						"shooter decreased by 100rpm to " + (shooter.getTargetVelocity().baseUnitMagnitude()));
 			}));
 
-			driverXbox.rightBumper().onTrue(Commands.runOnce(() -> {
+			m_JoystickL.button(3).onTrue(Commands.runOnce(() -> {
 				shooter.setHoodAngle(shooter.getTargetHoodAngle().plus(Degrees.of(10)));
 			}));
-			driverXbox.leftBumper().onTrue(Commands.runOnce(() -> {
+			m_JoystickL.button(4).onTrue(Commands.runOnce(() -> {
 				shooter.setHoodAngle(shooter.getTargetHoodAngle().minus(Degrees.of(10)));
 			}));
 		}
 
-		// ========== Climber Controls (Left Joystick) ==========
 		if (Constants.ENABLE_CLIMBER) {
-			m_JoystickL.button(3).whileTrue(climber.extendCommand());
-			m_JoystickL.button(4).whileTrue(climber.retractCommand());
+			m_JoystickL.button(5).whileTrue(climber.extendCommand());
+			m_JoystickL.button(6).whileTrue(climber.retractCommand());
 			m_JoystickL.trigger().whileTrue(
 					climber.manualControlCommand(() -> MathUtil.applyDeadband(-m_JoystickL.getY(), 0.1)));
 		}
 
-		// ========== Intake Controls ==========
 		if (Constants.ENABLE_INTAKE) {
 			driverXbox.y().onTrue(Commands.sequence(
 					intake.extendCommand(),
@@ -227,6 +224,12 @@ public class RobotContainer {
 			driverXbox.y().onFalse(Commands.sequence(
 					Commands.runOnce(gamePieceTracker::stopIntake),
 					intake.retractCommand()));
+
+			driverXbox.y().toggleOnTrue(intake.runRollerCommand());
+			driverXbox.y().toggleOnFalse(intake.stopRollerCommand());
+
+			m_JoystickL.button(8).onTrue(intake.extendCommand());
+			m_JoystickL.button(7).onFalse(intake.retractCommand());
 		}
 	}
 
@@ -260,6 +263,7 @@ public class RobotContainer {
 		return repulsor.alignTo(CENTRE_DEFENCE, CategorySpec.kEndgame);
 	}
 
+
 	public Command getAutonomousCommand() {
 		if (Constants.ENABLE_SWERVE && autoChooser != null) {
 			return autoChooser.getSelected();
@@ -281,6 +285,7 @@ public class RobotContainer {
 		gamePieceTracker.setHasPiece(true);
 		FieldTrackerCore.getInstance().resetAll();
 	}
+
 
 	public void setMotorBrake(boolean brake) {
 		if (Constants.ENABLE_SWERVE) {
