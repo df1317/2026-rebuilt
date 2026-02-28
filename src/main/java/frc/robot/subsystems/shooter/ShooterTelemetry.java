@@ -1,6 +1,7 @@
 package frc.robot.subsystems.shooter;
 
 import static edu.wpi.first.units.Units.RPM;
+
 import dev.doglog.DogLog;
 import edu.wpi.first.wpilibj.util.Color;
 
@@ -19,7 +20,7 @@ public class ShooterTelemetry {
 	 * Logs all shooter telemetry data.
 	 */
 	public void log() {
-		double currentRPM = shooter.encoder.getVelocity();
+		double currentRPM = shooter.motor.getVelocity().getValueAsDouble();
 		double targetRPM = shooter.targetVelocity.in(RPM);
 
 		double feederCurrentRPM = shooter.feederEncoder.getVelocity();
@@ -38,9 +39,9 @@ public class ShooterTelemetry {
 		DogLog.log("Shooter/Feeder/TargetVelocityRPM", feederTargetRPM);
 		DogLog.log("Shooter/Feeder/VelocityErrorRPM", feederTargetRPM - feederCurrentRPM);
 		// Motor data
-		DogLog.log("Shooter/MotorCurrentAmps", shooter.motor.getOutputCurrent());
+		DogLog.log("Shooter/MotorCurrentAmps", shooter.motor.getStatorCurrent().getValueAsDouble());
 		DogLog.log("Shooter/MotorVoltage",
-				shooter.motor.getBusVoltage() * shooter.motor.getAppliedOutput());
+				shooter.motor.getMotorVoltage().getValueAsDouble());
 
 		DogLog.log("Shooter/Hood/CurrentPosition", shooter.hoodEncoder.getPosition());
 		DogLog.log("Shooter/Hood/TargetPosition", shooter.targetHoodAngle);
