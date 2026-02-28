@@ -3,6 +3,7 @@ package frc.robot;
 import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.Meters;
 import java.io.File;
+import java.util.concurrent.atomic.AtomicReference;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation3d;
@@ -24,7 +25,9 @@ import frc.robot.commands.TeleopZoneAutomation;
 import frc.robot.repulsor.Repulsor;
 import frc.robot.repulsor.Fields.FieldMapBuilder.CategorySpec;
 import frc.robot.repulsor.Setpoints.HeightSetpoint;
+import frc.robot.repulsor.Setpoints.MutablePoseSetpoint;
 import frc.robot.repulsor.Setpoints.RepulsorSetpoint;
+import frc.robot.repulsor.Setpoints.SetpointType;
 import frc.robot.repulsor.Setpoints.Setpoints;
 import frc.robot.repulsor.Setpoints.Specific._Rebuilt2026;
 import frc.robot.repulsor.Tracking.FieldTrackerCore;
@@ -175,8 +178,15 @@ public class RobotContainer {
 				return repulsor.alignTo(sp, CategorySpec.kScore);
 			}, java.util.Set.of(drivebase)));
 
-			// Navigate to collect position
-			driverXbox.start().whileTrue(repulsor.alignTo(COLLECT_SETPOINT, CategorySpec.kEndgame));
+			// Navigate to collect position (vision-aware: drives to center, then redirects to detected pieces)
+			driverXbox.start().whileTrue(repulsor.alignTo(() -> {
+				Pose2d collectPose = FieldTrackerCore.getInstance()
+						.nextCollectionGoalBlue(drivebase.getPose(), 0.0, 0);
+				return new RepulsorSetpoint(
+						new MutablePoseSetpoint("vision-collect", SetpointType.kOther,
+								new AtomicReference<>(collectPose)),
+						HeightSetpoint.NONE);
+			}, CategorySpec.kCollect));
 		}
 
 		if (Constants.ENABLE_SHOOTER) {
@@ -241,8 +251,15 @@ public class RobotContainer {
 				repulsor.alignTo(scoreSetpoint, CategorySpec.kScore)
 						.until(repulsor.within(Meters.of(0.15))),
 				Commands.waitSeconds(0.5),
-				// Collect
-				repulsor.alignTo(COLLECT_SETPOINT, CategorySpec.kCollect)
+				// Collect (vision-aware: drives to center, then redirects to detected pieces)
+				repulsor.alignTo(() -> {
+					Pose2d collectPose = FieldTrackerCore.getInstance()
+							.nextCollectionGoalBlue(drivebase.getPose(), 0.0, 0);
+					return new RepulsorSetpoint(
+							new MutablePoseSetpoint("vision-collect", SetpointType.kOther,
+									new AtomicReference<>(collectPose)),
+							HeightSetpoint.NONE);
+				}, CategorySpec.kCollect)
 						.until(repulsor.within(Meters.of(0.15))),
 				Commands.waitSeconds(1.0),
 				// Score again
