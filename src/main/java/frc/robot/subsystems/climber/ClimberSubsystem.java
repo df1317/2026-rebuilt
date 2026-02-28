@@ -46,63 +46,33 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 
-/**
- * Climber subsystem using an elevator mechanism.
- *
- * <p>
- * Uses trapezoidal motion profiling with feedforward control for smooth, controlled climbing.
- * Implements soft limits based on encoder position.
- */
 public class ClimberSubsystem extends SubsystemBase {
-
-	// ==================== Hardware (package-private for telemetry/visualization)
-	// ====================
-	// final SparkMax motorLeft;
-	// private final SparkMax motorRight;
-	// private final SparkClosedLoopController controller;
-	// final RelativeEncoder encoder;
 
 	final TalonFX motorLeft;
 	final TalonFX motorRight;
 
-	// ==================== Control State (package-private for telemetry/visualization)
-
 	private boolean velocityMode = false;
 	private AngularVelocity targetVelocity = RPM.of(0);
 
-	// ====================
 	private final TrapezoidProfile profile;
 	private final ElevatorFeedforward feedforward;
 	TrapezoidProfile.State currentState = new TrapezoidProfile.State();
 	TrapezoidProfile.State goalState = new TrapezoidProfile.State();
 	private double lastUpdateTimestamp;
 
-	// ==================== SysId ====================
 	private final MutVoltage appliedVoltage = Volts.mutable(0);
 	private final MutDistance distance = Meters.mutable(0);
 	private final MutLinearVelocity velocity = MetersPerSecond.mutable(0);
 	private final SysIdRoutine sysIdRoutine;
 
-	// ==================== Visualization & Telemetry ====================
 	private final ClimberVisualization visualization;
 	private final ClimberTelemetry telemetry;
 
-	/**
-	 * Creates a new ClimberSubsystem.
-	 *
-	 * <p>
-	 * <b>Important:</b> The encoder position is not initialized on construction and will retain
-	 * values from previous power cycles or be zero after a fresh boot. Call {@link #resetEncoders()}
-	 * during robot initialization or before first use if the climber is not at the zero position.
-	 */
 	public ClimberSubsystem() {
 		motorLeft = new TalonFX(MOTOR_LEFT_ID);
 		motorRight = new TalonFX(MOTOR_RIGHT_ID);
 
-		// Configure the TalonFX for basic use
 		TalonFXConfiguration configs = new TalonFXConfiguration();
-		// This TalonFX should be configured with a kP of 1, a kI of 0, a kD of 10, and a kV of 2 on
-		// slot 0
 		configs.Slot0.kP = KP;
 		configs.Slot0.kI = KI;
 		configs.Slot0.kD = KD;
@@ -115,28 +85,6 @@ public class ClimberSubsystem extends SubsystemBase {
 
 		motorLeft.getConfigurator().apply(configs);
 		motorRight.getConfigurator().apply(configs);
-
-		// SparkMaxConfig leaderConfig = new SparkMaxConfig();
-		// leaderConfig.smartCurrentLimit(CURRENT_LIMIT).idleMode(IdleMode.kBrake).inverted(INVERTED);
-		// leaderConfig.closedLoop.p(KP, ClosedLoopSlot.kSlot0).i(KI, ClosedLoopSlot.kSlot0).d(KD,
-		// ClosedLoopSlot.kSlot0);
-		// leaderConfig.signals.primaryEncoderPositionPeriodMs(10);
-
-		// SparkMaxConfig followerConfig = new SparkMaxConfig();
-		// followerConfig.smartCurrentLimit(CURRENT_LIMIT).idleMode(IdleMode.kBrake)
-		// // Follower inverts relative to leader. With INVERTED=false on leader,
-		// // this causes motors to spin in opposite directions (correct for elevator
-		// // with mirrored motor mounting). Verify physical mounting matches this assumption.
-		// .follow(motorLeft, true);
-
-		// motorLeft.configure(leaderConfig, ResetMode.kResetSafeParameters,
-		// PersistMode.kNoPersistParameters);
-		// motorRight.configure(followerConfig, ResetMode.kResetSafeParameters,
-		// PersistMode.kNoPersistParameters);
-
-		// controller = motorLeft.getClosedLoopController();
-		// encoder = motorLeft.getEncoder();
-		// encoder.setPosition(0);
 
 		profile = new TrapezoidProfile(new TrapezoidProfile.Constraints(MAX_VELOCITY.in(MetersPerSecond),
 				MAX_ACCELERATION.in(MetersPerSecondPerSecond)));
@@ -175,7 +123,6 @@ public class ClimberSubsystem extends SubsystemBase {
 
 	boolean prevEnabled = false;
 
-	// ==================== Periodic ====================
 	@Override
 	public void periodic() {
 		if (DriverStation.isEnabled() && !prevEnabled) {
@@ -186,40 +133,17 @@ public class ClimberSubsystem extends SubsystemBase {
 		double now = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
 		double dt = now - lastUpdateTimestamp;
 		lastUpdateTimestamp = now;
-		// System.out.println("dt: " + dt);
 
 		double measuredHeight = getHeightMeters();
-		// System.out.println("before clamp: " + currentState.position);
-		// goalState.position =
-		// MathUtil.clamp(goalState.position, MIN_HEIGHT.in(Meters), MAX_HEIGHT.in(Meters));
-
-		// if (MathUtil.isNear(goalState.position, measuredHeight, POSITION_TOLERANCE.in(Meters) * 5)) {
-		// currentState.position = measuredHeight;
-		// currentState.velocity = 0.0;
-		// } else {
-		// currentState.velocity = MathUtil.clamp(currentState.velocity,
-		// -MAX_VELOCITY.in(MetersPerSecond), MAX_VELOCITY.in(MetersPerSecond));
-		// }
 
 		currentState = profile.calculate(dt, currentState, goalState);
 		if (!velocityMode) {
 			if (canMove(currentState.velocity)) {
 				double ff = feedforward.calculate(currentState.velocity);
-
-				// currentState.position += 0.1;
-				// System.out.println("shoud probly move!" + (goalState.position - currentState.position));
 				motorLeft.setControl(
 						new PositionVoltage(currentState.position * ROTATIONS_PER_METER).withFeedForward(ff));
-
-				// motorLeft.setControl(new PositionVoltage(currentState.position * ROTATIONS_PER_METER));
 				motorRight.setControl(new Follower(MOTOR_LEFT_ID, MotorAlignmentValue.Opposed));
-				// System.out.println("position: " + currentState.position);
-				// System.out.println("goal pos: " + goalState.position);
-
-				// controller.setSetpoint(currentState.position * ROTATIONS_PER_METER, ControlType.kPosition,
-				// ClosedLoopSlot.kSlot0, ff);
 			} else {
-				// Movement blocked by soft limits; realign profile state with measured position
 				currentState.position = measuredHeight;
 				currentState.velocity = 0.0;
 				motorLeft.stopMotor();
@@ -228,11 +152,8 @@ public class ClimberSubsystem extends SubsystemBase {
 			motorLeft.setControl(new VelocityVoltage(targetVelocity));
 		}
 
-		// visualization.update();
 		telemetry.log();
 	}
-
-	// ==================== State Queries ====================
 
 	double getHeightMeters() {
 		return motorLeft.getPosition().getValueAsDouble() / ROTATIONS_PER_METER;
@@ -265,17 +186,9 @@ public class ClimberSubsystem extends SubsystemBase {
 
 	private boolean canMove(double requestedVelocity) {
 		return true;
-		// double height = getHeightMeters();
-		// if (height >= MAX_HEIGHT.in(Meters) && requestedVelocity > 0) {
-		// return false;
-		// }
-		// return height > MIN_HEIGHT.in(Meters) || requestedVelocity >= 0;
 	}
 
-	// ==================== Control Methods ====================
 	private void setGoalHeight(double heightMeters) {
-		// goalState.position = MathUtil.clamp(heightMeters, MIN_HEIGHT.in(Meters),
-		// MAX_HEIGHT.in(Meters));
 		System.out.println("go to height " + heightMeters);
 		goalState.position = heightMeters;
 		goalState.velocity = 0.0;
@@ -301,7 +214,6 @@ public class ClimberSubsystem extends SubsystemBase {
 		goalState = new TrapezoidProfile.State(0, 0);
 	}
 
-	// ==================== Commands ====================
 	private static final double GO_TO_HEIGHT_TIMEOUT_SECONDS = 5.0;
 
 	public Command goToHeightCommand(double heightMeters) {
@@ -320,23 +232,10 @@ public class ClimberSubsystem extends SubsystemBase {
 		return Commands.runOnce(() -> this.setGoalVelocity(velo));
 	}
 
-	/**
-	 * Creates a command for manual climber control.
-	 *
-	 * <p>
-	 * When the command ends (button released), the climber holds its current position by setting the
-	 * goal to the current profile state.
-	 *
-	 * @param speedInput
-	 *          supplier for joystick input (-1 to 1)
-	 * @return command for manual control
-	 */
+	/** Manual control; holds position when released. */
 	public Command manualControlCommand(DoubleSupplier speedInput) {
 		return Commands.run(() -> {
 			double input = speedInput.getAsDouble();
-			double targetHeight = input > 0 ? MAX_HEIGHT.in(Meters)
-					: (input < 0 ? MIN_HEIGHT.in(Meters) : currentState.position);
-			// setGoalHeight(targetHeight);
 			goalState.position += input;
 		}, this).finallyDo(this::stop);
 	}
@@ -353,7 +252,6 @@ public class ClimberSubsystem extends SubsystemBase {
 		return Commands.runOnce(this::resetEncoders, this).withName("Climber Zero");
 	}
 
-	// ==================== SysId ====================
 	public Command sysIdQuasistatic(Direction direction) {
 		return sysIdRoutine.quasistatic(direction);
 	}
