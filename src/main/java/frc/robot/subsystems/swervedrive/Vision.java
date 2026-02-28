@@ -149,6 +149,19 @@ public class Vision {
 				VecBuilder.fill(
 						VisionConstants.CameraStdDevs.MULTI_TAG[0],
 						VisionConstants.CameraStdDevs.MULTI_TAG[1],
+						VisionConstants.CameraStdDevs.MULTI_TAG[2])),
+
+		BACK_CAM(
+				"STONE",
+				new Rotation3d(0, Units.degreesToRadians(15.0), Units.degreesToRadians(180)),
+				new Translation3d(-0.32, -0.32, 0.30),
+				VecBuilder.fill(
+						VisionConstants.CameraStdDevs.SINGLE_TAG[0],
+						VisionConstants.CameraStdDevs.SINGLE_TAG[1],
+						VisionConstants.CameraStdDevs.SINGLE_TAG[2]),
+				VecBuilder.fill(
+						VisionConstants.CameraStdDevs.MULTI_TAG[0],
+						VisionConstants.CameraStdDevs.MULTI_TAG[1],
 						VisionConstants.CameraStdDevs.MULTI_TAG[2]));
 
 		private final String cameraName;
