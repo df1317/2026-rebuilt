@@ -57,22 +57,6 @@ public class RobotContainer {
 	 * -------------------------------------------------- Converts driver input into a field-relative
 	 * ChassisSpeeds that is controlled by angular velocity.
 	 */
-	SwerveInputStream driveAngularVelocity = SwerveInputStream
-			.of(drivebase.getSwerveDrive(), () -> driverXbox.getLeftY() * -1,
-					() -> driverXbox.getLeftX() * -1)
-			.withControllerRotationAxis(() -> {
-				// Right stick X for rotation, plus triggers for fine-tuning (cubic scaling)
-				// Right trigger = clockwise (negative), Left trigger = counter-clockwise (positive)
-				double stickRotation = driverXbox.getRightX() * -1;
-				double leftTrigger = Math.pow(driverXbox.getLeftTriggerAxis(), 3);
-				double rightTrigger = Math.pow(driverXbox.getRightTriggerAxis(), 3);
-				double triggerRotation = (leftTrigger - rightTrigger) * 0.3;
-				return MathUtil.clamp(stickRotation + triggerRotation, -1.0, 1.0);
-			}).aim(FieldZones.HUB_POSE_RED).aimWhile(driverXbox.b())
-			.deadband(OperatorConstants.DEADBAND)
-			.scaleTranslation(DrivebaseConstants.TRANSLATION_SCALE).allianceRelativeControl(true);
-	 /* Converts driver input into a field-relative ChassisSpeeds controlled by angular velocity.
-	 */
 	private SwerveInputStream driveAngularVelocity;
 
 	/**
@@ -182,8 +166,8 @@ public class RobotContainer {
 
 		// ========== Intake Controls ==========
 		if (Constants.ENABLE_INTAKE) {
-      driverXbox.y().toggleOnTrue(intake.runRollerCommand());
-      driverXbox.y().toggleOnFalse(intake.stopRollerCommand());
+			driverXbox.y().toggleOnTrue(intake.runRollerCommand());
+			driverXbox.y().toggleOnFalse(intake.stopRollerCommand());
 
 			m_JoystickL.button(8).onTrue(intake.extendCommand());
 			m_JoystickL.button(7).onFalse(intake.retractCommand());
