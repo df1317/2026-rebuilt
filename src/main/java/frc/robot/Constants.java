@@ -1,40 +1,58 @@
 package frc.robot;
 
-import static edu.wpi.first.units.Units.*;
-
-import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.units.measure.AngularVelocity;
-import edu.wpi.first.units.measure.Distance;
-
+import static edu.wpi.first.units.Units.Centimeters;
+import static edu.wpi.first.units.Units.Degrees;
+import static edu.wpi.first.units.Units.DegreesPerSecond;
+import static edu.wpi.first.units.Units.DegreesPerSecondPerSecond;
+import static edu.wpi.first.units.Units.Inches;
+import static edu.wpi.first.units.Units.Meters;
+import static edu.wpi.first.units.Units.MetersPerSecond;
+import static edu.wpi.first.units.Units.MetersPerSecondPerSecond;
+import static edu.wpi.first.units.Units.RPM;
+import static edu.wpi.first.units.Units.Volts;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.units.measure.*;
+import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.AngularAcceleration;
+import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.units.measure.Distance;
+import edu.wpi.first.units.measure.LinearAcceleration;
+import edu.wpi.first.units.measure.LinearVelocity;
+import edu.wpi.first.units.measure.Voltage;
 import frc.robot.util.DevMode;
 import swervelib.math.Matter;
 import swervelib.telemetry.SwerveDriveTelemetry.TelemetryVerbosity;
 
-import static edu.wpi.first.units.Units.*;
-
 /**
- * ---------- Constants --- The Constants class provides a convenient place for teams to hold robot-wide numerical or
- * boolean constants. This class should not be used for any other purpose. All constants should be declared globally
- * (i.e. public static). Do not put anything functional in this class.
+ * ---------- Constants --- The Constants class provides a convenient place for teams to hold
+ * robot-wide numerical or boolean constants. This class should not be used for any other purpose.
+ * All constants should be declared globally (i.e. public static). Do not put anything functional in
+ * this class.
  *
  * <p>
- * It is advised to statically import this class (or one of its inner classes) wherever the constants are needed to
- * reduce verbosity. ---
+ * It is advised to statically import this class (or one of its inner classes) wherever the
+ * constants are needed to reduce verbosity. ---
  */
 public final class Constants {
+
+	/**
+	 * Subsystem enable flags — set to false when hardware is not connected.
+	 */
+	public static final boolean ENABLE_SWERVE = true;
+	public static final boolean ENABLE_CLIMBER = true;
+	public static final boolean ENABLE_INTAKE = true;
+	public static final boolean ENABLE_SHOOTER = true;
 
 	public static final double ROBOT_MASS = 60 * 0.453592; // 60lbs * kg per pound
 	public static final Matter CHASSIS = new Matter(new Translation3d(0, 0, Inches.of(8).in(Meters)), ROBOT_MASS);
 
 	/**
-	 * Expected control loop time including robot periodic (20ms) and motor controller velocity control latency.
+	 * Expected control loop time including robot periodic (20ms) and motor controller velocity
+	 * control latency.
 	 *
 	 * <p>
-	 * <b>Note:</b> The 110ms "SparkMAX velocity lag" comment appears to be outdated.
-	 * Typical SparkMAX closed-loop velocity control adds 10-20ms of latency, not 110ms.
+	 * <b>Note:</b> The 110ms "SparkMAX velocity lag" comment appears to be outdated. Typical SparkMAX
+	 * closed-loop velocity control adds 10-20ms of latency, not 110ms.
 	 *
 	 * <p>
 	 * If you're experiencing 130ms total loop times, investigate:
@@ -55,18 +73,17 @@ public final class Constants {
 	 * @deprecated This constant may need revision based on actual measured loop times
 	 */
 	@Deprecated
-	public static final double LOOP_TIME = 0.13; // s, 20ms + 110ms sprk max velocity lag
+	public static final double LOOP_TIME = 0.13; // s, 20ms + 110ms spark max velocity lag
 	public static final double MAX_SPEED = Units.feetToMeters(14.5);
 	public static final double MAX_ANGULAR_SPEED = Math.toRadians(240.0);
 	public static final double MAX_ACCELERATION = 1.5;
-	public static final double MAX_ANGULAR_ACCELERATION = Math.toRadians(120.0);
+	public static final double MAX_ANGULAR_ACCELERATION = Math.toRadians(540.0);
 
 	/**
-	 * Swerve telemetry verbosity - automatically switches based on dev/comp mode. HIGH for development/testing, LOW for
-	 * competition to reduce NT traffic.
+	 * Swerve telemetry verbosity - automatically switches based on dev/comp mode. HIGH for
+	 * development/testing, LOW for competition to reduce NT traffic.
 	 */
-	public static final TelemetryVerbosity SwerveTelemetryVerbosity = DevMode.isEnabled()
-			? TelemetryVerbosity.HIGH
+	public static final TelemetryVerbosity SwerveTelemetryVerbosity = DevMode.isEnabled() ? TelemetryVerbosity.HIGH
 			: TelemetryVerbosity.LOW;
 
 	public static final class DrivebaseConstants {
@@ -83,8 +100,9 @@ public final class Constants {
 		 * Translation scaling factor for driver input (0.0 to 1.0).
 		 *
 		 * <p>
-		 * Limits maximum translational speed to a percentage of the robot's theoretical max. This provides finer control
-		 * for drivers during teleop without sacrificing full speed capability in autonomous.
+		 * Limits maximum translational speed to a percentage of the robot's theoretical max. This
+		 * provides finer control for drivers during teleop without sacrificing full speed capability in
+		 * autonomous.
 		 *
 		 * <p>
 		 * Common values:
@@ -95,8 +113,8 @@ public final class Constants {
 		 * </ul>
 		 *
 		 * <p>
-		 * Note: This does NOT affect rotation speed, which uses cubic scaling
-		 * (see {@code Math.pow(input, 3)}) for smooth control.
+		 * Note: This does NOT affect rotation speed, which uses cubic scaling (see
+		 * {@code Math.pow(input, 3)}) for smooth control.
 		 */
 		public static final double TRANSLATION_SCALE = 0.8;
 	}
@@ -131,24 +149,24 @@ public final class Constants {
 	public static class IntakeConstants {
 
 		// Motor CAN IDs
-		public static final int PIVOT_MOTOR_ID = 20;
-		public static final int ROLLER_MOTOR_ID = 21;
+		public static final int PIVOT_MOTOR_ID = 28;
+		public static final int ROLLER_MOTOR_ID = 20;
 
 		// Motor configuration
 		public static final boolean PIVOT_INVERTED = false;
 		public static final boolean ROLLER_INVERTED = false;
 		public static final int PIVOT_CURRENT_LIMIT = 15;
-		public static final int ROLLER_CURRENT_LIMIT = 35;
+		public static final int ROLLER_CURRENT_LIMIT = 20;
 
 		// Pivot geometry
 		public static final Angle PIVOT_EXTENDED_ANGLE = Degrees.of(90);
 		public static final Angle PIVOT_RETRACTED_ANGLE = Degrees.of(0);
 		public static final Angle PIVOT_ANGLE_TOLERANCE = Degrees.of(3);
-		public static final double PIVOT_GEAR_RATIO = 25.0; // motor rotations per pivot rotation
+		public static final double PIVOT_GEAR_RATIO = 12.0; // motor rotations per pivot rotation
 		public static final Distance PIVOT_ARM_LENGTH = Inches.of(12);
 
 		// Pivot PID constants
-		public static final double PIVOT_KP = 0.1;
+		public static final double PIVOT_KP = 0.01;
 		public static final double PIVOT_KI = 0.0;
 		public static final double PIVOT_KD = 0.0;
 
@@ -158,10 +176,11 @@ public final class Constants {
 		public static final AngularVelocity ROLLER_VELOCITY_TOLERANCE = RPM.of(100);
 
 		// Roller PID constants
-		public static final double ROLLER_KP = 0.0002;
-		public static final double ROLLER_KI = 0.0;
+		public static final double ROLLER_KP = 2E-4;
+		public static final double ROLLER_KI = 1E-5;
 		public static final double ROLLER_KD = 0.0;
-		public static final double ROLLER_KV = 0.000175;
+		public static final double ROLLER_KV = 1.8E-4; // derived from the REV NEO website * 5.5/2
+		public static final double ROLLER_I_ZONE = 1E-3;
 
 		// Debounce time for state checks
 		public static final double AT_POSITION_DEBOUNCE_TIME = 0.1;
@@ -170,17 +189,39 @@ public final class Constants {
 	public static class ShooterConstants {
 
 		// Motor CAN ID
-		public static final int MOTOR_ID = 30;
+		public static final int MOTOR_ID = 28;
+		public static final int FEEDER_ID = 26;
+		public static final int HOOD_ID = 17;
 
 		// Motor configuration
 		public static final boolean INVERTED = false;
-		public static final int CURRENT_LIMIT = 40;
+		public static final boolean FEEDER_INVERTED = false;
+		public static final boolean HOOD_INVERTED = false;
+		public static final int CURRENT_LIMIT = 25;
+		public static final int FEEDER_CURRENT_LIMIT = CURRENT_LIMIT;
+		public static final int HOOD_CURRENT_LIMIT = 20;
+
+		public static final double HOOD_GEAR_RATIO = 12.0 / 1.0;
+
+		public static final Angle MAX_HOOD = Degrees.of(180.0);
+		public static final Angle MIN_HOOD = Degrees.of(0.0);
+
+		public static final AngularVelocity MAX_VELOCITY = DegreesPerSecond.of(1440);
+		public static final AngularAcceleration MAX_ACCELERATION = DegreesPerSecondPerSecond.of(1440);
+
+		public static final Angle HOOD_TOLERANCE = Degrees.of(3);
 
 		// PID constants (tune these for your flywheel)
 		public static final double KP = 0.0002;
 		public static final double KI = 0.0;
 		public static final double KD = 0.0;
 		public static final double KV = 0.000175;
+		public static final double KG = 0.0;
+		public static final double KS = 0.0;
+
+		public static final double HOOD_KP = 0.0012;
+		public static final double HOOD_KI = 0.0;
+		public static final double HOOD_KD = 0.000;
 
 		// Velocity control
 		public static final AngularVelocity VELOCITY_TOLERANCE = RPM.of(100);
@@ -188,6 +229,13 @@ public final class Constants {
 
 		// SysId configuration
 		public static final Voltage SYSID_STEP_VOLTAGE = Volts.of(7);
+
+		// Hood debouncer
+		public static final double AT_POSITION_DEBOUNCE_TIME = 0.1; // seconds
+
+		// Hood stall constants
+		public static final double HOOD_STALL_RPM = 2.0;
+		public static final double CURRENT_DEBOUNCE_TIME = 0.1;
 	}
 
 	public static class ClimberConstants {
@@ -224,12 +272,20 @@ public final class Constants {
 	public static class HopperConstants {
 
 		// Motor configuration
-		public static final int MOTOR_ID = 30;
-		public static final int CURRENT_LIMIT = 35;
+		public static final int HOPPER_MOTOR_ID = 30;
+		public static final int HOPPER_CURRENT_LIMIT = 35;
 		public static final boolean INVERTED = false;
 
 		// Feed speed (duty cycle, -1.0 to 1.0)
-		public static final double FEED_SPEED = 0.5;
-		public static final double REVERSE_SPEED = -0.3;
+		public static final AngularVelocity FEED_SPEED = RPM.of(0.5);
+		public static final AngularVelocity REVERSE_SPEED = RPM.of(-0.3);
+		public static final AngularVelocity HOPPER_VELOCITY_TOLERANCE = RPM.of(100);
+
+		// Hopper PID constants
+		public static final double HOPPER_KP = 2E-4;
+		public static final double HOPPER_KI = 1E-5;
+		public static final double HOPPER_KD = 0.0;
+		public static final double HOPPER_KV = 1.8E-4; // derived from the REV NEO website * 5.5/2
+		public static final double HOPPER_I_ZONE = 1E-3;
 	}
 }

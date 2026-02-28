@@ -1,5 +1,7 @@
 package frc.robot;
 
+import com.studica.frc.AHRS;
+import com.studica.frc.jni.AHRSJNI;
 import dev.doglog.DogLog;
 import dev.doglog.DogLogOptions;
 import edu.wpi.first.net.WebServer;
@@ -11,7 +13,7 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.util.DevMode;
-import frc.robot.util.HubState;
+import frc.robot.util.HubTracker;
 
 /**
  * ---------- Robot --- The VM is configured to automatically run this class and to call the
@@ -63,7 +65,7 @@ public class Robot extends TimedRobot {
 		}
 
 		// Initiate new NavX to type kUSB1
-		// AHRSJNI.c_AHRS_create(AHRS.NavXComType.kUSB1);
+		AHRSJNI.c_AHRS_create(AHRS.NavXComType.kUSB1);
 	}
 
 	/**
@@ -104,6 +106,9 @@ public class Robot extends TimedRobot {
 			lastLoopTimeMicros = nowMicros;
 		}
 
+		// Update shift tracker for phase-aware scoring
+		HubTracker.periodic();
+
 		/*
 		 * ---------- Runs the Scheduler. This is responsible for polling buttons, adding newly
 		 * scheduled commands, running already-scheduled commands, removing finished or interrupted
@@ -121,16 +126,15 @@ public class Robot extends TimedRobot {
 		}
 
 		// Essential values for Elastic dashboard - forceNt ensures these are always
-		// published
-		// even at competition (when regular NT publishing is disabled)
+		// published even at competition (when regular NT publishing is disabled)
 		DogLog.forceNt.log("Dash/MatchTime", DriverStation.getMatchTime());
 		DogLog.forceNt.log("Dash/RobotRelative", m_robotContainer.robotRelative);
-		DogLog.forceNt.log("Dash/HubStatusColor", HubState.getHubStatusColor().toHexString());
+		DogLog.forceNt.log("Dash/HubStatusColor", HubTracker.getHubStatusColor().toHexString());
 
 		// Log NavX gyro values
-		// DogLog.log("gyro yaw", AHRSJNI.c_AHRS_GetYaw());
-		// DogLog.log("gyro roll", AHRSJNI.c_AHRS_GetRoll());
-		// DogLog.log("gyro pitch", AHRSJNI.c_AHRS_GetPitch());
+		DogLog.log("gyro yaw", AHRSJNI.c_AHRS_GetYaw());
+		DogLog.log("gyro roll", AHRSJNI.c_AHRS_GetRoll());
+		DogLog.log("gyro pitch", AHRSJNI.c_AHRS_GetPitch());
 	}
 
 	/**
@@ -142,6 +146,7 @@ public class Robot extends TimedRobot {
 		m_robotContainer.setMotorBrake(true);
 		disabledTimer.reset();
 		disabledTimer.start();
+		HubTracker.reset();
 	}
 
 	/**
@@ -165,6 +170,7 @@ public class Robot extends TimedRobot {
 	public void autonomousInit() {
 		m_robotContainer.setMotorBrake(true);
 		m_autonomousCommand = m_robotContainer.getAutonomousCommand();
+		HubTracker.start();
 
 		// schedule the autonomous command (example)
 		if (m_autonomousCommand != null) {
