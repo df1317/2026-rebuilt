@@ -32,6 +32,7 @@ import com.ctre.phoenix6.signals.MotorAlignmentValue;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ElevatorFeedforward;
+import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.MutDistance;
@@ -113,7 +114,7 @@ public class ClimberSubsystem extends SubsystemBase {
 	}
 
 	public void onEnabled() {
-		System.out.println("justed ENABLED!");
+		System.out.println("just ENABLED!");
 		goalState.position = getHeightMeters();
 		currentState.position = getHeightMeters();
 		currentState.velocity = 0.0;
@@ -154,6 +155,15 @@ public class ClimberSubsystem extends SubsystemBase {
 
 		telemetry.log();
 	}
+
+	public boolean isClimberStalled() {
+		double climberMotorCurrent = motorLeft.getMotorVoltage().getValueAsDouble();
+		double climberMotorRPM = motorLeft.getVelocity().getValueAsDouble(); // RPM
+		boolean isPivotStalled = Math.abs(climberMotorRPM) < 2.0 && climberMotorCurrent > CURRENT_LIMIT * 0.5;
+		return stallDebouncer.calculate(isPivotStalled);
+	}
+
+	private final Debouncer stallDebouncer = new Debouncer(0.1, Debouncer.DebounceType.kBoth);
 
 	double getHeightMeters() {
 		return motorLeft.getPosition().getValueAsDouble() / ROTATIONS_PER_METER;
@@ -241,11 +251,19 @@ public class ClimberSubsystem extends SubsystemBase {
 	}
 
 	public Command extendCommand() {
-		return goToHeightCommand(MAX_HEIGHT.in(Meters)).withName("Climber Extend");
+		return goToHeightCommand(MAX_HEIGHT.in(Meters))
+				// // Uncomment below to enable limit switch
+				// .andThen(idle().until(() -> isClimberStalled() || isAtGoal()))
+				// .andThen(runOnce(() -> goToHeightCommand(this::getHeightMeters)))
+				.withName("Climber Extend");
 	}
 
 	public Command retractCommand() {
-		return goToHeightCommand(MIN_HEIGHT.in(Meters)).withName("Climber Retract");
+		return goToHeightCommand(MIN_HEIGHT.in(Meters))
+				// // Uncomment below to enable limit switch
+				// .andThen(idle().until(() -> isClimberStalled() || isAtGoal()))
+				// .andThen(runOnce(() -> goToHeightCommand(this::getHeightMeters)))
+				.withName("Climber Retract");
 	}
 
 	public Command zeroCommand() {
