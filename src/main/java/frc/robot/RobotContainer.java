@@ -22,6 +22,7 @@ import frc.robot.Constants.DrivebaseConstants;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.commands.TeleopZoneAutomation;
 import frc.robot.repulsor.Repulsor;
+import frc.robot.repulsor.Setpoints.SetpointContext;
 import frc.robot.repulsor.Setpoints.Specific._Rebuilt2026;
 import frc.robot.repulsor.Tracking.FieldTrackerCore;
 import frc.robot.repulsor.Tracking.Vision.FieldVision;
@@ -128,8 +129,9 @@ public class RobotContainer {
 								return speeds;
 							}));
 
-			// A once: gyro reset
-			driverXbox.a().onTrue(Commands.runOnce(drivebase::zeroGyro));
+			// A once: gyro reset (disabled in test mode)
+			driverXbox.a().and(() -> !DriverStation.isTest())
+					.onTrue(Commands.runOnce(drivebase::zeroGyro));
 
 			// Left bumper toggle: field relative
 			driverXbox.leftBumper().onTrue(Commands.runOnce(() -> robotRelative = !robotRelative));
@@ -223,7 +225,7 @@ public class RobotContainer {
 	private Command buildScoreCycleAuto(frc.robot.repulsor.Setpoints.GameSetpoint scoreSetpoint) {
 		return Commands.sequence(
 				// Score preloaded piece
-				repulsor.navigateTo(scoreSetpoint.approximateBluePose())
+				repulsor.navigateTo(() -> scoreSetpoint.poseForCurrentAlliance(SetpointContext.EMPTY))
 						.until(repulsor.within(Meters.of(0.15))),
 				Commands.waitSeconds(0.5),
 				// Collect (vision-aware)
@@ -234,21 +236,24 @@ public class RobotContainer {
 				}).until(repulsor.within(Meters.of(0.15))),
 				Commands.waitSeconds(1.0),
 				// Score again
-				repulsor.navigateTo(scoreSetpoint.approximateBluePose())
+				repulsor.navigateTo(() -> scoreSetpoint.poseForCurrentAlliance(SetpointContext.EMPTY))
 						.until(repulsor.within(Meters.of(0.15))),
 				Commands.waitSeconds(0.5));
 	}
 
 	private Command buildScoreAndClimbAuto(frc.robot.repulsor.Setpoints.GameSetpoint climbSetpoint) {
 		return Commands.sequence(
-				repulsor.navigateTo(_Rebuilt2026.HUB_SCORE_FRONT.approximateBluePose())
+				repulsor.navigateTo(
+						() -> _Rebuilt2026.HUB_SCORE_FRONT.poseForCurrentAlliance(SetpointContext.EMPTY))
 						.until(repulsor.within(Meters.of(0.15))),
 				Commands.waitSeconds(1.0),
-				repulsor.navigateTo(climbSetpoint.approximateBluePose()));
+				repulsor.navigateTo(
+						() -> climbSetpoint.poseForCurrentAlliance(SetpointContext.EMPTY)));
 	}
 
 	private Command buildDefenceOnlyAuto() {
-		return repulsor.navigateTo(_Rebuilt2026.CENTER_COLLECT.approximateBluePose());
+		return repulsor.navigateTo(
+				() -> _Rebuilt2026.CENTER_COLLECT.poseForCurrentAlliance(SetpointContext.EMPTY));
 	}
 
 	public Command getAutonomousCommand() {

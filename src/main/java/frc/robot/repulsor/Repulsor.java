@@ -58,7 +58,7 @@ public class Repulsor {
 		Optional<Distance> err = m_planner.getErr();
 		if (err.isEmpty())
 			return false;
-		return err.isPresent() && err.get().lt(Meters.of(0.1));
+		return err.get().lt(Meters.of(0.1));
 	}
 
 	public Repulsor(

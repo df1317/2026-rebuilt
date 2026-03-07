@@ -27,7 +27,6 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.RobotBase;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -406,10 +405,6 @@ public class FieldPlanner {
 				rect -> rectIntersectsAny(rect, effectiveDynamicsFinal));
 
 		step = step.times(turn.speedScale);
-
-		if (!RobotBase.isReal()) {
-			Pose2d arrowPose = new Pose2d(curTrans, netForce.getAngle());
-		}
 
 		return new RepulsorSample(
 				effectiveGoal.getTranslation(),
