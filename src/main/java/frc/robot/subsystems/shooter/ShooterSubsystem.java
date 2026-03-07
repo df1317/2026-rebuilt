@@ -6,9 +6,25 @@ import static edu.wpi.first.units.Units.DegreesPerSecondPerSecond;
 import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.Volts;
-import static frc.robot.Constants.ShooterConstants.*;
+import static frc.robot.Constants.ShooterConstants.AT_POSITION_DEBOUNCE_TIME;
+import static frc.robot.Constants.ShooterConstants.AT_SPEED_DEBOUNCE_TIME;
+import static frc.robot.Constants.ShooterConstants.CURRENT_DEBOUNCE_TIME;
+import static frc.robot.Constants.ShooterConstants.CURRENT_LIMIT;
+import static frc.robot.Constants.ShooterConstants.HOOD_CURRENT_LIMIT;
+import static frc.robot.Constants.ShooterConstants.HOOD_STALL_RPM;
+import static frc.robot.Constants.ShooterConstants.HOOD_TOLERANCE;
+import static frc.robot.Constants.ShooterConstants.KD;
+import static frc.robot.Constants.ShooterConstants.KG;
+import static frc.robot.Constants.ShooterConstants.KI;
+import static frc.robot.Constants.ShooterConstants.KS;
+import static frc.robot.Constants.ShooterConstants.KV;
+import static frc.robot.Constants.ShooterConstants.MOTOR_ID;
 
 import java.util.function.Supplier;
+
+import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.controls.VelocityVoltage;
+import com.ctre.phoenix6.hardware.TalonFX;
 import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.ResetMode;
@@ -19,6 +35,7 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
+
 import dev.doglog.DogLog;
 import edu.wpi.first.math.controller.ElevatorFeedforward;
 import edu.wpi.first.math.filter.Debouncer;
@@ -41,14 +58,12 @@ import frc.robot.Constants.ShooterConstants;
 public class ShooterSubsystem extends SubsystemBase {
 
 	// ==================== Hardware (package-private for telemetry) ====================
-	final SparkMax motor;
+	final TalonFX motor;
 	final SparkMax feeder;
 	final SparkMax hood;
-	final RelativeEncoder encoder;
 	final RelativeEncoder feederEncoder;
 	final RelativeEncoder hoodEncoder;
 
-	private final SparkClosedLoopController controller;
 	private final SparkClosedLoopController feedController;
 	private final SparkClosedLoopController hoodController;
 	private final Debouncer atSpeedDebouncer;
@@ -78,12 +93,10 @@ public class ShooterSubsystem extends SubsystemBase {
 
 	public ShooterSubsystem() {
 		feeder = new SparkMax(ShooterConstants.FEEDER_ID, MotorType.kBrushless);
-		motor = new SparkMax(ShooterConstants.MOTOR_ID, MotorType.kBrushless);
+		motor = new TalonFX(MOTOR_ID);
 		hood = new SparkMax(ShooterConstants.HOOD_ID, MotorType.kBrushless);
-		encoder = motor.getEncoder();
 		feederEncoder = feeder.getEncoder();
 		hoodEncoder = hood.getEncoder();
-		controller = motor.getClosedLoopController();
 		feedController = feeder.getClosedLoopController();
 		hoodController = hood.getClosedLoopController();
 		atSpeedDebouncer = new Debouncer(AT_SPEED_DEBOUNCE_TIME, DebounceType.kRising);
@@ -107,22 +120,29 @@ public class ShooterSubsystem extends SubsystemBase {
 	}
 
 	private void configureMotor() {
-		SparkMaxConfig config = new SparkMaxConfig();
 		SparkMaxConfig clonedConfig = new SparkMaxConfig();
-
-		config.idleMode(IdleMode.kCoast).smartCurrentLimit(ShooterConstants.CURRENT_LIMIT)
-				.inverted(ShooterConstants.INVERTED);
-		config.closedLoop.pid(ShooterConstants.KP, ShooterConstants.KI, ShooterConstants.KD);
-		config.closedLoop.feedForward.kV(ShooterConstants.KV);
-
 		clonedConfig.idleMode(IdleMode.kCoast).smartCurrentLimit(ShooterConstants.FEEDER_CURRENT_LIMIT)
 				.inverted(ShooterConstants.FEEDER_INVERTED);
 		clonedConfig.closedLoop.pid(ShooterConstants.KP, ShooterConstants.KI, ShooterConstants.KD);
 		clonedConfig.closedLoop.feedForward.kV(ShooterConstants.KV);
-
-		motor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
 		feeder.configure(clonedConfig, ResetMode.kResetSafeParameters,
 				PersistMode.kNoPersistParameters);
+
+		// Configure the TalonFX for basic use
+		TalonFXConfiguration configs = new TalonFXConfiguration();
+		// This TalonFX should be configured with a kP of 1, a kI of 0, a kD of 10, and a kV of 2 on
+		// slot 0
+		configs.Slot0.kP = ShooterConstants.KP;
+		configs.Slot0.kI = KI;
+		configs.Slot0.kD = KD;
+		configs.Slot0.kV = KV;
+		configs.Slot0.kA = KG;
+		configs.Slot0.kS = KS;
+
+		configs.CurrentLimits.SupplyCurrentLimit = CURRENT_LIMIT;
+		configs.CurrentLimits.SupplyCurrentLimitEnable = true;
+
+		motor.getConfigurator().apply(configs);
 	}
 
 	private void configureHood() {
@@ -181,7 +201,7 @@ public class ShooterSubsystem extends SubsystemBase {
 	// ==================== State Queries ====================
 
 	public boolean isAtSpeed() {
-		double error = Math.abs(targetVelocity.in(RPM) - encoder.getVelocity());
+		double error = Math.abs(targetVelocity.in(RPM) - motor.getVelocity().getValueAsDouble());
 		boolean withinTolerance = error < ShooterConstants.VELOCITY_TOLERANCE.in(RPM) && targetVelocity.in(RPM) > 0;
 		return atSpeedDebouncer.calculate(withinTolerance);
 	}
@@ -214,6 +234,7 @@ public class ShooterSubsystem extends SubsystemBase {
 	}
 
 	public Angle getTargetHoodAngle() {
+
 		return targetHoodAngle;
 	}
 
@@ -244,7 +265,7 @@ public class ShooterSubsystem extends SubsystemBase {
 
 	public void setVelocity(AngularVelocity velocity) {
 		targetVelocity = velocity;
-		controller.setSetpoint(velocity.in(RPM), ControlType.kVelocity);
+		motor.setControl(new VelocityVoltage(velocity));
 	}
 
 	public void setFeederVelocity(AngularVelocity velocity) {
