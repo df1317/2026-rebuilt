@@ -2,11 +2,13 @@ package frc.robot;
 
 import static edu.wpi.first.units.Units.Meters;
 import java.io.File;
+import dev.doglog.DogLog;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
+import edu.wpi.first.networktables.BooleanSubscriber;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -51,6 +53,7 @@ public class RobotContainer {
 	// Repulsor
 	private Repulsor repulsor;
 	private SwerveInputStream driveAngularVelocity;
+	private final BooleanSubscriber obstacleClampEnabled = DogLog.tunable("Drive/ObstacleClampEnabled", false);
 
 	// Game piece tracking
 	private final GamePieceTracker gamePieceTracker = new GamePieceTracker();
@@ -117,7 +120,13 @@ public class RobotContainer {
 		// ===== Driver Controls (Xbox port 0) =====
 		if (Constants.ENABLE_SWERVE) {
 			drivebase.setDefaultCommand(
-					drivebase.robotDriveCommand(driveAngularVelocity, () -> robotRelative));
+					drivebase.robotDriveCommand(driveAngularVelocity, () -> robotRelative,
+							speeds -> {
+								if (obstacleClampEnabled.get() && repulsor != null) {
+									return repulsor.clampDriveSpeed(speeds, drivebase.getPose());
+								}
+								return speeds;
+							}));
 
 			// A once: gyro reset
 			driverXbox.a().onTrue(Commands.runOnce(drivebase::zeroGyro));

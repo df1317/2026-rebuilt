@@ -48,6 +48,12 @@ In test mode, hold a button on the driver controller to run a subsystem at value
 | `Button B` | Test intake   | `Test/IntakePivotDeg`, `Test/IntakeRollerRPM`      |
 | `Button X` | Test climber  | `Test/ClimberHeightM`                              |
 
+#### Dashboard Toggles
+
+| Tunable                      | Default | Description                                        |
+|------------------------------|---------|----------------------------------------------------|
+| `Drive/ObstacleClampEnabled` | `false` | Clamps teleop drive to prevent driving into obstacles/walls |
+
 ## CAN IDs
 
 | Component   | Location    | ID   |

@@ -42,6 +42,7 @@ import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 
 import static edu.wpi.first.units.Units.*;
 
@@ -266,6 +267,11 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 	}
 
 	public Command robotDriveCommand(SwerveInputStream velocity, BooleanSupplier robotRelative) {
+		return robotDriveCommand(velocity, robotRelative, UnaryOperator.identity());
+	}
+
+	public Command robotDriveCommand(SwerveInputStream velocity, BooleanSupplier robotRelative,
+			UnaryOperator<ChassisSpeeds> speedModifier) {
 		return run(() -> {
 			Optional<Alliance> ally = DriverStation.getAlliance();
 
@@ -280,7 +286,7 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 					DogLog.log("misc/team", "BLUE");
 				}
 			}
-			ChassisSpeeds speeds = velocity.get();
+			ChassisSpeeds speeds = speedModifier.apply(velocity.get());
 			DogLog.log("Swerve/Input/AngularVelocity", speeds.omegaRadiansPerSecond);
 			DogLog.log("Swerve/Input/XVelocity", speeds.vxMetersPerSecond);
 			DogLog.log("Swerve/Input/YVelocity", speeds.vyMetersPerSecond);
