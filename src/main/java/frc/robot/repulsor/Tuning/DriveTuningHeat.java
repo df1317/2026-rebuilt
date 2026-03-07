@@ -32,7 +32,6 @@ public class DriveTuningHeat extends DriveTuning {
 	private double minStep = 0.02;
 	private double nearStart = 0.40;
 	private double nearEnd = 0.02;
-	private final double MAX_SPEED = 5.14;
 
 	private final Heatmap heatmap;
 	private final Supplier<Pose2d> robotPoseSupplier;
@@ -95,11 +94,6 @@ public class DriveTuningHeat extends DriveTuning {
 	public double baseStepMeters(double distanceMeters, boolean slowDown) {
 		double d = Math.max(0.0, distanceMeters);
 		if (d <= 0.0) {
-			// Logger.recordOutput("Repulsor/Speed", 0.0);
-			// Logger.recordOutput("Repulsor/Remaining", 0.0);
-			// Logger.recordOutput("Repulsor/Step", 0.0);
-			// Logger.recordOutput("Repulsor/Heat", 0.0);
-			// Logger.recordOutput("Repulsor/VMaxHeat", 0.0);
 			return 0.0;
 		}
 
@@ -121,7 +115,7 @@ public class DriveTuningHeat extends DriveTuning {
 			vMaxHeat = baseMaxSpeed * MathUtil.clamp(heat, 0.0, 1.0);
 		}
 
-		double vMax = Math.min(vMaxHeat, MAX_SPEED);
+		double vMax = vMaxHeat;
 		double aMax = Math.max(0.01, sqrtScale);
 
 		double dBrake = vMax * vMax / (2.0 * aMax);
@@ -150,12 +144,6 @@ public class DriveTuningHeat extends DriveTuning {
 			step = d;
 		}
 
-		// Logger.recordOutput("Repulsor/Speed", v);
-		// Logger.recordOutput("Repulsor/Remaining", d);
-		// Logger.recordOutput("Repulsor/Step", step);
-		// Logger.recordOutput("Repulsor/Heat", heat);
-		// Logger.recordOutput("Repulsor/VMaxHeat", vMaxHeat);
-
 		return step;
 	}
 
@@ -172,7 +160,7 @@ public class DriveTuningHeat extends DriveTuning {
 	private Pose2d getRobotPoseOrNull() {
 		try {
 			return robotPoseSupplier.get();
-		} catch (Throwable t) {
+		} catch (Exception e) {
 			return null;
 		}
 	}

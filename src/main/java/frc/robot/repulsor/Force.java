@@ -32,8 +32,6 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.interpolation.Interpolatable;
 import edu.wpi.first.math.numbers.N2;
 import edu.wpi.first.units.measure.Distance;
-import edu.wpi.first.util.protobuf.ProtobufSerializable;
-import edu.wpi.first.util.struct.StructSerializable;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -41,7 +39,7 @@ import java.util.Objects;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE)
-public class Force implements Interpolatable<Force>, ProtobufSerializable, StructSerializable {
+public class Force implements Interpolatable<Force> {
 	/**
 	 * A preallocated Force representing the origin.
 	 *
@@ -240,7 +238,7 @@ public class Force implements Interpolatable<Force>, ProtobufSerializable, Struc
 	 * Returns the sum of two translations in 2D space.
 	 *
 	 * <p>
-	 * For example, Translation3d(1.0, 2.5) + Translation3d(2.0, 5.5) = Translation3d{3.0, 8.0).
+	 * For example, Force(1.0, 2.5) + Force(2.0, 5.5) = Force(3.0, 8.0).
 	 *
 	 * @param other
 	 *          The translation to add.
@@ -292,7 +290,7 @@ public class Force implements Interpolatable<Force>, ProtobufSerializable, Struc
 	 * Returns the translation divided by a scalar.
 	 *
 	 * <p>
-	 * For example, Translation3d(2.0, 2.5) / 2 = Translation3d(1.0, 1.25).
+	 * For example, Force(2.0, 2.5) / 2 = Force(1.0, 1.25).
 	 *
 	 * @param scalar
 	 *          The scalar to multiply by.

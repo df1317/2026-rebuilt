@@ -24,7 +24,7 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 
 public class Fallback {
-	public abstract class PlannerFallback {
+	public static abstract class PlannerFallback {
 		public abstract ChassisSpeeds calculate(Translation2d currentPose, Translation2d target);
 
 		public boolean within(Translation2d err) {
@@ -37,7 +37,7 @@ public class Fallback {
 		protected abstract double _withinDist();
 	}
 
-	public class PID extends PlannerFallback {
+	public static class PID extends PlannerFallback {
 		private PIDController xController;
 		private PIDController yController;
 

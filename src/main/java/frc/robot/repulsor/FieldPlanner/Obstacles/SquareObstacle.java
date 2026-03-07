@@ -297,16 +297,7 @@ public class SquareObstacle extends Obstacle {
 
 		double progressPenalty = (d >= baseDist - 0.01) ? 0.35 : 0.0;
 
-		double wallPenalty = 0.0;
-		double edge = 0.20;
-		if (cand.getX() < minX - edge
-				|| cand.getX() > maxX + edge
-				|| cand.getY() < minY - edge
-				|| cand.getY() > maxY + edge) {
-			wallPenalty += 0.0;
-		}
-
-		return d + occPenalty + progressPenalty + wallPenalty;
+		return d + occPenalty + progressPenalty;
 	}
 
 	@Override

@@ -79,4 +79,24 @@ public class CorridorCenterlineRail extends Obstacle {
 			return new Force();
 		return new Force(n, v.getAngle());
 	}
+
+	@Override
+	public boolean intersectsRectangle(Translation2d[] rectCorners) {
+		double corridorMinX = xCenter - xHalfWindow;
+		double corridorMaxX = xCenter + xHalfWindow;
+		double corridorMinY = yCenter - yHalfWidth;
+		double corridorMaxY = yCenter + yHalfWidth;
+
+		double rMinX = Double.MAX_VALUE, rMinY = Double.MAX_VALUE;
+		double rMaxX = -Double.MAX_VALUE, rMaxY = -Double.MAX_VALUE;
+		for (Translation2d c : rectCorners) {
+			rMinX = Math.min(rMinX, c.getX());
+			rMaxX = Math.max(rMaxX, c.getX());
+			rMinY = Math.min(rMinY, c.getY());
+			rMaxY = Math.max(rMaxY, c.getY());
+		}
+
+		return rMaxX >= corridorMinX && rMinX <= corridorMaxX
+				&& rMaxY >= corridorMinY && rMinY <= corridorMaxY;
+	}
 }

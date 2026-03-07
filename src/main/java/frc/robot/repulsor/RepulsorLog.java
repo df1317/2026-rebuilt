@@ -27,12 +27,6 @@ public class RepulsorLog {
 		kSYSOUT, kNT4
 	}
 
-	public static void setLogType(LogType type) {
-	}
-
-	public static void setEnabled(boolean enable) {
-	}
-
 	public static void log(String key, String value) {
 		DogLog.log("Repulsor/" + key, value);
 	}
