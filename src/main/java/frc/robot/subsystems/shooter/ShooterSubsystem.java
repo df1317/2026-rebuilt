@@ -55,6 +55,7 @@ public class ShooterSubsystem extends SubsystemBase {
 	private final Debouncer stallDebouncer;
 	private final Debouncer atPositionDebouncer;
 	private final InterpolatingDoubleTreeMap distanceToRPM = new InterpolatingDoubleTreeMap();
+	private final InterpolatingDoubleTreeMap distanceToHoodDeg = new InterpolatingDoubleTreeMap();
 	private final SysIdRoutine sysIdRoutine;
 	private final DoubleSubscriber feederRPMTunable = DogLog.tunable("Shooter/feederRPMTunable", 0.0, RPM);
 
@@ -136,12 +137,22 @@ public class ShooterSubsystem extends SubsystemBase {
 	}
 
 	private void populateLookupTable() {
+		// Distance (m) -> Flywheel RPM
 		distanceToRPM.put(1.0, 2500.0);
 		distanceToRPM.put(2.0, 3000.0);
 		distanceToRPM.put(3.0, 3500.0);
 		distanceToRPM.put(4.0, 4000.0);
 		distanceToRPM.put(5.0, 4500.0);
 		distanceToRPM.put(6.0, 5000.0);
+
+		// Distance (m) -> Hood angle (degrees)
+		// TODO: tune these values on the real robot
+		distanceToHoodDeg.put(1.0, 60.0);
+		distanceToHoodDeg.put(2.0, 50.0);
+		distanceToHoodDeg.put(3.0, 42.0);
+		distanceToHoodDeg.put(4.0, 35.0);
+		distanceToHoodDeg.put(5.0, 30.0);
+		distanceToHoodDeg.put(6.0, 25.0);
 	}
 
 	@Override
@@ -205,6 +216,17 @@ public class ShooterSubsystem extends SubsystemBase {
 
 	// ==================== Control Methods ====================
 
+	public Angle getHoodAngleForDistance(Distance distance) {
+		double distanceMeters = distance.in(Meters);
+		double clampedDistance = Math.max(1.0, Math.min(6.0, distanceMeters));
+		return Degrees.of(distanceToHoodDeg.get(clampedDistance));
+	}
+
+	public void setForDistance(Distance distance) {
+		setVelocity(getRPMForDistance(distance));
+		setHoodAngle(getHoodAngleForDistance(distance));
+	}
+
 	public void setVelocityForDistance(Distance distance) {
 		setVelocity(getRPMForDistance(distance));
 	}
@@ -256,7 +278,7 @@ public class ShooterSubsystem extends SubsystemBase {
 	}
 
 	public Command shootForDistanceCommand(Supplier<Distance> distance) {
-		return Commands.run(() -> setVelocityForDistance(distance.get()), this).finallyDo(this::stop);
+		return Commands.run(() -> setForDistance(distance.get()), this).finallyDo(this::stop);
 	}
 
 	public Command hoodSetpoint(Angle angle) {

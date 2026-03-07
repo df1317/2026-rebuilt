@@ -1,7 +1,6 @@
 package frc.robot.commands;
 
 import static edu.wpi.first.units.Units.Meters;
-import static edu.wpi.first.units.Units.RPM;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -12,7 +11,6 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import java.util.function.Supplier;
 import frc.robot.repulsor.Repulsor;
-import frc.robot.repulsor.Setpoints.Specific._Rebuilt2026;
 import frc.robot.subsystems.intake.IntakeSubsystem;
 import frc.robot.subsystems.shooter.ShooterSubsystem;
 import frc.robot.util.FieldZones;
@@ -24,9 +22,7 @@ public class TeleopZoneAutomation {
 		SHUTTLE, SHOOT
 	}
 
-	private static final double SCORE_PROXIMITY_M = 1.0;
 	private static final double ALIGN_TOLERANCE_M = 0.15;
-	private static final double SHOOT_RPM = 3000.0;
 
 	private final Repulsor repulsor;
 	private final IntakeSubsystem intake;
@@ -70,14 +66,18 @@ public class TeleopZoneAutomation {
 			return FieldZones.isInOwnAllianceZone(robotPose.get(), alliance);
 		});
 
-		Trigger nearScoringPose = new Trigger(() -> {
-			Translation2d pos = robotPose.get().getTranslation();
-			var nearest = _Rebuilt2026.nearestScoringPose(pos);
-			Pose2d scorePose = nearest.approximateBluePose();
-			return pos.getDistance(scorePose.getTranslation()) < SCORE_PROXIMITY_M;
+		// Scoring zone: behind the hub on your own alliance wall side
+		Trigger inScoringZone = new Trigger(() -> {
+			DriverStation.Alliance alliance = DriverStation.getAlliance()
+					.orElse(DriverStation.Alliance.Blue);
+			Pose2d hub = FieldZones.getHubPose(alliance);
+			double robotX = robotPose.get().getX();
+			// Blue: scoring zone is x < hub_x (between wall and hub)
+			// Red: scoring zone is x > hub_x (between wall and hub)
+			return alliance == DriverStation.Alliance.Red
+					? robotX > hub.getX()
+					: robotX < hub.getX();
 		});
-
-		Trigger aligned = new Trigger(() -> repulsor.within(Meters.of(ALIGN_TOLERANCE_M)).getAsBoolean());
 
 		// Shuttle mode: auto-intake when in own zone without piece
 		if (intake != null) {
@@ -95,22 +95,23 @@ public class TeleopZoneAutomation {
 							intake.stopRollerCommand()));
 		}
 
-		// Both modes: auto-align when near scoring pose with piece
-		isTeleop.and(nearScoringPose).and(hasPiece)
-				.whileTrue(Commands.defer(() -> {
-					var nearest = _Rebuilt2026.nearestScoringPose(robotPose.get().getTranslation());
-					return repulsor.navigateTo(nearest.approximateBluePose());
-				}, java.util.Set.of(repulsor.getDrive().asSubsystem())));
-
-		// Auto-fire when aligned
+		// Auto-fire when in scoring zone with piece (distance-based)
 		if (shooter != null) {
-			isTeleop.and(nearScoringPose).and(hasPiece).and(aligned)
+			isTeleop.and(inScoringZone).and(hasPiece)
+					.whileTrue(shooter.shootForDistanceCommand(() -> {
+						Translation2d pos = robotPose.get().getTranslation();
+						DriverStation.Alliance alliance = DriverStation.getAlliance()
+								.orElse(DriverStation.Alliance.Blue);
+						Translation2d hub = FieldZones.getHubPose(alliance).getTranslation();
+						return Meters.of(pos.getDistance(hub));
+					}));
+
+			isTeleop.and(inScoringZone).and(hasPiece)
+					.and(new Trigger(shooter::isAtSpeed))
 					.onTrue(Commands.sequence(
 							Commands.runOnce(tracker::startShoot),
-							shooter.shootCommand(RPM.of(SHOOT_RPM))
-									.withTimeout(1.0),
-							Commands.runOnce(tracker::stopShoot),
-							shooter.stopCommand()));
+							Commands.waitSeconds(0.5),
+							Commands.runOnce(tracker::stopShoot)));
 		}
 	}
 }
