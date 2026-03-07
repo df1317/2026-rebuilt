@@ -1,6 +1,5 @@
 package frc.robot;
 
-import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.Meters;
 import java.io.File;
 import edu.wpi.first.math.MathUtil;
@@ -16,7 +15,6 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Constants.DrivebaseConstants;
 import frc.robot.Constants.OperatorConstants;
@@ -39,8 +37,7 @@ public class RobotContainer {
 
 	// HID
 	private final CommandXboxController driverXbox = new CommandXboxController(0);
-	private final CommandJoystick m_JoystickL = new CommandJoystick(1);
-	private final CommandJoystick m_JoystickR = new CommandJoystick(2);
+	private final CommandXboxController operatorXbox = new CommandXboxController(1);
 
 	// Subsystems
 	private final SwerveSubsystem drivebase = Constants.ENABLE_SWERVE
@@ -69,13 +66,8 @@ public class RobotContainer {
 			driveAngularVelocity = SwerveInputStream
 					.of(drivebase.getSwerveDrive(), () -> driverXbox.getLeftY() * -1,
 							() -> driverXbox.getLeftX() * -1)
-					.withControllerRotationAxis(() -> {
-						double stickRotation = driverXbox.getRightX() * -1;
-						double leftTrigger = Math.pow(driverXbox.getLeftTriggerAxis(), 3);
-						double rightTrigger = Math.pow(driverXbox.getRightTriggerAxis(), 3);
-						double triggerRotation = (leftTrigger - rightTrigger) * 0.3;
-						return MathUtil.clamp(stickRotation + triggerRotation, -1.0, 1.0);
-					}).aim(FieldZones.HUB_POSE_RED).aimWhile(driverXbox.b())
+					.withControllerRotationAxis(() -> driverXbox.getRightX() * -1)
+					.aim(FieldZones.HUB_POSE_RED).aimWhile(driverXbox.y())
 					.deadband(OperatorConstants.DEADBAND)
 					.scaleTranslation(DrivebaseConstants.TRANSLATION_SCALE).allianceRelativeControl(true);
 
@@ -122,89 +114,80 @@ public class RobotContainer {
 	}
 
 	private void configureBindings() {
+		// ===== Driver Controls (Xbox port 0) =====
 		if (Constants.ENABLE_SWERVE) {
-			// Wrap default drive command with obstacle clamping
 			drivebase.setDefaultCommand(
 					drivebase.robotDriveCommand(driveAngularVelocity, () -> robotRelative));
 
-			driverXbox.x().whileTrue(
-					drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY, FieldZones.HUB_POSE_BLUE));
-
+			// A once: gyro reset
 			driverXbox.a().onTrue(Commands.runOnce(drivebase::zeroGyro));
 
-			driverXbox.rightBumper().onTrue(Commands.runOnce(() -> robotRelative = !robotRelative))
-					.and(DriverStation::isTeleop);
-
-			driverXbox.leftBumper().whileTrue(Commands.runOnce(drivebase::lock, drivebase).repeatedly());
-
-			driverXbox.back().whileTrue(
-					Commands.either(drivebase.centerModulesCommand(), Commands.none(), DriverStation::isTest));
-
-			// Navigate to nearest scoring pose
-			driverXbox.b().whileTrue(Commands.defer(() -> {
-				var nearest = _Rebuilt2026.nearestScoringPose(drivebase.getPose().getTranslation());
-				return repulsor.navigateTo(nearest.approximateBluePose());
-			}, java.util.Set.of(drivebase)));
-
-			// Navigate to collect position (vision-aware)
-			driverXbox.start().whileTrue(repulsor.navigateTo(() -> {
-				Pose2d collectPose = FieldTrackerCore.getInstance()
-						.nextCollectionGoalBlue(drivebase.getPose(), 0.0, 0);
-				return collectPose;
-			}));
+			// Left bumper toggle: field relative
+			driverXbox.leftBumper().onTrue(Commands.runOnce(() -> robotRelative = !robotRelative));
 		}
+
+		// Right trigger hold: auto shoot (distance-based)
+		if (Constants.ENABLE_SWERVE && Constants.ENABLE_SHOOTER) {
+			driverXbox.rightTrigger(0.3).whileTrue(
+					shooter.shootForDistanceCommand(this::getDistanceToTarget));
+		}
+
+		// Left trigger hold: intake
+		if (Constants.ENABLE_SWERVE && Constants.ENABLE_INTAKE) {
+			driverXbox.leftTrigger(0.3).whileTrue(Commands.parallel(
+					intake.intakeCommand(),
+					Commands.runOnce(gamePieceTracker::startIntake)))
+					.onFalse(Commands.sequence(
+							Commands.runOnce(gamePieceTracker::stopIntake),
+							intake.stowCommand()));
+		}
+
+		// ===== Operator Controls (Xbox port 1) =====
 
 		if (Constants.ENABLE_SHOOTER) {
-			m_JoystickL.povRight().onTrue(Commands.runOnce(() -> {
-				shooter.setVelocity(Units.RPM.of(1000.0));
-				shooter.setFeederVelocity(Units.RPM.of(1000.0));
-				System.out.println("shooter set to 1000RPM");
-			}));
-			m_JoystickL.povLeft().onTrue(Commands.runOnce(() -> {
-				System.out.println("shooter stopped");
-				shooter.stop();
-			}));
-			m_JoystickL.povUp().onTrue(Commands.runOnce(() -> {
+			// Left bumper toggle: shooter motor start/stop
+			operatorXbox.leftBumper().toggleOnTrue(
+					shooter.shootCommand(Units.RPM.of(3000)));
+
+			// D-pad up: +100 RPM
+			operatorXbox.povUp().onTrue(Commands.runOnce(() -> {
 				shooter.setVelocity(shooter.getTargetVelocity().plus(Units.RPM.of(100.0)));
 				shooter.setFeederVelocity(shooter.getTargetVelocity());
-				System.out.println(
-						"shooter increased by 100rpm to " + (shooter.getTargetVelocity().baseUnitMagnitude()));
 			}));
-			m_JoystickL.povDown().onTrue(Commands.runOnce(() -> {
+
+			// D-pad down: -100 RPM
+			operatorXbox.povDown().onTrue(Commands.runOnce(() -> {
 				shooter.setVelocity(shooter.getTargetVelocity().minus(Units.RPM.of(100.0)));
 				shooter.setFeederVelocity(shooter.getTargetVelocity());
-				System.out.println(
-						"shooter decreased by 100rpm to " + (shooter.getTargetVelocity().baseUnitMagnitude()));
 			}));
 
-			m_JoystickL.button(3).onTrue(Commands.runOnce(() -> {
-				shooter.setHoodAngle(shooter.getTargetHoodAngle().plus(Degrees.of(10)));
-			}));
-			m_JoystickL.button(4).onTrue(Commands.runOnce(() -> {
-				shooter.setHoodAngle(shooter.getTargetHoodAngle().minus(Degrees.of(10)));
-			}));
-		}
-
-		if (Constants.ENABLE_CLIMBER) {
-			m_JoystickL.button(5).whileTrue(climber.extendCommand());
-			m_JoystickL.button(6).whileTrue(climber.retractCommand());
-			m_JoystickL.trigger().whileTrue(
-					climber.manualControlCommand(() -> MathUtil.applyDeadband(-m_JoystickL.getY(), 0.1)));
+			// Left trigger hold: reverse shoot (declog)
+			operatorXbox.leftTrigger(0.3).whileTrue(Commands.startEnd(
+					() -> {
+						shooter.setVelocity(Units.RPM.of(-1000));
+						shooter.setFeederVelocity(Units.RPM.of(-1000));
+					},
+					shooter::stop, shooter));
 		}
 
 		if (Constants.ENABLE_INTAKE) {
-			driverXbox.y().onTrue(Commands.sequence(
-					intake.extendCommand(),
-					Commands.runOnce(gamePieceTracker::startIntake)));
-			driverXbox.y().onFalse(Commands.sequence(
-					Commands.runOnce(gamePieceTracker::stopIntake),
-					intake.retractCommand()));
+			// A toggle: intake down/up
+			operatorXbox.a().toggleOnTrue(intake.intakeCommand());
+			operatorXbox.a().toggleOnFalse(intake.stowCommand());
 
-			driverXbox.y().toggleOnTrue(intake.runRollerCommand());
-			driverXbox.y().toggleOnFalse(intake.stopRollerCommand());
+			// B hold: reverse intake
+			operatorXbox.b().whileTrue(intake.ejectCommand());
+		}
 
-			m_JoystickL.button(8).onTrue(intake.extendCommand());
-			m_JoystickL.button(7).onFalse(intake.retractCommand());
+		if (Constants.ENABLE_CLIMBER) {
+			// Y: climber toggle (extend/retract)
+			operatorXbox.y().toggleOnTrue(climber.extendCommand());
+			operatorXbox.y().toggleOnFalse(climber.retractCommand());
+
+			// Right bumper hold + right stick: manual climber
+			operatorXbox.rightBumper().whileTrue(
+					climber.manualControlCommand(
+							() -> MathUtil.applyDeadband(-operatorXbox.getRightY(), 0.1)));
 		}
 	}
 
