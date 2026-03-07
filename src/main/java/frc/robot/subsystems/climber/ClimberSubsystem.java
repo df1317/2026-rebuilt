@@ -24,6 +24,7 @@ import static frc.robot.Constants.ClimberConstants.ROTATIONS_PER_METER;
 import java.util.function.DoubleSupplier;
 
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import dev.doglog.DogLog;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.controls.VelocityVoltage;
@@ -33,6 +34,7 @@ import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ElevatorFeedforward;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
+import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.MutDistance;
 import edu.wpi.first.units.measure.MutLinearVelocity;
@@ -64,6 +66,9 @@ public class ClimberSubsystem extends SubsystemBase {
 	private final MutDistance distance = Meters.mutable(0);
 	private final MutLinearVelocity velocity = MetersPerSecond.mutable(0);
 	private final SysIdRoutine sysIdRoutine;
+
+	private final DoubleSubscriber testClimberHeight = DogLog.tunable("Test/ClimberHeightM",
+			MAX_HEIGHT.in(Meters), Meters);
 
 	private final ClimberVisualization visualization;
 	private final ClimberTelemetry telemetry;
@@ -250,6 +255,10 @@ public class ClimberSubsystem extends SubsystemBase {
 
 	public Command zeroCommand() {
 		return Commands.runOnce(this::resetEncoders, this).withName("Climber Zero");
+	}
+
+	public Command testClimberCommand() {
+		return goToHeightCommand(() -> testClimberHeight.get()).withName("Test Climber");
 	}
 
 	public Command sysIdQuasistatic(Direction direction) {

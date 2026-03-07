@@ -189,6 +189,24 @@ public class RobotContainer {
 					climber.manualControlCommand(
 							() -> MathUtil.applyDeadband(-operatorXbox.getRightY(), 0.1)));
 		}
+
+		// ===== Test Mode Controls =====
+		// Use dashboard tunables (Test/*) to set values, then hold buttons to run
+
+		if (Constants.ENABLE_SHOOTER) {
+			driverXbox.a().and(DriverStation::isTest)
+					.whileTrue(shooter.testShooterCommand());
+		}
+
+		if (Constants.ENABLE_INTAKE) {
+			driverXbox.b().and(DriverStation::isTest)
+					.whileTrue(intake.testIntakeCommand());
+		}
+
+		if (Constants.ENABLE_CLIMBER) {
+			driverXbox.x().and(DriverStation::isTest)
+					.whileTrue(climber.testClimberCommand());
+		}
 	}
 
 	// ===== Auto Routines =====

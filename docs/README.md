@@ -36,6 +36,18 @@ Quick reference documentation for robot controls and configuration.
 | `Right Bumper`  | Manual climber   | Enables manual climber control (hold)                |
 | `Right Stick Y` | Climber speed    | Controls climber speed (while right bumper held)     |
 
+### Test Mode
+
+In test mode, hold a button on the driver controller to run a subsystem at values set via dashboard tunables. Adjust the tunable values in AdvantageScope or Glass under the `Tunable/Test/` table.
+
+#### Xbox Controller (Driver) [`Port 0`]
+
+| Binding    | Action        | Tunables                                           |
+|------------|---------------|----------------------------------------------------|
+| `Button A` | Test shooter  | `Test/ShooterRPM`, `Test/FeederRPM`, `Test/HoodAngleDeg` |
+| `Button B` | Test intake   | `Test/IntakePivotDeg`, `Test/IntakeRollerRPM`      |
+| `Button X` | Test climber  | `Test/ClimberHeightM`                              |
+
 ## CAN IDs
 
 | Component   | Location    | ID   |

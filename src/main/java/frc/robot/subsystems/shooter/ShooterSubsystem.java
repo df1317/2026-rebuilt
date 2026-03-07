@@ -58,6 +58,9 @@ public class ShooterSubsystem extends SubsystemBase {
 	private final InterpolatingDoubleTreeMap distanceToHoodDeg = new InterpolatingDoubleTreeMap();
 	private final SysIdRoutine sysIdRoutine;
 	private final DoubleSubscriber feederRPMTunable = DogLog.tunable("Shooter/feederRPMTunable", 0.0, RPM);
+	private final DoubleSubscriber testShooterRPM = DogLog.tunable("Test/ShooterRPM", 3000.0, RPM);
+	private final DoubleSubscriber testFeederRPM = DogLog.tunable("Test/FeederRPM", 3000.0, RPM);
+	private final DoubleSubscriber testHoodDeg = DogLog.tunable("Test/HoodAngleDeg", 45.0, Degrees);
 
 	private final TrapezoidProfile profile;
 	private final ElevatorFeedforward feedforward;
@@ -286,6 +289,16 @@ public class ShooterSubsystem extends SubsystemBase {
 				.andThen(idle().until(() -> isHoodStalled() || isHoodAtPosition()))
 				.andThen(runOnce(() -> setHoodAngle(Degrees.of(hoodEncoder.getPosition()))));
 	}
+	// ==================== Test Mode ====================
+
+	public Command testShooterCommand() {
+		return Commands.run(() -> {
+			setVelocity(RPM.of(testShooterRPM.get()));
+			setFeederVelocity(RPM.of(testFeederRPM.get()));
+			setHoodAngle(Degrees.of(testHoodDeg.get()));
+		}, this).finallyDo(this::stop).withName("Test Shooter");
+	}
+
 	// ==================== SysId ====================
 
 	public Command sysIdQuasistatic(SysIdRoutine.Direction direction) {

@@ -34,8 +34,10 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
+import dev.doglog.DogLog;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
+import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -62,6 +64,10 @@ public class IntakeSubsystem extends SubsystemBase {
 	AngularVelocity targetRollerVelocity = RPM.of(0);
 	private final Debouncer atPositionDebouncer;
 	private final Debouncer stallDebouncer = new Debouncer(0.1, DebounceType.kBoth);
+	private final DoubleSubscriber testPivotDeg = DogLog.tunable("Test/IntakePivotDeg",
+			PIVOT_EXTENDED_ANGLE.in(Degrees), Degrees);
+	private final DoubleSubscriber testRollerRPM = DogLog.tunable("Test/IntakeRollerRPM",
+			ROLLER_INTAKE_VELOCITY.in(RPM), RPM);
 
 	// ==================== Visualization & Telemetry ====================
 	private final IntakeVisualization visualization;
@@ -184,6 +190,17 @@ public class IntakeSubsystem extends SubsystemBase {
 	public Command stowCommand() {
 		return sequence(stopRollerCommand(), retractCommand()).withName("Intake Stow");
 	}
+
+	// ==================== Test Mode ====================
+
+	public Command testIntakeCommand() {
+		return Commands.run(() -> {
+			setPivotAngle(Degrees.of(testPivotDeg.get()));
+			setRollerVelocity(RPM.of(testRollerRPM.get()));
+		}, this).finallyDo(this::stop).withName("Test Intake");
+	}
+
+	// ==================== Stall Detection ====================
 
 	public boolean isPivotStalled() {
 		double pivotMotorCurrent = pivotMotor.getOutputCurrent();
