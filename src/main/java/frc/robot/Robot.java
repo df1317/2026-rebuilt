@@ -67,7 +67,6 @@ public class Robot extends TimedRobot {
 		// Update Repulsor path planner state before CommandScheduler
 		m_robotContainer.updateRepulsor();
 
-
 		long schedulerStartMicros = RobotController.getFPGATime();
 		CommandScheduler.getInstance().run();
 		long schedulerEndMicros = RobotController.getFPGATime();

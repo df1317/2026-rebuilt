@@ -12,9 +12,6 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import java.util.function.Supplier;
 import frc.robot.repulsor.Repulsor;
-import frc.robot.repulsor.Fields.FieldMapBuilder.CategorySpec;
-import frc.robot.repulsor.Setpoints.HeightSetpoint;
-import frc.robot.repulsor.Setpoints.RepulsorSetpoint;
 import frc.robot.repulsor.Setpoints.Specific._Rebuilt2026;
 import frc.robot.subsystems.intake.IntakeSubsystem;
 import frc.robot.subsystems.shooter.ShooterSubsystem;
@@ -102,8 +99,7 @@ public class TeleopZoneAutomation {
 		isTeleop.and(nearScoringPose).and(hasPiece)
 				.whileTrue(Commands.defer(() -> {
 					var nearest = _Rebuilt2026.nearestScoringPose(robotPose.get().getTranslation());
-					var sp = new RepulsorSetpoint(nearest, HeightSetpoint.NET);
-					return repulsor.alignTo(sp, CategorySpec.kScore);
+					return repulsor.navigateTo(nearest.approximateBluePose());
 				}, java.util.Set.of(repulsor.getDrive().asSubsystem())));
 
 		// Auto-fire when aligned

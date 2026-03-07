@@ -33,8 +33,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import frc.robot.repulsor.RepulsorConstants;
-import frc.robot.repulsor.DriverStation.NtRepulsorDriverStation;
-import frc.robot.repulsor.DriverStation.RepulsorDriverStation;
 import frc.robot.repulsor.ExtraPathing;
 import frc.robot.repulsor.Fallback.PlannerFallback;
 import frc.robot.repulsor.FieldPlanner.Helpers.FieldPlannerForceModel;
@@ -44,7 +42,6 @@ import frc.robot.repulsor.FieldPlanner.Obstacles.GatedAttractorObstacle;
 import frc.robot.repulsor.Fields.FieldMapBuilder.CategorySpec;
 import frc.robot.repulsor.Force;
 import frc.robot.repulsor.HeadingGate;
-import frc.robot.repulsor.ReactiveBypass.ReactiveBypass;
 import frc.robot.repulsor.Setpoints.RepulsorSetpoint;
 import frc.robot.repulsor.Setpoints.SetpointContext;
 import frc.robot.repulsor.Tracking.FieldTrackerCore;
@@ -102,7 +99,6 @@ public class FieldPlanner {
 
 	private final TurnTuning turnTuning;
 	private final DriveTuning driveTuning;
-	public final ReactiveBypass bypass = new ReactiveBypass();
 	private final HeadingGate headingGate = new HeadingGate();
 
 	private final ObstacleProvider obstacleProvider;
@@ -154,15 +150,6 @@ public class FieldPlanner {
 
 		this.forceModel = new FieldPlannerForceModel(fieldObstacles, walls);
 		this.goalManager = new FieldPlannerGoalManager(gatedAttractors);
-
-		String prefix = System.getenv("REACTIVE_BYPASS_ID");
-		String logName;
-		if (prefix != null && !prefix.isEmpty()) {
-			logName = prefix + "ReactiveBypassLog.csv";
-		} else {
-			logName = "ReactiveBypassLog.csv";
-		}
-		// bypass.enableLogging(logName);
 	}
 
 	public static boolean segmentIntersectsPolygonOuter(
@@ -216,24 +203,24 @@ public class FieldPlanner {
 		return forceModel.getArrows();
 	}
 
-	Force getGoalForce(Translation2d curLocation, Translation2d goal) {
+	public Force getGoalForce(Translation2d curLocation, Translation2d goal) {
 		return forceModel.getGoalForce(curLocation, goal);
 	}
 
-	Force getWallForce(Translation2d curLocation, Translation2d target) {
+	public Force getWallForce(Translation2d curLocation, Translation2d target) {
 		return forceModel.getWallForce(curLocation, target);
 	}
 
-	Force getObstacleForce(
+	public Force getObstacleForce(
 			Translation2d curLocation, Translation2d target, List<? extends Obstacle> extra) {
 		return forceModel.getObstacleForce(curLocation, target, extra);
 	}
 
-	Force getObstacleForce(Translation2d curLocation, Translation2d target) {
+	public Force getObstacleForce(Translation2d curLocation, Translation2d target) {
 		return forceModel.getObstacleForce(curLocation, target);
 	}
 
-	Force getForce(Translation2d curLocation, Translation2d target) {
+	public Force getForce(Translation2d curLocation, Translation2d target) {
 		return forceModel.getForce(curLocation, target);
 	}
 
@@ -276,18 +263,13 @@ public class FieldPlanner {
 		Translation2d curTrans = pose.getTranslation();
 		double distToGoal = curTrans.getDistance(goalManager.getGoalTranslation());
 
-		var dsBase = RepulsorDriverStation.getInstance();
-		if (dsBase instanceof NtRepulsorDriverStation ds) {
-			ds.forcedGoalPose("main").ifPresent(this::setRequestedGoal);
-		}
-
 		boolean slowDown = goalManager.updateStagedGoal(curTrans, dynamicObstacles);
 		distToGoal = curTrans.getDistance(goalManager.getGoalTranslation());
 
 		ClearMemo memo = new ClearMemo();
 
-		boolean forceThrough = bypass.isPinnedMode();
-		List<? extends Obstacle> effectiveDynamics = forceThrough ? Collections.emptyList() : dynamicObstacles;
+		boolean forceThrough = false;
+		List<? extends Obstacle> effectiveDynamics = dynamicObstacles;
 
 		if (!forceThrough && !suppressFallback) {
 			boolean blockedWithDynamics = !ExtraPathing.isClearPath(
@@ -388,30 +370,7 @@ public class FieldPlanner {
 					goalManager.getGoalTranslation(), speeds, Radians.of(pose.getRotation().getRadians()));
 		}
 
-		var obstacleForceToGoal = getObstacleForce(curTrans, goalManager.getGoalTranslation(), effectiveDynamicsFinal)
-				.plus(getWallForce(curTrans, goalManager.getGoalTranslation()));
-		var netForceToGoal = getGoalForce(curTrans, goalManager.getGoalTranslation()).plus(obstacleForceToGoal);
-		Rotation2d headingToGoal = netForceToGoal.getAngle();
-
-		var maybeBypass = bypass.update(
-				pose,
-				goalManager.getGoalPose(),
-				headingToGoal,
-				driveTuning.dtSeconds(),
-				robot_x,
-				robot_y,
-				effectiveDynamicsFinal,
-				rect -> rectIntersectsDynamic(rect, effectiveDynamicsFinal),
-				tag -> ExtraPathing.isClearPath(
-						"Repulsor/Bypass/Rejoin",
-						curTrans,
-						goalManager.getGoalTranslation(),
-						effectiveDynamicsFinal,
-						robot_x,
-						robot_y,
-						true));
-
-		Pose2d effectiveGoal = maybeBypass.orElse(goalManager.getGoalPose());
+		Pose2d effectiveGoal = goalManager.getGoalPose();
 
 		var obstacleForce = getObstacleForce(curTrans, effectiveGoal.getTranslation(), effectiveDynamicsFinal)
 				.plus(getWallForce(curTrans, effectiveGoal.getTranslation()));

@@ -45,13 +45,11 @@ public final class ExtraPathingClearPath {
 			boolean publishSamples) {
 		final double eps = 1e-9;
 		if (start.minus(goal).getNorm() < eps) {
-			ExtraPathingRecording.recordPath(topicRoot + "/Path/Direct", List.of(start, goal));
 			return true;
 		}
 
 		if (ExtraPathingCollision.segmentCompletelyBlocked(
 				start, goal, robotLengthMeters, robotWidthMeters, obstacles)) {
-			ExtraPathingRecording.recordPath(topicRoot + "/Path/Direct", List.of(start, goal));
 			return false;
 		}
 
@@ -62,25 +60,10 @@ public final class ExtraPathingClearPath {
 		final double GOAL_CAPTURE_RADIUS = 0.20;
 		final double PUSH_MARGIN = 0.05;
 		final Translation2d goalEff = ExtraPathingMath.trimEnd(start, goal, GOAL_CAPTURE_RADIUS);
-		ExtraPathingRecording.recordCircle(topicRoot + "/Goal/Capture", goal, GOAL_CAPTURE_RADIUS, 40);
 
 		final Translation2d seg = goalEff.minus(start);
 		final double segLen = Math.max(seg.getNorm(), 1e-9);
 		final double terminalT = Math.max(0.0, 1.0 - (GOAL_CAPTURE_RADIUS / segLen));
-
-		ExtraPathingRecording.recordCorridor(topicRoot + "/Corridor", start, goal, corridorR);
-		ExtraPathingRecording.recordPath(topicRoot + "/Path/Direct", List.of(start, goal));
-		if (publishSamples) {
-			ExtraPathingRecording.renderObstacles(topicRoot + "/Obstacles", obstacles, corridorR);
-			ExtraPathingRecording.recordForbiddenGrid(
-					topicRoot + "/Forbidden",
-					obstacles,
-					robotLengthMeters,
-					robotWidthMeters,
-					0.25,
-					goal,
-					GOAL_CAPTURE_RADIUS);
-		}
 
 		double minX = Math.min(start.getX(), goalEff.getX()) - corridorR;
 		double maxX = Math.max(start.getX(), goalEff.getX()) + corridorR;
@@ -89,7 +72,7 @@ public final class ExtraPathingClearPath {
 		Predicate<Translation2d> inAABB = p -> p.getX() >= minX && p.getX() <= maxX && p.getY() >= minY && p.getY() <= maxY;
 
 		java.util.function.BiPredicate<Obstacle, Double> allowInWindow = (obs,
-				penetration) -> ExtraPathingObstacleUtil.isPushableObstacle(obs) && penetration <= PUSH_MARGIN;
+				penetration) -> penetration <= PUSH_MARGIN;
 
 		BiFunction<Translation2d, Translation2d, Boolean> segClearAgainstAll = (a, b) -> {
 			double lminX = Math.min(a.getX(), b.getX()) - corridorR;
@@ -331,13 +314,8 @@ public final class ExtraPathingClearPath {
 			}
 		}
 
-		if (publishSamples) {
-			ExtraPathingRecording.recordPoints(topicRoot + "/Candidates", candidates);
-		}
-
 		for (Translation2d w : candidates) {
 			if (segClearAgainstAll.apply(start, w) && segClearAgainstAll.apply(w, goalEff)) {
-				ExtraPathingRecording.recordPath(topicRoot + "/Path/Chosen", List.of(start, w, goal));
 				return true;
 			}
 		}

@@ -21,7 +21,6 @@ package frc.robot.repulsor;
 
 import edu.wpi.first.math.geometry.Translation2d;
 import java.util.List;
-import frc.robot.repulsor.ExtraPathingHelpers.ExtraPathingBounceListener;
 import frc.robot.repulsor.ExtraPathingHelpers.ExtraPathingClearPath;
 import frc.robot.repulsor.ExtraPathingHelpers.ExtraPathingCollision;
 import frc.robot.repulsor.FieldPlanner.Obstacle;
@@ -51,11 +50,5 @@ public class ExtraPathing {
 			boolean publishSamples) {
 		return ExtraPathingClearPath.isClearPath(
 				topicRoot, start, goal, obstacles, robotLengthMeters, robotWidthMeters, publishSamples);
-	}
-
-	public class BounceListener extends ExtraPathingBounceListener {
-		public BounceListener(double bounceDistanceThreshold, int bounceHistoryLimit) {
-			super(bounceDistanceThreshold, bounceHistoryLimit);
-		}
 	}
 }

@@ -25,8 +25,6 @@ import edu.wpi.first.wpilibj.RobotBase;
 import java.util.ArrayList;
 import java.util.List;
 import frc.robot.repulsor.RepulsorConstants;
-import frc.robot.repulsor.DriverStation.NtRepulsorDriverStation;
-import frc.robot.repulsor.DriverStation.RepulsorDriverStation;
 import frc.robot.repulsor.FieldPlanner.FieldPlanner;
 import frc.robot.repulsor.FieldPlanner.Obstacle;
 import frc.robot.repulsor.Force;
@@ -129,16 +127,10 @@ public final class FieldPlannerForceModel {
 	public Force getObstacleForce(
 			Translation2d curLocation, Translation2d target, List<? extends Obstacle> extra) {
 		var force = Force.kZero;
-		var dsBase = RepulsorDriverStation.getInstance();
 		for (Obstacle obs : fieldObstacles)
 			force = force.plus(obs.getForceAtPosition(curLocation, target));
 		for (Obstacle obs : extra)
-			force = force.plus(
-					obs.getForceAtPosition(curLocation, target)
-							.times(
-									dsBase instanceof NtRepulsorDriverStation ds
-											? ds.getConfigDouble("repulsion_scale")
-											: 1.0));
+			force = force.plus(obs.getForceAtPosition(curLocation, target));
 		return force;
 	}
 
