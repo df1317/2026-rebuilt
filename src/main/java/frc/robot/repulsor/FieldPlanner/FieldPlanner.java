@@ -27,6 +27,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.wpilibj.DriverStation;
+import dev.doglog.DogLog;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -387,7 +388,7 @@ public class FieldPlanner {
 		}
 
 		if (stuckStepCount >= MAX_STUCK_STEPS) {
-			System.out.println("[Repulsor] Stuck! Aborting after " + stuckStepCount + " tiny steps.");
+			DogLog.log("Repulsor/Stuck", true);
 			return new RepulsorSample(curTrans, 0, 0, Radians.of(pose.getRotation().getRadians()));
 		}
 

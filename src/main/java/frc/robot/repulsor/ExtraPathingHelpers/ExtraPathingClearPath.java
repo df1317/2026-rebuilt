@@ -125,7 +125,8 @@ public final class ExtraPathingClearPath {
 					if (!Double.isNaN(t) && t >= 0.0 && t <= 1.0) {
 						if (t <= terminalT)
 							return false;
-						return false;
+						if (!allowInWindow.test(obs, corridorR))
+							return false;
 					}
 					double md = Math.min(Math.abs(a.getY() - h.y), Math.abs(b.getY() - h.y));
 					if (md <= corridorR)
@@ -138,7 +139,8 @@ public final class ExtraPathingClearPath {
 					if (!Double.isNaN(t) && t >= 0.0 && t <= 1.0) {
 						if (t <= terminalT)
 							return false;
-						return false;
+						if (!allowInWindow.test(obs, corridorR))
+							return false;
 					}
 					double md = Math.min(Math.abs(a.getX() - v.x), Math.abs(b.getX() - v.x));
 					if (md <= corridorR)
@@ -152,7 +154,8 @@ public final class ExtraPathingClearPath {
 					if (dp.dist() <= eff) {
 						if (dp.t() <= terminalT)
 							return false;
-						return false;
+						if (!allowInWindow.test(obs, eff - dp.dist()))
+							return false;
 					}
 					Translation2d aa = a.minus(tdrop.loc);
 					Translation2d bb = b.minus(tdrop.loc);
