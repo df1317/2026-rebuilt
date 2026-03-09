@@ -30,6 +30,7 @@ import com.revrobotics.ResetMode;
 import com.revrobotics.spark.ClosedLoopSlot;
 import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.SparkClosedLoopController;
+import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
@@ -50,7 +51,7 @@ public class IntakeSubsystem extends SubsystemBase {
 	// ==================== Hardware (package-private for telemetry/visualization)
 	// ====================
 	final SparkMax pivotMotor;
-	final SparkMax rollerMotor;
+	final SparkFlex rollerMotor;
 	private final SparkClosedLoopController pivotController;
 	private final SparkClosedLoopController rollerController;
 	final RelativeEncoder pivotEncoder;
@@ -69,7 +70,7 @@ public class IntakeSubsystem extends SubsystemBase {
 
 	public IntakeSubsystem() {
 		pivotMotor = new SparkMax(PIVOT_MOTOR_ID, MotorType.kBrushless);
-		rollerMotor = new SparkMax(ROLLER_MOTOR_ID, MotorType.kBrushless);
+		rollerMotor = new SparkFlex(ROLLER_MOTOR_ID, MotorType.kBrushless);
 		pivotController = pivotMotor.getClosedLoopController();
 		rollerController = rollerMotor.getClosedLoopController();
 		pivotEncoder = pivotMotor.getEncoder();
