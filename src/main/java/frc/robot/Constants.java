@@ -74,8 +74,8 @@ public final class Constants {
 	}
 
 	public static class IntakeConstants {
-		public static final int PIVOT_MOTOR_ID = 28;
-		public static final int ROLLER_MOTOR_ID = 20;
+		public static final int PIVOT_MOTOR_ID = 25;
+		public static final int ROLLER_MOTOR_ID = 30;
 
 		public static final boolean PIVOT_INVERTED = false;
 		public static final boolean ROLLER_INVERTED = false;
@@ -106,9 +106,10 @@ public final class Constants {
 	}
 
 	public static class ShooterConstants {
-		public static final int MOTOR_ID = 28;
-		public static final int FEEDER_ID = 26;
-		public static final int HOOD_ID = 17;
+		public static final int MOTOR_ID = 40;
+    //check above ID
+		public static final int FEEDER_ID = 28;
+		public static final int HOOD_ID = 24;
 
 		public static final boolean INVERTED = false;
 		public static final boolean FEEDER_INVERTED = false;
@@ -150,8 +151,7 @@ public final class Constants {
 	}
 
 	public static class ClimberConstants {
-		public static final int MOTOR_LEFT_ID = 24;
-		public static final int MOTOR_RIGHT_ID = 25;
+		public static final int MOTOR_LEFT_ID = 29;
 
 		public static final boolean INVERTED = false;
 		public static final int CURRENT_LIMIT = 40;
@@ -174,7 +174,7 @@ public final class Constants {
 	}
 
 	public static class HopperConstants {
-		public static final int HOPPER_MOTOR_ID = 30;
+		public static final int HOPPER_MOTOR_ID = 26;
 		public static final int HOPPER_CURRENT_LIMIT = 35;
 		public static final boolean INVERTED = false;
 

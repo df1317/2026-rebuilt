@@ -17,7 +17,6 @@ import static frc.robot.Constants.ClimberConstants.MAX_HEIGHT;
 import static frc.robot.Constants.ClimberConstants.MAX_VELOCITY;
 import static frc.robot.Constants.ClimberConstants.MIN_HEIGHT;
 import static frc.robot.Constants.ClimberConstants.MOTOR_LEFT_ID;
-import static frc.robot.Constants.ClimberConstants.MOTOR_RIGHT_ID;
 import static frc.robot.Constants.ClimberConstants.POSITION_TOLERANCE;
 import static frc.robot.Constants.ClimberConstants.ROTATIONS_PER_METER;
 
@@ -52,7 +51,7 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 public class ClimberSubsystem extends SubsystemBase {
 
 	final TalonFX motorLeft;
-	final TalonFX motorRight;
+
 
 	private boolean velocityMode = false;
 	private AngularVelocity targetVelocity = RPM.of(0);
@@ -76,7 +75,6 @@ public class ClimberSubsystem extends SubsystemBase {
 
 	public ClimberSubsystem() {
 		motorLeft = new TalonFX(MOTOR_LEFT_ID);
-		motorRight = new TalonFX(MOTOR_RIGHT_ID);
 
 		TalonFXConfiguration configs = new TalonFXConfiguration();
 		configs.Slot0.kP = KP;
@@ -90,7 +88,7 @@ public class ClimberSubsystem extends SubsystemBase {
 		configs.CurrentLimits.SupplyCurrentLimitEnable = true;
 
 		motorLeft.getConfigurator().apply(configs);
-		motorRight.getConfigurator().apply(configs);
+
 
 		profile = new TrapezoidProfile(new TrapezoidProfile.Constraints(MAX_VELOCITY.in(MetersPerSecond),
 				MAX_ACCELERATION.in(MetersPerSecondPerSecond)));
@@ -148,7 +146,6 @@ public class ClimberSubsystem extends SubsystemBase {
 				double ff = feedforward.calculate(currentState.velocity);
 				motorLeft.setControl(
 						new PositionVoltage(currentState.position * ROTATIONS_PER_METER).withFeedForward(ff));
-				motorRight.setControl(new Follower(MOTOR_LEFT_ID, MotorAlignmentValue.Opposed));
 			} else {
 				currentState.position = measuredHeight;
 				currentState.velocity = 0.0;
@@ -224,7 +221,6 @@ public class ClimberSubsystem extends SubsystemBase {
 
 	public void resetEncoders() {
 		motorLeft.setPosition(0);
-		motorRight.setPosition(0);
 		currentState = new TrapezoidProfile.State(0, 0);
 		goalState = new TrapezoidProfile.State(0, 0);
 	}
