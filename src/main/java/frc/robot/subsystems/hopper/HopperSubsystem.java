@@ -11,8 +11,11 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
+import dev.doglog.DogLog;
+import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 /**
@@ -32,6 +35,9 @@ public class HopperSubsystem extends SubsystemBase {
 
 	// ==================== Visualization & Telemetry ====================
 	private final HopperTelemetry telemetry;
+
+	// ==================== Test Mode ====================
+	private final DoubleSubscriber testHopperRPM = DogLog.tunable("Test/HopperRPM", 0.5);
 
 	public HopperSubsystem() {
 		hopperMotor = new SparkMax(HOPPER_MOTOR_ID, MotorType.kBrushless);
@@ -87,5 +93,11 @@ public class HopperSubsystem extends SubsystemBase {
 
 	public Command stopCommand() {
 		return runOnce(this::stopHopper).withName("Hopper Stop");
+	}
+
+	public Command testHopperCommand() {
+		return Commands.run(() -> {
+			setHopperVelocity(RPM.of(testHopperRPM.get()));
+		}, this).finallyDo(this::stopHopper).withName("Test Hopper");
 	}
 }

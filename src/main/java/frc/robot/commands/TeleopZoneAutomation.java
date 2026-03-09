@@ -82,10 +82,10 @@ public class TeleopZoneAutomation {
 		// Shuttle mode: auto-intake when in own zone without piece
 		if (intake != null) {
 			isTeleop.and(isShuttleMode).and(inOwnZone).and(noPiece)
-					.whileTrue(Commands.parallel(
+					.whileTrue(Commands.sequence(
+							Commands.runOnce(tracker::startIntake),
 							intake.extendCommand(),
-							intake.runRollerCommand(),
-							Commands.runOnce(tracker::startIntake)));
+							intake.runRollerCommand()));
 
 			// Auto-retract intake when piece acquired
 			isTeleop.and(isShuttleMode).and(hasPiece)

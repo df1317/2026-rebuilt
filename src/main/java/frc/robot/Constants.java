@@ -1,27 +1,13 @@
 package frc.robot;
 
-import static edu.wpi.first.units.Units.Centimeters;
-import static edu.wpi.first.units.Units.Degrees;
-import static edu.wpi.first.units.Units.DegreesPerSecond;
-import static edu.wpi.first.units.Units.DegreesPerSecondPerSecond;
-import static edu.wpi.first.units.Units.Inches;
-import static edu.wpi.first.units.Units.Meters;
-import static edu.wpi.first.units.Units.MetersPerSecond;
-import static edu.wpi.first.units.Units.MetersPerSecondPerSecond;
-import static edu.wpi.first.units.Units.RPM;
-import static edu.wpi.first.units.Units.Volts;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.units.measure.AngularAcceleration;
-import edu.wpi.first.units.measure.AngularVelocity;
-import edu.wpi.first.units.measure.Distance;
-import edu.wpi.first.units.measure.LinearAcceleration;
-import edu.wpi.first.units.measure.LinearVelocity;
-import edu.wpi.first.units.measure.Voltage;
+import edu.wpi.first.units.measure.*;
 import frc.robot.util.DevMode;
 import swervelib.math.Matter;
 import swervelib.telemetry.SwerveDriveTelemetry.TelemetryVerbosity;
+
+import static edu.wpi.first.units.Units.*;
 
 public final class Constants {
 
@@ -30,6 +16,7 @@ public final class Constants {
 	public static final boolean ENABLE_CLIMBER = true;
 	public static final boolean ENABLE_INTAKE = true;
 	public static final boolean ENABLE_SHOOTER = true;
+	public static final boolean ENABLE_HOPPER = true;
 
 	public static final double ROBOT_MASS = 60 * 0.453592; // 60lbs * kg per pound
 	public static final Matter CHASSIS = new Matter(new Translation3d(0, 0, Inches.of(8).in(Meters)), ROBOT_MASS);
@@ -107,7 +94,7 @@ public final class Constants {
 
 	public static class ShooterConstants {
 		public static final int MOTOR_ID = 40;
-    //check above ID
+		// check above ID
 		public static final int FEEDER_ID = 28;
 		public static final int HOOD_ID = 24;
 
