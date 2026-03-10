@@ -84,10 +84,6 @@ public final class Constants {
 		public static final double PIVOT_GEAR_RATIO = 12.0;
 		public static final Distance PIVOT_ARM_LENGTH = Inches.of(12);
 
-		// Initial values excessive to ensure proper homing
-		public static Angle MIN_PIVOT_ANGLE = Degrees.of(0);
-		public static Angle MAX_PIVOT_ANGLE = Degrees.of(360);
-
 		public static final double PIVOT_KP = 0.01;
 		public static final double PIVOT_KI = 0.0;
 		public static final double PIVOT_KD = 0.0;

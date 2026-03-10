@@ -128,19 +128,20 @@ public class IntakeSubsystem extends SubsystemBase {
 	}
 
 	// ==================== Command Factory Methods ====================
-
+  public static Angle minPivotAngleTemp = PIVOT_RETRACTED_ANGLE;
+  public static Angle maxPivotAngleTemp = PIVOT_EXTENDED_ANGLE;
 	public Command homeCommand() {
 		return
 		// home min
-		runOnce(() -> setPivotAngle(MIN_PIVOT_ANGLE))
+		runOnce(() -> setPivotAngle(Degrees.of(-360)))
 				.andThen(idle().until(this::isPivotStalled))
 				.andThen(runOnce(() -> setPivotAngle(Degrees.of(pivotEncoder.getPosition()))))
-				.andThen(runOnce(() -> MIN_PIVOT_ANGLE = Degrees.of(pivotEncoder.getPosition())))
+				.andThen(runOnce(() -> minPivotAngleTemp = Degrees.of(pivotEncoder.getPosition())))
 				// home max
-				.andThen(() -> setPivotAngle(MAX_PIVOT_ANGLE))
+				.andThen(() -> setPivotAngle(Degrees.of(360)))
 				.andThen(idle().until(this::isPivotStalled))
 				.andThen(runOnce(() -> setPivotAngle(Degrees.of(pivotEncoder.getPosition()))))
-				.andThen(runOnce(() -> MAX_PIVOT_ANGLE = Degrees.of(pivotEncoder.getPosition())))
+				.andThen(runOnce(() -> maxPivotAngleTemp = Degrees.of(pivotEncoder.getPosition())))
 				.withName("Home Intake");
 	}
 
