@@ -162,9 +162,7 @@ public final class Constants {
 
 		public static final Distance MAX_HEIGHT = Meters.of(1.23);
 		public static final Distance MIN_HEIGHT = Meters.of(0.0);
-		// Initial values are excessive to ensure it homes to min and max
-		public static double MIN_CLIMBER_HEIGHT = -10;
-		public static double MAX_CLIMBER_HEIGHT = 30;
+
 		public static final double ROTATIONS_PER_METER = 42.4;
 		public static final Distance POSITION_TOLERANCE = Centimeters.of(2);
 

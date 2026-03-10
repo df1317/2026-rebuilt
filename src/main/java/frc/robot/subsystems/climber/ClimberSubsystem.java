@@ -204,6 +204,13 @@ public class ClimberSubsystem extends SubsystemBase {
 		}).andThen(Commands.waitUntil(this::isAtGoal)).withTimeout(GO_TO_HEIGHT_TIMEOUT_SECONDS);
 	}
 
+  public Command goToHeightCommand(Distance heightMeters) {
+    return Commands.runOnce(() -> {
+      System.out.println("called set goal");
+      setGoalHeight(heightMeters.in(Meters));
+    }).andThen(Commands.waitUntil(this::isAtGoal)).withTimeout(GO_TO_HEIGHT_TIMEOUT_SECONDS);
+  }
+
 	public Command goToHeightCommand(DoubleSupplier heightMeters) {
 		return Commands.runOnce(() -> setGoalHeight(heightMeters.getAsDouble()), this)
 				.andThen(Commands.waitUntil(this::isAtGoal)).withTimeout(GO_TO_HEIGHT_TIMEOUT_SECONDS);
@@ -212,19 +219,20 @@ public class ClimberSubsystem extends SubsystemBase {
 	public Command goToVelocityCommand(AngularVelocity velo) {
 		return Commands.runOnce(() -> this.setGoalVelocity(velo));
 	}
-
+  public static double minClimberHeightTemp = MIN_HEIGHT.in(Meters);
+	public static double maxClimberHeightTemp = MAX_HEIGHT.in(Meters);
 	public Command homeCommandWithoutRatchet() {
 		return
 		// home min
-		runOnce(() -> setGoalHeight(MIN_CLIMBER_HEIGHT))
+		runOnce(() -> goToHeightCommand(MIN_HEIGHT.minus(Meters.of(1))))
 				.andThen(idle().until(this::isClimberStalled))
 				.andThen(runOnce(() -> setGoalHeight(getHeightMeters())))
-				.andThen(runOnce(() -> MIN_CLIMBER_HEIGHT = getHeightMeters()))
+				.andThen(runOnce(() -> minClimberHeightTemp = getHeightMeters()))
 				// home max
-				.andThen(() -> goToHeightCommand(MAX_CLIMBER_HEIGHT))
+				.andThen(() -> goToHeightCommand(MAX_HEIGHT.plus(Meters.of(1)))
 				.andThen(idle().until(this::isClimberStalled))
-				.andThen(runOnce(() -> setGoalHeight(getHeightMeters()))
-						.andThen(runOnce(() -> MAX_CLIMBER_HEIGHT = getHeightMeters())))
+				.andThen(runOnce(() -> setGoalHeight(getHeightMeters())))
+						.andThen(runOnce(() -> maxClimberHeightTemp = getHeightMeters())))
 				.withName("Home Climber Without Ratchet");
 	}
 
