@@ -34,7 +34,6 @@ import frc.robot.subsystems.intake.IntakeSubsystem;
 import frc.robot.subsystems.shooter.ShooterSubsystem;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
 import frc.robot.util.FieldZones;
-import frc.robot.util.GamePieceTracker;
 import swervelib.SwerveInputStream;
 
 public class RobotContainer {
@@ -59,9 +58,6 @@ public class RobotContainer {
 	private Repulsor repulsor;
 	private SwerveInputStream driveAngularVelocity;
 	private final BooleanSubscriber obstacleClampEnabled = DogLog.tunable("Drive/ObstacleClampEnabled", false);
-
-	// Game piece tracking
-	private final GamePieceTracker gamePieceTracker = new GamePieceTracker();
 
 	// Ball camera vision
 	private FieldVision ballCamera;
@@ -92,7 +88,7 @@ public class RobotContainer {
 
 			// Setup teleop automation
 			teleopAutomation = new TeleopZoneAutomation(
-					repulsor, intake, shooter, gamePieceTracker,
+					repulsor, intake, shooter,
 					() -> drivebase.getPose());
 			teleopAutomation.configureTriggers();
 
@@ -149,12 +145,8 @@ public class RobotContainer {
 
 		// Left trigger hold: intake
 		if (Constants.ENABLE_SWERVE && Constants.ENABLE_INTAKE) {
-			driverXbox.leftTrigger(0.3).whileTrue(Commands.parallel(
-					intake.intakeCommand(),
-					Commands.runOnce(gamePieceTracker::startIntake)))
-					.onFalse(Commands.sequence(
-							Commands.runOnce(gamePieceTracker::stopIntake),
-							intake.stowCommand()));
+			driverXbox.leftTrigger(0.3).whileTrue(intake.intakeCommand())
+					.onFalse(intake.stowCommand());
 		}
 
 		// ===== Operator Controls (Joystick port 2) =====
@@ -294,11 +286,9 @@ public class RobotContainer {
 		if (ballCamera != null && drivebase != null) {
 			ballCamera.update(drivebase.getPose());
 		}
-		gamePieceTracker.update();
 	}
 
 	public void autonomousInit() {
-		gamePieceTracker.setHasPiece(true);
 		FieldTrackerCore.getInstance().resetAll();
 	}
 
