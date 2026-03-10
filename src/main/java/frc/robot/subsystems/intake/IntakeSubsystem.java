@@ -2,28 +2,7 @@ package frc.robot.subsystems.intake;
 
 import static edu.wpi.first.units.Units.*;
 import static edu.wpi.first.wpilibj2.command.Commands.sequence;
-import static frc.robot.Constants.IntakeConstants.AT_POSITION_DEBOUNCE_TIME;
-import static frc.robot.Constants.IntakeConstants.PIVOT_ANGLE_TOLERANCE;
-import static frc.robot.Constants.IntakeConstants.PIVOT_CURRENT_LIMIT;
-import static frc.robot.Constants.IntakeConstants.PIVOT_EXTENDED_ANGLE;
-import static frc.robot.Constants.IntakeConstants.PIVOT_GEAR_RATIO;
-import static frc.robot.Constants.IntakeConstants.PIVOT_INVERTED;
-import static frc.robot.Constants.IntakeConstants.PIVOT_KD;
-import static frc.robot.Constants.IntakeConstants.PIVOT_KI;
-import static frc.robot.Constants.IntakeConstants.PIVOT_KP;
-import static frc.robot.Constants.IntakeConstants.PIVOT_MOTOR_ID;
-import static frc.robot.Constants.IntakeConstants.PIVOT_RETRACTED_ANGLE;
-import static frc.robot.Constants.IntakeConstants.ROLLER_CURRENT_LIMIT;
-import static frc.robot.Constants.IntakeConstants.ROLLER_EJECT_VELOCITY;
-import static frc.robot.Constants.IntakeConstants.ROLLER_INTAKE_VELOCITY;
-import static frc.robot.Constants.IntakeConstants.ROLLER_INVERTED;
-import static frc.robot.Constants.IntakeConstants.ROLLER_I_ZONE;
-import static frc.robot.Constants.IntakeConstants.ROLLER_KD;
-import static frc.robot.Constants.IntakeConstants.ROLLER_KI;
-import static frc.robot.Constants.IntakeConstants.ROLLER_KP;
-import static frc.robot.Constants.IntakeConstants.ROLLER_KV;
-import static frc.robot.Constants.IntakeConstants.ROLLER_MOTOR_ID;
-import static frc.robot.Constants.IntakeConstants.ROLLER_VELOCITY_TOLERANCE;
+import static frc.robot.Constants.IntakeConstants.*;
 import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.ResetMode;
@@ -116,9 +95,6 @@ public class IntakeSubsystem extends SubsystemBase {
 
 	// ==================== State Query Methods ====================
 
-	public Angle minPivotAngle = Degrees.of(0);
-	public Angle maxPivotAngle = Degrees.of(360);
-
 	public boolean isPivotAtPosition() {
 		boolean atPositionRaw = Math.abs(pivotEncoder.getPosition() - targetPivotAngle.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
 				.in(Degrees);
@@ -156,15 +132,15 @@ public class IntakeSubsystem extends SubsystemBase {
 	public Command homeCommand() {
 		return
 		// home min
-		runOnce(() -> setPivotAngle(minPivotAngle))
+		runOnce(() -> setPivotAngle(MIN_PIVOT_ANGLE))
 				.andThen(idle().until(this::isPivotStalled))
 				.andThen(runOnce(() -> setPivotAngle(Degrees.of(pivotEncoder.getPosition()))))
-				.andThen(runOnce(() -> minPivotAngle = Degrees.of(pivotEncoder.getPosition())))
+				.andThen(runOnce(() -> MIN_PIVOT_ANGLE = Degrees.of(pivotEncoder.getPosition())))
 				// home max
-				.andThen(() -> setPivotAngle(maxPivotAngle))
+				.andThen(() -> setPivotAngle(MAX_PIVOT_ANGLE))
 				.andThen(idle().until(this::isPivotStalled))
 				.andThen(runOnce(() -> setPivotAngle(Degrees.of(pivotEncoder.getPosition()))))
-				.andThen(runOnce(() -> maxPivotAngle = Degrees.of(pivotEncoder.getPosition())))
+				.andThen(runOnce(() -> MAX_PIVOT_ANGLE = Degrees.of(pivotEncoder.getPosition())))
 				.withName("Home Intake");
 	}
 

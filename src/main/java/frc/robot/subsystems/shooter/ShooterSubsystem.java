@@ -6,19 +6,8 @@ import static edu.wpi.first.units.Units.DegreesPerSecondPerSecond;
 import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.Volts;
-import static frc.robot.Constants.ShooterConstants.AT_POSITION_DEBOUNCE_TIME;
-import static frc.robot.Constants.ShooterConstants.AT_SPEED_DEBOUNCE_TIME;
-import static frc.robot.Constants.ShooterConstants.CURRENT_DEBOUNCE_TIME;
-import static frc.robot.Constants.ShooterConstants.CURRENT_LIMIT;
-import static frc.robot.Constants.ShooterConstants.HOOD_CURRENT_LIMIT;
-import static frc.robot.Constants.ShooterConstants.HOOD_STALL_RPM;
-import static frc.robot.Constants.ShooterConstants.HOOD_TOLERANCE;
-import static frc.robot.Constants.ShooterConstants.KD;
-import static frc.robot.Constants.ShooterConstants.KG;
-import static frc.robot.Constants.ShooterConstants.KI;
-import static frc.robot.Constants.ShooterConstants.KS;
-import static frc.robot.Constants.ShooterConstants.KV;
-import static frc.robot.Constants.ShooterConstants.MOTOR_ID;
+
+import static frc.robot.Constants.ShooterConstants.*;
 
 import java.util.function.Supplier;
 
@@ -224,9 +213,6 @@ public class ShooterSubsystem extends SubsystemBase {
 		return targetHoodAngle;
 	}
 
-	public Angle minHoodAngle;
-	public Angle maxHoodAngle;
-
 	// ==================== Control Methods ====================
 
 	public void setVelocityForDistance(Distance distance) {
@@ -286,16 +272,16 @@ public class ShooterSubsystem extends SubsystemBase {
 	public Command homeHood() {
 		return
 		// home min
-		runOnce(() -> setHoodAngle(minHoodAngle))
+		runOnce(() -> setHoodAngle(MIN_HOOD_ANGLE))
 				.andThen(idle().until(this::isHoodStalled))
 				.andThen(runOnce(() -> setHoodAngle(Degrees.of(hoodEncoder.getPosition()))))
-				.andThen(runOnce(() -> minHoodAngle = Degrees.of(hoodEncoder.getPosition())))
+				.andThen(runOnce(() -> MIN_HOOD_ANGLE = Degrees.of(hoodEncoder.getPosition())))
 				// home max
-				.andThen(() -> setHoodAngle(maxHoodAngle))
+				.andThen(() -> setHoodAngle(MAX_HOOD_ANGLE))
 				.andThen(idle().until(this::isHoodStalled))
 				.andThen(runOnce(() -> setHoodAngle(Degrees.of(hoodEncoder.getPosition()))))
-				.andThen(runOnce(() -> maxHoodAngle = Degrees.of(hoodEncoder.getPosition())))
-        .withName("Home Hood");
+				.andThen(runOnce(() -> MAX_HOOD_ANGLE = Degrees.of(hoodEncoder.getPosition())))
+				.withName("Home Hood");
 	}
 
 	public Command hoodSetpoint(Angle angle) {

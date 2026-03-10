@@ -1,21 +1,7 @@
 package frc.robot.subsystems.climber;
 
 import static edu.wpi.first.units.Units.*;
-import static edu.wpi.first.units.Units.Degrees;
-import static frc.robot.Constants.ClimberConstants.CURRENT_LIMIT;
-import static frc.robot.Constants.ClimberConstants.KD;
-import static frc.robot.Constants.ClimberConstants.KG;
-import static frc.robot.Constants.ClimberConstants.KI;
-import static frc.robot.Constants.ClimberConstants.KP;
-import static frc.robot.Constants.ClimberConstants.KS;
-import static frc.robot.Constants.ClimberConstants.KV;
-import static frc.robot.Constants.ClimberConstants.MAX_ACCELERATION;
-import static frc.robot.Constants.ClimberConstants.MAX_HEIGHT;
-import static frc.robot.Constants.ClimberConstants.MAX_VELOCITY;
-import static frc.robot.Constants.ClimberConstants.MIN_HEIGHT;
-import static frc.robot.Constants.ClimberConstants.MOTOR_LEFT_ID;
-import static frc.robot.Constants.ClimberConstants.POSITION_TOLERANCE;
-import static frc.robot.Constants.ClimberConstants.ROTATIONS_PER_METER;
+import static frc.robot.Constants.ClimberConstants.*;
 
 import java.util.function.DoubleSupplier;
 
@@ -149,9 +135,6 @@ public class ClimberSubsystem extends SubsystemBase {
 		return stallDebouncer.calculate(isClimberStalled);
 	}
 
-  public double minClimberHeight = 0;
-  public double maxClimberHeight = 30;
-
 	private final Debouncer stallDebouncer = new Debouncer(0.1, Debouncer.DebounceType.kBoth);
 
 	double getHeightMeters() {
@@ -230,21 +213,20 @@ public class ClimberSubsystem extends SubsystemBase {
 		return Commands.runOnce(() -> this.setGoalVelocity(velo));
 	}
 
-  public Command homeCommandWithoutRatchet() {
-    return
-      // home min
-      runOnce(() -> setGoalHeight(minClimberHeight))
-        .andThen(idle().until(this::isClimberStalled))
-        .andThen(runOnce(() -> setGoalHeight(getHeightMeters())))
-        .andThen(runOnce(() -> minClimberHeight = getHeightMeters()))
-        // home max
-        .andThen(() -> setGoalHeight(maxClimberHeight))
-        .andThen(idle().until(this::isClimberStalled))
-        .andThen(runOnce(() -> setGoalHeight(getHeightMeters()))
-        .andThen(runOnce(() -> maxClimberHeight = getHeightMeters())))
-        .withName("Home Climber Without Ratchet");
-  }
-
+	public Command homeCommandWithoutRatchet() {
+		return
+		// home min
+		runOnce(() -> setGoalHeight(MIN_CLIMBER_HEIGHT))
+				.andThen(idle().until(this::isClimberStalled))
+				.andThen(runOnce(() -> setGoalHeight(getHeightMeters())))
+				.andThen(runOnce(() -> MIN_CLIMBER_HEIGHT = getHeightMeters()))
+				// home max
+				.andThen(() -> goToHeightCommand(MAX_CLIMBER_HEIGHT))
+				.andThen(idle().until(this::isClimberStalled))
+				.andThen(runOnce(() -> setGoalHeight(getHeightMeters()))
+						.andThen(runOnce(() -> MAX_CLIMBER_HEIGHT = getHeightMeters())))
+				.withName("Home Climber Without Ratchet");
+	}
 
 	/** Manual control; holds position when released. */
 	public Command manualControlCommand(DoubleSupplier speedInput) {

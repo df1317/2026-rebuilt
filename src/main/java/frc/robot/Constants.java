@@ -84,6 +84,10 @@ public final class Constants {
 		public static final double PIVOT_GEAR_RATIO = 12.0;
 		public static final Distance PIVOT_ARM_LENGTH = Inches.of(12);
 
+		// Initial values excessive to ensure proper homing
+		public static Angle MIN_PIVOT_ANGLE = Degrees.of(0);
+		public static Angle MAX_PIVOT_ANGLE = Degrees.of(360);
+
 		public static final double PIVOT_KP = 0.01;
 		public static final double PIVOT_KI = 0.0;
 		public static final double PIVOT_KD = 0.0;
@@ -113,6 +117,10 @@ public final class Constants {
 		public static final int CURRENT_LIMIT = 25;
 		public static final int FEEDER_CURRENT_LIMIT = CURRENT_LIMIT;
 		public static final int HOOD_CURRENT_LIMIT = 20;
+
+		// Initial values excessive to ensure proper homing
+		public static Angle MIN_HOOD_ANGLE;
+		public static Angle MAX_HOOD_ANGLE;
 
 		public static final double HOOD_GEAR_RATIO = 12.0;
 
@@ -154,6 +162,9 @@ public final class Constants {
 
 		public static final Distance MAX_HEIGHT = Meters.of(1.23);
 		public static final Distance MIN_HEIGHT = Meters.of(0.0);
+		// Initial values are excessive to ensure it homes to min and max
+		public static double MIN_CLIMBER_HEIGHT = -10;
+		public static double MAX_CLIMBER_HEIGHT = 30;
 		public static final double ROTATIONS_PER_METER = 42.4;
 		public static final Distance POSITION_TOLERANCE = Centimeters.of(2);
 
