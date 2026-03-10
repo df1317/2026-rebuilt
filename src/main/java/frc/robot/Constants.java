@@ -105,7 +105,7 @@ public final class Constants {
 		public static final int FEEDER_CURRENT_LIMIT = CURRENT_LIMIT;
 		public static final int HOOD_CURRENT_LIMIT = 20;
 
-		public static final double HOOD_GEAR_RATIO = 12.0;
+		public static final double HOOD_GEAR_RATIO = 24.0;
 
 		public static final Angle MAX_HOOD = Degrees.of(180.0);
 		public static final Angle MIN_HOOD = Degrees.of(0.0);
