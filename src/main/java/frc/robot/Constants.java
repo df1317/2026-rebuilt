@@ -120,9 +120,6 @@ public final class Constants {
 
 		public static final double HOOD_GEAR_RATIO = 12.0;
 
-		public static final Angle MAX_HOOD = Degrees.of(180.0);
-		public static final Angle MIN_HOOD = Degrees.of(0.0);
-
 		public static final AngularVelocity MAX_VELOCITY = DegreesPerSecond.of(1440);
 		public static final AngularAcceleration MAX_ACCELERATION = DegreesPerSecondPerSecond.of(1440);
 

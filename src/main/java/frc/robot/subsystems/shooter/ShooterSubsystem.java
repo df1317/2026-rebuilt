@@ -269,18 +269,21 @@ public class ShooterSubsystem extends SubsystemBase {
 		return Commands.run(() -> setVelocityForDistance(distance.get()), this).finallyDo(this::stop);
 	}
 
+  public static Angle maxHoodAngleTemp = MAX_HOOD_ANGLE;
+  public static Angle minHoodAngleTemp = MIN_HOOD_ANGLE;
+
 	public Command homeHood() {
 		return
 		// home min
-		runOnce(() -> setHoodAngle(MIN_HOOD_ANGLE))
+		runOnce(() -> setHoodAngle(Degrees.of(-360)))
 				.andThen(idle().until(this::isHoodStalled))
 				.andThen(runOnce(() -> setHoodAngle(Degrees.of(hoodEncoder.getPosition()))))
-				.andThen(runOnce(() -> MIN_HOOD_ANGLE = Degrees.of(hoodEncoder.getPosition())))
+				.andThen(runOnce(() -> minHoodAngleTemp = Degrees.of(hoodEncoder.getPosition())))
 				// home max
-				.andThen(() -> setHoodAngle(MAX_HOOD_ANGLE))
+				.andThen(() -> setHoodAngle(Degrees.of(360)))
 				.andThen(idle().until(this::isHoodStalled))
 				.andThen(runOnce(() -> setHoodAngle(Degrees.of(hoodEncoder.getPosition()))))
-				.andThen(runOnce(() -> MAX_HOOD_ANGLE = Degrees.of(hoodEncoder.getPosition())))
+				.andThen(runOnce(() -> maxHoodAngleTemp = Degrees.of(hoodEncoder.getPosition())))
 				.withName("Home Hood");
 	}
 
