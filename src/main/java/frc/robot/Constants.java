@@ -103,7 +103,7 @@ public final class Constants {
 
 	public static class ShooterConstants {
 		public static final int MOTOR_ID = 40;
-    //check above ID
+		// check above ID
 		public static final int FEEDER_ID = 28;
 		public static final int HOOD_ID = 24;
 

@@ -23,11 +23,9 @@ import static frc.robot.Constants.ClimberConstants.ROTATIONS_PER_METER;
 import java.util.function.DoubleSupplier;
 
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
-import com.ctre.phoenix6.signals.MotorAlignmentValue;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ElevatorFeedforward;
@@ -49,7 +47,6 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 public class ClimberSubsystem extends SubsystemBase {
 
 	final TalonFX motorLeft;
-
 
 	private boolean velocityMode = false;
 	private AngularVelocity targetVelocity = RPM.of(0);
@@ -83,7 +80,6 @@ public class ClimberSubsystem extends SubsystemBase {
 		configs.CurrentLimits.SupplyCurrentLimitEnable = true;
 
 		motorLeft.getConfigurator().apply(configs);
-
 
 		profile = new TrapezoidProfile(new TrapezoidProfile.Constraints(MAX_VELOCITY.in(MetersPerSecond),
 				MAX_ACCELERATION.in(MetersPerSecondPerSecond)));
