@@ -194,11 +194,16 @@ public class IntakeSubsystem extends SubsystemBase {
 
 	// ==================== Test Mode ====================
 
-	public Command testIntakeCommand() {
-		return Commands.run(() -> {
-			setPivotAngle(Degrees.of(testPivotDeg.get()));
-			setRollerVelocity(RPM.of(testRollerRPM.get()));
-		}, this).finallyDo(this::stop).withName("Test Intake");
+	public Command testPivotCommand() {
+		return Commands.run(() -> setPivotAngle(Degrees.of(testPivotDeg.get())), this)
+				.finallyDo(() -> pivotMotor.stopMotor())
+				.withName("Test Intake Pivot");
+	}
+
+	public Command testRollerCommand() {
+		return Commands.run(() -> setRollerVelocity(RPM.of(testRollerRPM.get())), this)
+				.finallyDo(this::stopRoller)
+				.withName("Test Intake Roller");
 	}
 
 	// ==================== Stall Detection ====================

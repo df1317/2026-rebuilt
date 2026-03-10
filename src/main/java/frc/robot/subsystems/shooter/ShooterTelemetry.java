@@ -29,22 +29,24 @@ public class ShooterTelemetry {
 		// Status for LED strip
 		DogLog.forceNt.log("Shooter/Status", getStatusColor().toHexString());
 
-		// Velocity tracking
-		DogLog.log("Shooter/VelocityRPM", currentRPM);
-		DogLog.log("Shooter/TargetVelocityRPM", targetRPM);
-		DogLog.log("Shooter/VelocityErrorRPM", targetRPM - currentRPM);
-		DogLog.log("Shooter/AtSpeed", shooter.isAtSpeed());
+		// Shooter motor
+		DogLog.log("Shooter/Motor/VelocityRPM", currentRPM);
+		DogLog.log("Shooter/Motor/TargetVelocityRPM", targetRPM);
+		DogLog.log("Shooter/Motor/VelocityErrorRPM", targetRPM - currentRPM);
+		DogLog.log("Shooter/Motor/AtSpeed", shooter.isAtSpeed());
+		DogLog.log("Shooter/Motor/CurrentAmps", shooter.motor.getStatorCurrent().getValueAsDouble());
+		DogLog.log("Shooter/Motor/Voltage", shooter.motor.getMotorVoltage().getValueAsDouble());
 
+		// Feeder motor
 		DogLog.log("Shooter/Feeder/VelocityRPM", feederCurrentRPM);
 		DogLog.log("Shooter/Feeder/TargetVelocityRPM", feederTargetRPM);
 		DogLog.log("Shooter/Feeder/VelocityErrorRPM", feederTargetRPM - feederCurrentRPM);
-		// Motor data
-		DogLog.log("Shooter/MotorCurrentAmps", shooter.motor.getStatorCurrent().getValueAsDouble());
-		DogLog.log("Shooter/MotorVoltage",
-				shooter.motor.getMotorVoltage().getValueAsDouble());
+		DogLog.log("Shooter/Feeder/CurrentAmps", shooter.feeder.getOutputCurrent());
 
+		// Hood
 		DogLog.log("Shooter/Hood/CurrentPosition", shooter.hoodEncoder.getPosition());
 		DogLog.log("Shooter/Hood/TargetPosition", shooter.targetHoodAngle);
+		DogLog.log("Shooter/Hood/CurrentAmps", shooter.hood.getOutputCurrent());
 	}
 
 	private Color getStatusColor() {

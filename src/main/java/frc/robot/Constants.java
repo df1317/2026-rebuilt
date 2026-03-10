@@ -13,7 +13,7 @@ public final class Constants {
 
 	// Subsystem enable flags
 	public static final boolean ENABLE_SWERVE = true;
-	public static final boolean ENABLE_CLIMBER = true;
+	public static final boolean ENABLE_CLIMBER = false;
 	public static final boolean ENABLE_INTAKE = true;
 	public static final boolean ENABLE_SHOOTER = true;
 	public static final boolean ENABLE_HOPPER = true;
@@ -67,7 +67,7 @@ public final class Constants {
 		public static final boolean PIVOT_INVERTED = false;
 		public static final boolean ROLLER_INVERTED = false;
 		public static final int PIVOT_CURRENT_LIMIT = 15;
-		public static final int ROLLER_CURRENT_LIMIT = 20;
+		public static final int ROLLER_CURRENT_LIMIT = 40;
 
 		public static final Angle PIVOT_EXTENDED_ANGLE = Degrees.of(90);
 		public static final Angle PIVOT_RETRACTED_ANGLE = Degrees.of(0);
@@ -100,7 +100,7 @@ public final class Constants {
 
 		public static final boolean INVERTED = false;
 		public static final boolean FEEDER_INVERTED = false;
-		public static final boolean HOOD_INVERTED = false;
+		public static final boolean HOOD_INVERTED = true;
 		public static final int CURRENT_LIMIT = 25;
 		public static final int FEEDER_CURRENT_LIMIT = CURRENT_LIMIT;
 		public static final int HOOD_CURRENT_LIMIT = 20;
@@ -115,12 +115,17 @@ public final class Constants {
 
 		public static final Angle HOOD_TOLERANCE = Degrees.of(3);
 
-		public static final double KP = 0.0002;
-		public static final double KI = 0.0;
-		public static final double KD = 0.0;
-		public static final double KV = 0.000175;
-		public static final double KG = 0.0;
-		public static final double KS = 0.0;
+		public static final double SHOOTER_KP = 0.05;
+		public static final double SHOOTER_KI = 0.0;
+		public static final double SHOOTER_KD = 0.0;
+		public static final double SHOOTER_KV = 0.000175;
+		public static final double SHOOTER_KG = 0.0;
+		public static final double SHOOTER_KS = 0.0;
+
+		public static final double FEEDER_KP = 0.0002;
+		public static final double FEEDER_KI = 0.0;
+		public static final double FEEDER_KD = 0.0;
+		public static final double FEEDER_KV = 0.000175;
 
 		public static final double HOOD_KP = 0.0012;
 		public static final double HOOD_KI = 0.0;
@@ -135,6 +140,7 @@ public final class Constants {
 
 		public static final double HOOD_STALL_RPM = 2.0;
 		public static final double CURRENT_DEBOUNCE_TIME = 0.1;
+		public static final double HOOD_HOMING_VOLTAGE = 2.0;
 	}
 
 	public static class ClimberConstants {
@@ -169,7 +175,7 @@ public final class Constants {
 		public static final AngularVelocity REVERSE_SPEED = RPM.of(-0.3);
 		public static final AngularVelocity HOPPER_VELOCITY_TOLERANCE = RPM.of(100);
 
-		public static final double HOPPER_KP = 2E-4;
+		public static final double HOPPER_KP = 5E-4;
 		public static final double HOPPER_KI = 1E-5;
 		public static final double HOPPER_KD = 0.0;
 		public static final double HOPPER_KV = 1.8E-4;

@@ -13,11 +13,11 @@ import static frc.robot.Constants.ShooterConstants.CURRENT_LIMIT;
 import static frc.robot.Constants.ShooterConstants.HOOD_CURRENT_LIMIT;
 import static frc.robot.Constants.ShooterConstants.HOOD_STALL_RPM;
 import static frc.robot.Constants.ShooterConstants.HOOD_TOLERANCE;
-import static frc.robot.Constants.ShooterConstants.KD;
-import static frc.robot.Constants.ShooterConstants.KG;
-import static frc.robot.Constants.ShooterConstants.KI;
-import static frc.robot.Constants.ShooterConstants.KS;
-import static frc.robot.Constants.ShooterConstants.KV;
+import static frc.robot.Constants.ShooterConstants.SHOOTER_KD;
+import static frc.robot.Constants.ShooterConstants.SHOOTER_KG;
+import static frc.robot.Constants.ShooterConstants.SHOOTER_KI;
+import static frc.robot.Constants.ShooterConstants.SHOOTER_KS;
+import static frc.robot.Constants.ShooterConstants.SHOOTER_KV;
 import static frc.robot.Constants.ShooterConstants.MOTOR_ID;
 
 import java.util.function.Supplier;
@@ -114,7 +114,7 @@ public class ShooterSubsystem extends SubsystemBase {
 		profile = new TrapezoidProfile(
 				new TrapezoidProfile.Constraints(ShooterConstants.MAX_VELOCITY.in(DegreesPerSecond),
 						ShooterConstants.MAX_ACCELERATION.in(DegreesPerSecondPerSecond)));
-		feedforward = new ElevatorFeedforward(KS, KG, KV);
+		feedforward = new ElevatorFeedforward(SHOOTER_KS, SHOOTER_KG, SHOOTER_KV);
 
 		telemetry = new ShooterTelemetry(this);
 	}
@@ -123,8 +123,8 @@ public class ShooterSubsystem extends SubsystemBase {
 		SparkMaxConfig clonedConfig = new SparkMaxConfig();
 		clonedConfig.idleMode(IdleMode.kCoast).smartCurrentLimit(ShooterConstants.FEEDER_CURRENT_LIMIT)
 				.inverted(ShooterConstants.FEEDER_INVERTED);
-		clonedConfig.closedLoop.pid(ShooterConstants.KP, ShooterConstants.KI, ShooterConstants.KD);
-		clonedConfig.closedLoop.feedForward.kV(ShooterConstants.KV);
+		clonedConfig.closedLoop.pid(ShooterConstants.FEEDER_KP, ShooterConstants.FEEDER_KI, ShooterConstants.FEEDER_KD);
+		clonedConfig.closedLoop.feedForward.kV(ShooterConstants.FEEDER_KV);
 		feeder.configure(clonedConfig, ResetMode.kResetSafeParameters,
 				PersistMode.kNoPersistParameters);
 
@@ -132,12 +132,12 @@ public class ShooterSubsystem extends SubsystemBase {
 		TalonFXConfiguration configs = new TalonFXConfiguration();
 		// This TalonFX should be configured with a kP of 1, a kI of 0, a kD of 10, and a kV of 2 on
 		// slot 0
-		configs.Slot0.kP = ShooterConstants.KP;
-		configs.Slot0.kI = KI;
-		configs.Slot0.kD = KD;
-		configs.Slot0.kV = KV;
-		configs.Slot0.kA = KG;
-		configs.Slot0.kS = KS;
+		configs.Slot0.kP = ShooterConstants.SHOOTER_KP;
+		configs.Slot0.kI = SHOOTER_KI;
+		configs.Slot0.kD = SHOOTER_KD;
+		configs.Slot0.kV = SHOOTER_KV;
+		configs.Slot0.kA = SHOOTER_KG;
+		configs.Slot0.kS = SHOOTER_KS;
 
 		configs.CurrentLimits.SupplyCurrentLimit = CURRENT_LIMIT;
 		configs.CurrentLimits.SupplyCurrentLimitEnable = true;
@@ -312,12 +312,52 @@ public class ShooterSubsystem extends SubsystemBase {
 	}
 	// ==================== Test Mode ====================
 
-	public Command testShooterCommand() {
-		return Commands.run(() -> {
-			setVelocity(RPM.of(testShooterRPM.get()));
-			setFeederVelocity(RPM.of(testFeederRPM.get()));
-			setHoodAngle(Degrees.of(testHoodDeg.get()));
-		}, this).finallyDo(this::stop).withName("Test Shooter");
+	public Command testShooterMotorCommand() {
+		return Commands.run(() -> setVelocity(RPM.of(testShooterRPM.get())), this)
+				.finallyDo(() -> { motor.stopMotor(); targetVelocity = RPM.of(0); })
+				.withName("Test Shooter Motor");
+	}
+
+	public Command testFeederCommand() {
+		return Commands.run(() -> setFeederVelocity(RPM.of(testFeederRPM.get())), this)
+				.finallyDo(() -> { feeder.stopMotor(); targetFeederVelocity = RPM.of(0); })
+				.withName("Test Feeder");
+	}
+
+	public Command testHoodCommand() {
+		return Commands.run(() -> setHoodAngle(Degrees.of(testHoodDeg.get())), this)
+				.finallyDo(() -> hood.stopMotor())
+				.withName("Test Hood");
+	}
+
+	public Command homeHoodCommand() {
+		return Commands.sequence(
+				// Drive hood toward min stop
+				Commands.runOnce(() -> hood.setVoltage(-ShooterConstants.HOOD_HOMING_VOLTAGE)),
+				Commands.waitUntil(this::isHoodStalled),
+				Commands.runOnce(() -> {
+					hood.stopMotor();
+					hoodEncoder.setPosition(0.0);
+				}),
+				Commands.waitSeconds(0.25),
+				// Drive hood toward max stop
+				Commands.runOnce(() -> hood.setVoltage(ShooterConstants.HOOD_HOMING_VOLTAGE)),
+				Commands.waitUntil(this::isHoodStalled),
+				Commands.runOnce(() -> {
+					hood.stopMotor();
+					double maxDeg = hoodEncoder.getPosition();
+					DogLog.log("Shooter/HoodMaxDeg", maxDeg);
+					// Apply soft limits
+					SparkMaxConfig config = new SparkMaxConfig();
+					config.softLimit
+							.forwardSoftLimit((float) maxDeg)
+							.forwardSoftLimitEnabled(true)
+							.reverseSoftLimit(0.0f)
+							.reverseSoftLimitEnabled(true);
+					hood.configure(config, ResetMode.kNoResetSafeParameters,
+							PersistMode.kNoPersistParameters);
+				})
+		).finallyDo(() -> hood.stopMotor()).withName("Home Hood");
 	}
 
 	// ==================== SysId ====================

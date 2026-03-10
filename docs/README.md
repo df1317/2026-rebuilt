@@ -19,35 +19,23 @@ Quick reference documentation for robot controls and configuration.
 | `Button A`      | Zero gyro             | Resets gyro heading (once)                                |
 | `Left Bumper`   | Toggle field relative | Switches between field and robot relative driving         |
 | `Button Y`      | Auto aim              | Aims at hub while allowing translation (hold)             |
-| `Right Trigger` | Auto shoot            | Spins shooter + sets hood based on distance to hub; also runs hopper (hold) |
-| `Left Trigger`  | Intake                | Extends intake and runs rollers + hopper; stows on release (hold)  |
-
-#### Joystick (Operator) [`Port 1`]
-
-| Binding    | Action           | Description                                          |
-|------------|------------------|------------------------------------------------------|
-| `Button 1` | Reverse hopper  | Runs hopper in reverse to unclog (hold)              |
-| `Button 2` | Shooter toggle  | Toggles shooter motor on/off at 3000 RPM             |
-| `POV Up`   | Increase speed  | Increases shooter speed by 100 RPM                   |
-| `POV Down` | Decrease speed  | Decreases shooter speed by 100 RPM                   |
-| `Button 3` | Reverse shoot   | Spins shooter backwards to declog (hold)             |
-| `Button 4` | Intake toggle   | Toggles intake extend/retract                        |
-| `Button 5` | Reverse intake  | Runs intake rollers in reverse to eject (hold)       |
-| `Button 6` | Climber toggle  | Toggles climber extend/retract                       |
-| `Button 7` | Manual climber  | Enables manual climber with joystick Y axis (hold)   |
 
 ### Test Mode
 
-In test mode, hold a button on the driver controller to run a subsystem at values set via dashboard tunables. Adjust the tunable values in AdvantageScope or Glass under the `Tunable/Test/` table.
+In test mode, hold a button on the joystick to run individual motors at values set via dashboard tunables. Adjust the tunable values in Elastic or Glass under the `Tunable/Test/` table.
 
-#### Xbox Controller (Driver) [`Port 0`]
+#### Joystick (Operator) [`Port 1`]
 
-| Binding    | Action        | Tunables                                           |
-|------------|---------------|----------------------------------------------------|
-| `Button A` | Test shooter  | `Test/ShooterRPM`, `Test/FeederRPM`, `Test/HoodAngleDeg` |
-| `Button B` | Test intake   | `Test/IntakePivotDeg`, `Test/IntakeRollerRPM`      |
-| `Button X` | Test climber  | `Test/ClimberHeightM`                              |
-| `Button Y` | Test hopper   | `Test/HopperRPM`                                   |
+| Binding     | Action              | Tunables                |
+|-------------|---------------------|-------------------------|
+| `Button 3`  | Test hopper         | `Test/HopperRPM`       |
+| `Button 4`  | Home hood           | *(auto — finds limits via stall detection)* |
+| `Button 7`  | Test shooter motor  | `Test/ShooterRPM`      |
+| `Button 8`  | Test feeder motor   | `Test/FeederRPM`       |
+| `Button 9`  | Test hood angle     | `Test/HoodAngleDeg`    |
+| `Button 10` | Test intake pivot   | `Test/IntakePivotDeg`  |
+| `Button 11` | Test intake roller  | `Test/IntakeRollerRPM` |
+| `Button 12` | Test climber        | `Test/ClimberHeightM`  |
 
 #### Dashboard Toggles
 

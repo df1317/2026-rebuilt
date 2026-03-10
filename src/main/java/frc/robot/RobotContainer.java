@@ -1,7 +1,5 @@
 package frc.robot;
 
-import static edu.wpi.first.units.Units.Meters;
-import java.io.File;
 import dev.doglog.DogLog;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation3d;
@@ -14,8 +12,8 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-
 import frc.robot.Constants.DrivebaseConstants;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.commands.TeleopZoneAutomation;
@@ -32,12 +30,15 @@ import frc.robot.subsystems.swervedrive.SwerveSubsystem;
 import frc.robot.util.FieldZones;
 import swervelib.SwerveInputStream;
 
-public class RobotContainer {
+import java.io.File;
 
-	private SendableChooser<Command> autoChooser;
+import static edu.wpi.first.units.Units.Meters;
+
+public class RobotContainer {
 
 	// HID
 	private final CommandXboxController driverXbox = new CommandXboxController(0);
+	private final CommandJoystick m_JoystickL = new CommandJoystick(1);
 	// Subsystems
 	private final SwerveSubsystem drivebase = Constants.ENABLE_SWERVE
 			? new SwerveSubsystem(new File(Filesystem.getDeployDirectory(), "swerve/neo"))
@@ -46,18 +47,16 @@ public class RobotContainer {
 	private final ShooterSubsystem shooter = Constants.ENABLE_SHOOTER ? new ShooterSubsystem() : null;
 	private final IntakeSubsystem intake = Constants.ENABLE_INTAKE ? new IntakeSubsystem() : null;
 	private final HopperSubsystem hopper = Constants.ENABLE_HOPPER ? new HopperSubsystem() : null;
-	public boolean robotRelative = false;
-
-	// Repulsor
-	private Repulsor repulsor;
-	private SwerveInputStream driveAngularVelocity;
 	private final BooleanSubscriber obstacleClampEnabled = DogLog.tunable("Drive/ObstacleClampEnabled", false);
-
+	private final SendableChooser<Command> autoChooser;
+	// Repulsor
+	private final Repulsor repulsor;
+	private final SwerveInputStream driveAngularVelocity;
 	// Ball camera vision
-	private FieldVision ballCamera;
-
+	private final FieldVision ballCamera;
 	// Teleop automation
-	private TeleopZoneAutomation teleopAutomation;
+	private final TeleopZoneAutomation teleopAutomation;
+	public boolean robotRelative = false;
 
 	public RobotContainer() {
 		if (Constants.ENABLE_SWERVE) {
@@ -131,6 +130,25 @@ public class RobotContainer {
 			driverXbox.leftBumper().onTrue(Commands.runOnce(() -> robotRelative = !robotRelative));
 		}
 
+		// ===== Test Mode Controls =====
+		if (DriverStation.isTest()) {
+			if (Constants.ENABLE_SHOOTER && shooter != null) {
+				m_JoystickL.button(4).onTrue(shooter.homeHoodCommand());
+				m_JoystickL.button(7).whileTrue(shooter.testShooterMotorCommand());
+				m_JoystickL.button(8).whileTrue(shooter.testFeederCommand());
+				m_JoystickL.button(9).whileTrue(shooter.testHoodCommand());
+			}
+			if (Constants.ENABLE_INTAKE && intake != null) {
+				m_JoystickL.button(10).whileTrue(intake.testPivotCommand());
+				m_JoystickL.button(11).whileTrue(intake.testRollerCommand());
+			}
+			if (Constants.ENABLE_CLIMBER && climber != null) {
+				m_JoystickL.button(12).whileTrue(climber.testClimberCommand());
+			}
+			if (Constants.ENABLE_HOPPER && hopper != null) {
+				m_JoystickL.button(3).whileTrue(hopper.testHopperCommand());
+			}
+		}
 	}
 
 	// ===== Auto Routines =====
@@ -157,7 +175,7 @@ public class RobotContainer {
 	private Command buildScoreAndClimbAuto(frc.robot.repulsor.Setpoints.GameSetpoint climbSetpoint) {
 		return Commands.sequence(
 				repulsor.navigateTo(
-						() -> _Rebuilt2026.HUB_SCORE_FRONT.poseForCurrentAlliance(SetpointContext.EMPTY))
+								() -> _Rebuilt2026.HUB_SCORE_FRONT.poseForCurrentAlliance(SetpointContext.EMPTY))
 						.until(repulsor.within(Meters.of(0.15))),
 				Commands.waitSeconds(1.0),
 				repulsor.navigateTo(
