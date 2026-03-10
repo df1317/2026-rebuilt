@@ -116,6 +116,9 @@ public class IntakeSubsystem extends SubsystemBase {
 
 	// ==================== State Query Methods ====================
 
+  public Angle minPivotAngle = Degrees.of(0);
+  public Angle maxPivotAngle = Degrees.of(360);
+
 	public boolean isPivotAtPosition() {
 		boolean atPositionRaw = Math.abs(pivotEncoder.getPosition() - targetPivotAngle.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
 				.in(Degrees);
@@ -149,6 +152,19 @@ public class IntakeSubsystem extends SubsystemBase {
 	}
 
 	// ==================== Command Factory Methods ====================
+
+  public Command homeCommand() {
+    return
+      runOnce(() -> setPivotAngle(minPivotAngle))
+      .andThen(idle().until(this::isPivotStalled))
+      .andThen(runOnce(() -> setPivotAngle(Degrees.of(pivotEncoder.getPosition()))))
+      .andThen(runOnce(() -> minPivotAngle = Degrees.of(pivotEncoder.getPosition())))
+      .andThen(() -> setPivotAngle(maxPivotAngle))
+      .andThen(idle().until(this::isPivotStalled))
+      .andThen(runOnce(() -> setPivotAngle(Degrees.of(pivotEncoder.getPosition()))))
+      .andThen(runOnce(() -> maxPivotAngle = Degrees.of(pivotEncoder.getPosition())))
+      .withName("Home Intake");
+  }
 
 	public Command extendCommand() {
 		return runOnce(() -> setPivotAngle(PIVOT_EXTENDED_ANGLE))
