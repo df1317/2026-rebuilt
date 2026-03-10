@@ -155,10 +155,12 @@ public class IntakeSubsystem extends SubsystemBase {
 
   public Command homeCommand() {
     return
+        //home min
       runOnce(() -> setPivotAngle(minPivotAngle))
       .andThen(idle().until(this::isPivotStalled))
       .andThen(runOnce(() -> setPivotAngle(Degrees.of(pivotEncoder.getPosition()))))
       .andThen(runOnce(() -> minPivotAngle = Degrees.of(pivotEncoder.getPosition())))
+        //home max
       .andThen(() -> setPivotAngle(maxPivotAngle))
       .andThen(idle().until(this::isPivotStalled))
       .andThen(runOnce(() -> setPivotAngle(Degrees.of(pivotEncoder.getPosition()))))
