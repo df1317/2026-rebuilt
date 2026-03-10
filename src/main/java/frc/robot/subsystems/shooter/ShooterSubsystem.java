@@ -224,6 +224,9 @@ public class ShooterSubsystem extends SubsystemBase {
 		return targetHoodAngle;
 	}
 
+  public Angle minHoodAngle;
+  public Angle maxHoodAngle;
+
 	// ==================== Control Methods ====================
 
 	public void setVelocityForDistance(Distance distance) {
@@ -279,6 +282,20 @@ public class ShooterSubsystem extends SubsystemBase {
 	public Command shootForDistanceCommand(Supplier<Distance> distance) {
 		return Commands.run(() -> setVelocityForDistance(distance.get()), this).finallyDo(this::stop);
 	}
+
+  public Command homeHood (Angle angle) {
+    return
+        //home min
+      runOnce(() -> setHoodAngle(minHoodAngle))
+      .andThen(idle().until(this::isHoodStalled))
+      .andThen(runOnce(() -> setHoodAngle(Degrees.of(hoodEncoder.getPosition()))))
+      .andThen(runOnce(() -> minHoodAngle = Degrees.of(hoodEncoder.getPosition())))
+        //home max
+      .andThen(() -> setHoodAngle(maxHoodAngle))
+      .andThen(idle().until(this::isHoodStalled))
+      .andThen(runOnce(() -> setHoodAngle(Degrees.of(hoodEncoder.getPosition()))))
+      .andThen(runOnce(() -> maxHoodAngle = Degrees.of(hoodEncoder.getPosition())));
+  }
 
 	public Command hoodSetpoint(Angle angle) {
 		return Commands.runOnce(() -> setHoodAngle(angle))
