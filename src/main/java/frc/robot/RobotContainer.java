@@ -3,21 +3,17 @@ package frc.robot;
 import static edu.wpi.first.units.Units.Meters;
 import java.io.File;
 import dev.doglog.DogLog;
-import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.networktables.BooleanSubscriber;
-import edu.wpi.first.units.Units;
-import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 
 import frc.robot.Constants.DrivebaseConstants;
@@ -42,8 +38,6 @@ public class RobotContainer {
 
 	// HID
 	private final CommandXboxController driverXbox = new CommandXboxController(0);
-	private final CommandJoystick m_JoystickL = new CommandJoystick(1);
-
 	// Subsystems
 	private final SwerveSubsystem drivebase = Constants.ENABLE_SWERVE
 			? new SwerveSubsystem(new File(Filesystem.getDeployDirectory(), "swerve/neo"))
@@ -137,103 +131,6 @@ public class RobotContainer {
 			driverXbox.leftBumper().onTrue(Commands.runOnce(() -> robotRelative = !robotRelative));
 		}
 
-		// Right trigger hold: auto shoot (distance-based)
-		if (Constants.ENABLE_SWERVE && Constants.ENABLE_SHOOTER) {
-			driverXbox.rightTrigger(0.3).whileTrue(
-					shooter.shootForDistanceCommand(this::getDistanceToTarget));
-		}
-
-		// Left trigger hold: intake
-		if (Constants.ENABLE_SWERVE && Constants.ENABLE_INTAKE) {
-			driverXbox.leftTrigger(0.3).whileTrue(intake.intakeCommand())
-					.onFalse(intake.stowCommand());
-		}
-
-		// ===== Operator Controls (Joystick port 2) =====
-
-		if (Constants.ENABLE_HOPPER) {
-			// Hopper runs automatically with intake
-			if (Constants.ENABLE_INTAKE) {
-				driverXbox.leftTrigger(0.3).whileTrue(hopper.forwardCommand());
-			}
-
-			// Hopper feeds when shooting
-			if (Constants.ENABLE_SHOOTER) {
-				driverXbox.rightTrigger(0.3).whileTrue(hopper.forwardCommand());
-			}
-
-			// Button 1: reverse hopper (unclog)
-			m_JoystickL.button(1).whileTrue(hopper.reverseCommand());
-		}
-
-		if (Constants.ENABLE_SHOOTER) {
-			// Button 2: shooter toggle on/off at 3000 RPM
-			m_JoystickL.button(2).toggleOnTrue(
-					shooter.shootCommand(Units.RPM.of(3000)));
-
-			// POV up: +100 RPM
-			m_JoystickL.povUp().onTrue(Commands.runOnce(() -> {
-				shooter.setVelocity(shooter.getTargetVelocity().plus(Units.RPM.of(100.0)));
-				shooter.setFeederVelocity(shooter.getTargetVelocity());
-			}));
-
-			// POV down: -100 RPM
-			m_JoystickL.povDown().onTrue(Commands.runOnce(() -> {
-				shooter.setVelocity(shooter.getTargetVelocity().minus(Units.RPM.of(100.0)));
-				shooter.setFeederVelocity(shooter.getTargetVelocity());
-			}));
-
-			// Button 3: reverse shoot (declog)
-			m_JoystickL.button(3).whileTrue(Commands.startEnd(
-					() -> {
-						shooter.setVelocity(Units.RPM.of(-1000));
-						shooter.setFeederVelocity(Units.RPM.of(-1000));
-					},
-					shooter::stop, shooter));
-		}
-
-		if (Constants.ENABLE_INTAKE) {
-			// Button 4: intake toggle down/up
-			m_JoystickL.button(4).toggleOnTrue(intake.intakeCommand());
-			m_JoystickL.button(4).toggleOnFalse(intake.stowCommand());
-
-			// Button 5: reverse intake (eject)
-			m_JoystickL.button(5).whileTrue(intake.ejectCommand());
-		}
-
-		if (Constants.ENABLE_CLIMBER) {
-			// Button 6: climber extend/retract toggle
-			m_JoystickL.button(6).toggleOnTrue(climber.extendCommand());
-			m_JoystickL.button(6).toggleOnFalse(climber.retractCommand());
-
-			// Joystick Y axis: manual climber (while button 7 held)
-			m_JoystickL.button(7).whileTrue(
-					climber.manualControlCommand(
-							() -> MathUtil.applyDeadband(-m_JoystickL.getY(), 0.1)));
-		}
-
-		// ===== Test Mode Controls =====
-		// Use dashboard tunables (Test/*) to set values, then hold buttons to run
-
-		if (Constants.ENABLE_SHOOTER) {
-			driverXbox.a().and(DriverStation::isTest)
-					.whileTrue(shooter.testShooterCommand());
-		}
-
-		if (Constants.ENABLE_INTAKE) {
-			driverXbox.b().and(DriverStation::isTest)
-					.whileTrue(intake.testIntakeCommand());
-		}
-
-		if (Constants.ENABLE_CLIMBER) {
-			driverXbox.x().and(DriverStation::isTest)
-					.whileTrue(climber.testClimberCommand());
-		}
-
-		if (Constants.ENABLE_HOPPER) {
-			driverXbox.y().and(DriverStation::isTest)
-					.whileTrue(hopper.testHopperCommand());
-		}
 	}
 
 	// ===== Auto Routines =====
@@ -296,12 +193,5 @@ public class RobotContainer {
 		if (Constants.ENABLE_SWERVE) {
 			drivebase.setMotorBrake(brake);
 		}
-	}
-
-	private Distance getDistanceToTarget() {
-		Pose2d hubPose = DriverStation.getAlliance()
-				.orElse(DriverStation.Alliance.Blue) == DriverStation.Alliance.Red ? FieldZones.HUB_POSE_RED
-						: FieldZones.HUB_POSE_BLUE;
-		return Meters.of(drivebase.getPose().getTranslation().getDistance(hubPose.getTranslation()));
 	}
 }
