@@ -1,10 +1,7 @@
 package frc.robot.subsystems.climber;
 
-import static edu.wpi.first.units.Units.Meters;
-import static edu.wpi.first.units.Units.MetersPerSecond;
-import static edu.wpi.first.units.Units.MetersPerSecondPerSecond;
-import static edu.wpi.first.units.Units.RPM;
-import static edu.wpi.first.units.Units.Volts;
+import static edu.wpi.first.units.Units.*;
+import static edu.wpi.first.units.Units.Degrees;
 import static frc.robot.Constants.ClimberConstants.CURRENT_LIMIT;
 import static frc.robot.Constants.ClimberConstants.KD;
 import static frc.robot.Constants.ClimberConstants.KG;
@@ -31,11 +28,7 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ElevatorFeedforward;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
-import edu.wpi.first.units.measure.AngularVelocity;
-import edu.wpi.first.units.measure.MutDistance;
-import edu.wpi.first.units.measure.MutLinearVelocity;
-import edu.wpi.first.units.measure.MutVoltage;
-import edu.wpi.first.units.measure.Voltage;
+import edu.wpi.first.units.measure.*;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.util.Color;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -152,9 +145,12 @@ public class ClimberSubsystem extends SubsystemBase {
 	public boolean isClimberStalled() {
 		double climberMotorCurrent = motorLeft.getMotorVoltage().getValueAsDouble();
 		double climberMotorRPM = motorLeft.getVelocity().getValueAsDouble(); // RPM
-		boolean isPivotStalled = Math.abs(climberMotorRPM) < 2.0 && climberMotorCurrent > CURRENT_LIMIT * 0.5;
-		return stallDebouncer.calculate(isPivotStalled);
+		boolean isClimberStalled = Math.abs(climberMotorRPM) < 2.0 && climberMotorCurrent > CURRENT_LIMIT * 0.5;
+		return stallDebouncer.calculate(isClimberStalled);
 	}
+
+  public double minClimberHeight = 0;
+  public double maxClimberHeight = 30;
 
 	private final Debouncer stallDebouncer = new Debouncer(0.1, Debouncer.DebounceType.kBoth);
 
@@ -233,6 +229,22 @@ public class ClimberSubsystem extends SubsystemBase {
 	public Command goToVelocityCommand(AngularVelocity velo) {
 		return Commands.runOnce(() -> this.setGoalVelocity(velo));
 	}
+
+  public Command homeCommandWithoutRatchet() {
+    return
+      // home min
+      runOnce(() -> setGoalHeight(minClimberHeight))
+        .andThen(idle().until(this::isClimberStalled))
+        .andThen(runOnce(() -> setGoalHeight(getHeightMeters())))
+        .andThen(runOnce(() -> minClimberHeight = getHeightMeters()))
+        // home max
+        .andThen(() -> setGoalHeight(maxClimberHeight))
+        .andThen(idle().until(this::isClimberStalled))
+        .andThen(runOnce(() -> setGoalHeight(getHeightMeters()))
+        .andThen(runOnce(() -> maxClimberHeight = getHeightMeters())))
+        .withName("Home Climber Without Ratchet");
+  }
+
 
 	/** Manual control; holds position when released. */
 	public Command manualControlCommand(DoubleSupplier speedInput) {
