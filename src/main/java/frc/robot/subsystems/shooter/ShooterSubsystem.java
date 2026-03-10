@@ -283,7 +283,7 @@ public class ShooterSubsystem extends SubsystemBase {
 		return Commands.run(() -> setVelocityForDistance(distance.get()), this).finallyDo(this::stop);
 	}
 
-	public Command homeHood(Angle angle) {
+	public Command homeHood() {
 		return
 		// home min
 		runOnce(() -> setHoodAngle(minHoodAngle))
