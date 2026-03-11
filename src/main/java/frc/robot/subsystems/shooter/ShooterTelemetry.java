@@ -20,7 +20,7 @@ public class ShooterTelemetry {
 	 * Logs all shooter telemetry data.
 	 */
 	public void log() {
-		double currentRPM = shooter.motor.getVelocity().getValueAsDouble();
+		double currentRPM = shooter.motor.getVelocity().getValueAsDouble() * 60; // RPS to RPM
 		double targetRPM = shooter.targetVelocity.in(RPM);
 
 		double feederCurrentRPM = shooter.feederEncoder.getVelocity();
