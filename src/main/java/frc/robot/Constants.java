@@ -1,13 +1,28 @@
 package frc.robot;
 
+import static edu.wpi.first.units.Units.Centimeters;
+import static edu.wpi.first.units.Units.Degrees;
+import static edu.wpi.first.units.Units.DegreesPerSecond;
+import static edu.wpi.first.units.Units.DegreesPerSecondPerSecond;
+import static edu.wpi.first.units.Units.Inches;
+import static edu.wpi.first.units.Units.Meters;
+import static edu.wpi.first.units.Units.MetersPerSecond;
+import static edu.wpi.first.units.Units.MetersPerSecondPerSecond;
+import static edu.wpi.first.units.Units.RPM;
+import static edu.wpi.first.units.Units.Volts;
+
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.units.measure.*;
+import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.AngularAcceleration;
+import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.units.measure.Distance;
+import edu.wpi.first.units.measure.LinearAcceleration;
+import edu.wpi.first.units.measure.LinearVelocity;
+import edu.wpi.first.units.measure.Voltage;
 import frc.robot.util.DevMode;
 import swervelib.math.Matter;
 import swervelib.telemetry.SwerveDriveTelemetry.TelemetryVerbosity;
-
-import static edu.wpi.first.units.Units.*;
 
 public final class Constants {
 
@@ -98,8 +113,8 @@ public final class Constants {
 		public static final int FEEDER_ID = 28;
 		public static final int HOOD_ID = 24;
 
-		public static final boolean INVERTED = false;
-		public static final boolean FEEDER_INVERTED = false;
+		public static final boolean INVERTED = true;
+		public static final boolean FEEDER_INVERTED = true;
 		public static final boolean HOOD_INVERTED = true;
 		public static final int CURRENT_LIMIT = 25;
 		public static final int FEEDER_CURRENT_LIMIT = CURRENT_LIMIT;
@@ -118,7 +133,7 @@ public final class Constants {
 		public static final double SHOOTER_KP = 0.05;
 		public static final double SHOOTER_KI = 0.0;
 		public static final double SHOOTER_KD = 0.0;
-		public static final double SHOOTER_KV = 0.000175;
+		public static final double SHOOTER_KV = 0.115;
 		public static final double SHOOTER_KG = 0.0;
 		public static final double SHOOTER_KS = 0.0;
 
@@ -168,17 +183,21 @@ public final class Constants {
 
 	public static class HopperConstants {
 		public static final int HOPPER_MOTOR_ID = 26;
-		public static final int HOPPER_CURRENT_LIMIT = 35;
-		public static final boolean INVERTED = false;
+		public static final int HOPPER_CURRENT_LIMIT = 20;
+		public static final boolean INVERTED = true;
 
 		public static final AngularVelocity FEED_SPEED = RPM.of(0.5);
 		public static final AngularVelocity REVERSE_SPEED = RPM.of(-0.3);
 		public static final AngularVelocity HOPPER_VELOCITY_TOLERANCE = RPM.of(100);
 
-		public static final double HOPPER_KP = 5E-4;
+		public static final double HOPPER_KP = 2E-4;
 		public static final double HOPPER_KI = 1E-5;
 		public static final double HOPPER_KD = 0.0;
-		public static final double HOPPER_KV = 1.8E-4;
+		public static final double HOPPER_KV = 1.8E-4; // usless
+		public static final double HOPPER_KS = 0.5; // usless
 		public static final double HOPPER_I_ZONE = 1E-3;
+		public static final double HOPPER_KF = 1.75E-4;
+
+		public static final double GEAR_RATIO = 24.0;
 	}
 }
