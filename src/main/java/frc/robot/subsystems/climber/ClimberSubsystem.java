@@ -229,7 +229,7 @@ public class ClimberSubsystem extends SubsystemBase {
 				.andThen(runOnce(() -> setGoalHeight(getHeightMeters())))
 				.andThen(runOnce(() -> minClimberHeightTemp = getHeightMeters()))
 				// home max
-				.andThen(() -> goToHeightCommand(MAX_HEIGHT.plus(MAX_HEIGHT.minus(MIN_HEIGHT)))
+				.andThen(() -> goToHeightCommand(MAX_HEIGHT.plus(MAX_HEIGHT))
 				.andThen(idle().until(this::isClimberStalled))
 				.andThen(runOnce(() -> setGoalHeight(getHeightMeters())))
 						.andThen(runOnce(() -> maxClimberHeightTemp = getHeightMeters())))
