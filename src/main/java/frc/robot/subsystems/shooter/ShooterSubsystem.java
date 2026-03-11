@@ -348,6 +348,12 @@ public class ShooterSubsystem extends SubsystemBase {
 		return Commands.run(() -> setForDistance(distance.get()), this).finallyDo(this::stop);
 	}
 
+	/**
+	 * NEVER USE THIS COMMAND!
+	 *
+	 * @param angle
+	 * @return
+	 */
 	public Command hoodSetpoint(Angle angle) {
 		return Commands.runOnce(() -> setHoodAngle(angle))
 				.andThen(idle().until(() -> isHoodStalled() || isHoodAtPosition()))
