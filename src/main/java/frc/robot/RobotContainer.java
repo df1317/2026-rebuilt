@@ -133,12 +133,12 @@ public class RobotContainer {
 		}
 		if (Constants.ENABLE_SHOOTER) {
 			driverXbox.rightTrigger(0.3).whileTrue(Commands.runEnd(() -> {
-				System.out.println("move HOOD! 1");
+				// System.out.println("move HOOD! 1");
 				final Angle newSetpoint = shooter.getTargetHoodAngle().plus(Degree.of(5));
 				shooter.setHoodAngle(newSetpoint);
 			}, () -> shooter.HoodStop()));
 			driverXbox.leftTrigger(0.3).whileTrue(Commands.runEnd(() -> {
-				System.out.println("move HOOD! 2");
+				// System.out.println("move HOOD! 2");
 				final Angle newSetpoint = shooter.getTargetHoodAngle().minus(Degree.of(5));
 				shooter.setHoodAngle(newSetpoint);
 			}, () -> shooter.HoodStop()));

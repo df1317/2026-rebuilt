@@ -1,6 +1,7 @@
 package frc.robot.subsystems.intake;
 
-import static edu.wpi.first.units.Units.*;
+import static edu.wpi.first.units.Units.Degrees;
+import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.wpilibj2.command.Commands.sequence;
 import static frc.robot.Constants.IntakeConstants.AT_POSITION_DEBOUNCE_TIME;
 import static frc.robot.Constants.IntakeConstants.PIVOT_ANGLE_TOLERANCE;
@@ -24,6 +25,7 @@ import static frc.robot.Constants.IntakeConstants.ROLLER_KP;
 import static frc.robot.Constants.IntakeConstants.ROLLER_KV;
 import static frc.robot.Constants.IntakeConstants.ROLLER_MOTOR_ID;
 import static frc.robot.Constants.IntakeConstants.ROLLER_VELOCITY_TOLERANCE;
+
 import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.ResetMode;
@@ -35,6 +37,7 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
+
 import dev.doglog.DogLog;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
@@ -114,10 +117,37 @@ public class IntakeSubsystem extends SubsystemBase {
 		rollerMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
 	}
 
+	private final DoubleSubscriber KP = DogLog.tunable("Test/PIVOT_KP", PIVOT_KP);
+	private final DoubleSubscriber KI = DogLog.tunable("Test/PIVOT_KI", PIVOT_KI);
+	private final DoubleSubscriber KD = DogLog.tunable("Test/PIVOT_KP", PIVOT_KD);
+	private final DoubleSubscriber KV = DogLog.tunable("Test/PIVOT_KV", 0.0);
+	private final DoubleSubscriber KS = DogLog.tunable("Test/PIVOT_KS", 0.0);
+
+	double prevKP = KP.getAsDouble();
+	double prevKI = KI.getAsDouble();
+	double prevKD = KD.getAsDouble();
+	double prevKV = KV.getAsDouble();
+	double prevKS = KS.getAsDouble();
+
 	@Override
 	public void periodic() {
-		visualization.update();
 		telemetry.log();
+		if (prevKP != KP.getAsDouble() || prevKI != KI.getAsDouble() || prevKD != KD.getAsDouble()
+				|| prevKV != KV.getAsDouble()) {
+
+			prevKP = KP.getAsDouble();
+			prevKI = KI.getAsDouble();
+			prevKD = KD.getAsDouble();
+			prevKV = KV.getAsDouble();
+
+			SparkMaxConfig config = new SparkMaxConfig();
+			config.idleMode(IdleMode.kCoast).smartCurrentLimit(PIVOT_CURRENT_LIMIT)
+					.inverted(PIVOT_INVERTED);
+			config.closedLoop.pid(KP.getAsDouble(), KI.getAsDouble(), KD.getAsDouble());
+			config.closedLoop.feedForward.kV(KV.getAsDouble());
+
+			pivotMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
+		}
 	}
 
 	// ==================== State Query Methods ====================
@@ -195,7 +225,10 @@ public class IntakeSubsystem extends SubsystemBase {
 	// ==================== Test Mode ====================
 
 	public Command testPivotCommand() {
-		return Commands.run(() -> setPivotAngle(Degrees.of(testPivotDeg.get())), this)
+		return Commands.run(() -> {
+			setPivotAngle(Degrees.of(testPivotDeg.get()));
+			System.out.println("testPivotCommand!!!!");
+		}, this)
 				.finallyDo(() -> pivotMotor.stopMotor())
 				.withName("Test Intake Pivot");
 	}

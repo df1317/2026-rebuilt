@@ -78,9 +78,9 @@ public class ShooterSubsystem extends SubsystemBase {
 	private final DoubleSubscriber testFeederRPM = DogLog.tunable("Test/FeederRPM", 3000.0, RPM);
 	private final DoubleSubscriber testHoodDeg = DogLog.tunable("Test/HoodAngleDeg", 45.0, Degrees);
 
-	private final DoubleSubscriber KP = DogLog.tunable("Test/KP", ShooterConstants.HOOD_KP);
-	private final DoubleSubscriber KI = DogLog.tunable("Test/KI", ShooterConstants.HOOD_KI);
-	private final DoubleSubscriber KD = DogLog.tunable("Test/KP", ShooterConstants.HOOD_KD);
+	// private final DoubleSubscriber KP = DogLog.tunable("Test/KP", ShooterConstants.HOOD_KP);
+	// private final DoubleSubscriber KI = DogLog.tunable("Test/KI", ShooterConstants.HOOD_KI);
+	// private final DoubleSubscriber KD = DogLog.tunable("Test/KP", ShooterConstants.HOOD_KD);
 	// private final DoubleSubscriber KV = DogLog.tunable("Test/KV", ShooterConstants.HOOD_KV);
 
 	private final TrapezoidProfile profile;
@@ -186,9 +186,9 @@ public class ShooterSubsystem extends SubsystemBase {
 		distanceToHoodDeg.put(6.0, 25.0);
 	}
 
-	double prevKP = KP.getAsDouble();
-	double prevKI = KI.getAsDouble();
-	double prevKD = KD.getAsDouble();
+	// double prevKP = KP.getAsDouble();
+	// double prevKI = KI.getAsDouble();
+	// double prevKD = KD.getAsDouble();
 	// double prevKV = KV.getAsDouble();
 
 	@Override
@@ -210,25 +210,25 @@ public class ShooterSubsystem extends SubsystemBase {
 
 		// setFeederVelocity(RPM.of(feederRPMTunable.get()));
 
-		if (prevKP != KP.getAsDouble() || prevKI != KI.getAsDouble() || prevKD != KD.getAsDouble()) {
+		// if (prevKP != KP.getAsDouble() || prevKI != KI.getAsDouble() || prevKD != KD.getAsDouble()) {
 
-			prevKP = KP.getAsDouble();
-			prevKI = KI.getAsDouble();
-			prevKD = KD.getAsDouble();
-			// prevKV = KV.getAsDouble();
+		// prevKP = KP.getAsDouble();
+		// prevKI = KI.getAsDouble();
+		// prevKD = KD.getAsDouble();
+		// // prevKV = KV.getAsDouble();
 
-			SparkMaxConfig config = new SparkMaxConfig();
-			config.idleMode(IdleMode.kBrake).smartCurrentLimit(HOOD_CURRENT_LIMIT)
-					.inverted(ShooterConstants.HOOD_INVERTED);
-			config.encoder
-					// Converts encoder rotations to degrees: (360 deg/rot) / gear_ratio
-					.positionConversionFactor(360.0 / ShooterConstants.HOOD_GEAR_RATIO);
-			config.closedLoop
-					.pid(prevKP, prevKI, prevKD)
-					.allowedClosedLoopError(ShooterConstants.HOOD_TOLERANCE.in(Degrees), ClosedLoopSlot.kSlot0);
+		// SparkMaxConfig config = new SparkMaxConfig();
+		// config.idleMode(IdleMode.kBrake).smartCurrentLimit(HOOD_CURRENT_LIMIT)
+		// .inverted(ShooterConstants.HOOD_INVERTED);
+		// config.encoder
+		// // Converts encoder rotations to degrees: (360 deg/rot) / gear_ratio
+		// .positionConversionFactor(360.0 / ShooterConstants.HOOD_GEAR_RATIO);
+		// config.closedLoop
+		// .pid(prevKP, prevKI, prevKD)
+		// .allowedClosedLoopError(ShooterConstants.HOOD_TOLERANCE.in(Degrees), ClosedLoopSlot.kSlot0);
 
-			hood.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
-		}
+		// hood.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
+		// }
 
 	}
 
@@ -308,14 +308,14 @@ public class ShooterSubsystem extends SubsystemBase {
 	}
 
 	public void setHoodAngle(Angle angle) {
-		System.out.println("hood should move! to " + angle.in(Degrees));
+		// System.out.println("hood should move! to " + angle.in(Degrees));
 		targetHoodAngle = angle;
 		hoodController.setSetpoint(angle.in(Degrees), ControlType.kPosition);
 	}
 
 	public void HoodStop() {
 		// return Commands.runOnce(() -> {
-		System.out.println("STOP HOOD!");
+		// System.out.println("STOP HOOD!");
 		double currentAngle = hoodEncoder.getPosition();
 		targetHoodAngle = Degrees.of(currentAngle);
 		hoodController.setSetpoint(currentAngle, ControlType.kPosition);
