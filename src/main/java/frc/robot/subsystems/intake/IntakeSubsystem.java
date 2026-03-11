@@ -2,7 +2,28 @@ package frc.robot.subsystems.intake;
 
 import static edu.wpi.first.units.Units.*;
 import static edu.wpi.first.wpilibj2.command.Commands.sequence;
-import static frc.robot.Constants.IntakeConstants.*;
+import static frc.robot.Constants.IntakeConstants.AT_POSITION_DEBOUNCE_TIME;
+import static frc.robot.Constants.IntakeConstants.PIVOT_ANGLE_TOLERANCE;
+import static frc.robot.Constants.IntakeConstants.PIVOT_CURRENT_LIMIT;
+import static frc.robot.Constants.IntakeConstants.PIVOT_EXTENDED_ANGLE;
+import static frc.robot.Constants.IntakeConstants.PIVOT_GEAR_RATIO;
+import static frc.robot.Constants.IntakeConstants.PIVOT_INVERTED;
+import static frc.robot.Constants.IntakeConstants.PIVOT_KD;
+import static frc.robot.Constants.IntakeConstants.PIVOT_KI;
+import static frc.robot.Constants.IntakeConstants.PIVOT_KP;
+import static frc.robot.Constants.IntakeConstants.PIVOT_MOTOR_ID;
+import static frc.robot.Constants.IntakeConstants.PIVOT_RETRACTED_ANGLE;
+import static frc.robot.Constants.IntakeConstants.ROLLER_CURRENT_LIMIT;
+import static frc.robot.Constants.IntakeConstants.ROLLER_EJECT_VELOCITY;
+import static frc.robot.Constants.IntakeConstants.ROLLER_INTAKE_VELOCITY;
+import static frc.robot.Constants.IntakeConstants.ROLLER_INVERTED;
+import static frc.robot.Constants.IntakeConstants.ROLLER_I_ZONE;
+import static frc.robot.Constants.IntakeConstants.ROLLER_KD;
+import static frc.robot.Constants.IntakeConstants.ROLLER_KI;
+import static frc.robot.Constants.IntakeConstants.ROLLER_KP;
+import static frc.robot.Constants.IntakeConstants.ROLLER_KV;
+import static frc.robot.Constants.IntakeConstants.ROLLER_MOTOR_ID;
+import static frc.robot.Constants.IntakeConstants.ROLLER_VELOCITY_TOLERANCE;
 import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.ResetMode;
@@ -134,22 +155,6 @@ public class IntakeSubsystem extends SubsystemBase {
 	}
 
 	// ==================== Command Factory Methods ====================
-  public static Angle minPivotAngleTemp = PIVOT_RETRACTED_ANGLE;
-  public static Angle maxPivotAngleTemp = PIVOT_EXTENDED_ANGLE;
-	public Command homeCommand() {
-		return
-		// home min
-		runOnce(() -> setPivotAngle(Degrees.of(-360)))
-				.andThen(idle().until(this::isPivotStalled))
-				.andThen(runOnce(() -> setPivotAngle(Degrees.of(pivotEncoder.getPosition()))))
-				.andThen(runOnce(() -> minPivotAngleTemp = Degrees.of(pivotEncoder.getPosition())))
-				// home max
-				.andThen(() -> setPivotAngle(Degrees.of(360)))
-				.andThen(idle().until(this::isPivotStalled))
-				.andThen(runOnce(() -> setPivotAngle(Degrees.of(pivotEncoder.getPosition()))))
-				.andThen(runOnce(() -> maxPivotAngleTemp = Degrees.of(pivotEncoder.getPosition())))
-				.withName("Home Intake");
-	}
 
 	public Command extendCommand() {
 		return runOnce(() -> setPivotAngle(PIVOT_EXTENDED_ANGLE))
