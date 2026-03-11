@@ -1,24 +1,7 @@
 package frc.robot.subsystems.climber;
 
-import static edu.wpi.first.units.Units.Meters;
-import static edu.wpi.first.units.Units.MetersPerSecond;
-import static edu.wpi.first.units.Units.MetersPerSecondPerSecond;
-import static edu.wpi.first.units.Units.RPM;
-import static edu.wpi.first.units.Units.Volts;
-import static frc.robot.Constants.ClimberConstants.CURRENT_LIMIT;
-import static frc.robot.Constants.ClimberConstants.KD;
-import static frc.robot.Constants.ClimberConstants.KG;
-import static frc.robot.Constants.ClimberConstants.KI;
-import static frc.robot.Constants.ClimberConstants.KP;
-import static frc.robot.Constants.ClimberConstants.KS;
-import static frc.robot.Constants.ClimberConstants.KV;
-import static frc.robot.Constants.ClimberConstants.MAX_ACCELERATION;
-import static frc.robot.Constants.ClimberConstants.MAX_HEIGHT;
-import static frc.robot.Constants.ClimberConstants.MAX_VELOCITY;
-import static frc.robot.Constants.ClimberConstants.MIN_HEIGHT;
-import static frc.robot.Constants.ClimberConstants.MOTOR_LEFT_ID;
-import static frc.robot.Constants.ClimberConstants.POSITION_TOLERANCE;
-import static frc.robot.Constants.ClimberConstants.ROTATIONS_PER_METER;
+import static edu.wpi.first.units.Units.*;
+import static frc.robot.Constants.ClimberConstants.*;
 
 import java.util.function.DoubleSupplier;
 
@@ -38,6 +21,7 @@ import edu.wpi.first.units.measure.MutDistance;
 import edu.wpi.first.units.measure.MutLinearVelocity;
 import edu.wpi.first.units.measure.MutVoltage;
 import edu.wpi.first.units.measure.Voltage;
+import edu.wpi.first.units.measure.*;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.util.Color;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -157,8 +141,8 @@ public class ClimberSubsystem extends SubsystemBase {
 	public boolean isClimberStalled() {
 		double climberMotorCurrent = motorLeft.getMotorVoltage().getValueAsDouble();
 		double climberMotorRPM = motorLeft.getVelocity().getValueAsDouble(); // RPM
-		boolean isPivotStalled = Math.abs(climberMotorRPM) < 2.0 && climberMotorCurrent > CURRENT_LIMIT * 0.5;
-		return stallDebouncer.calculate(isPivotStalled);
+		boolean isClimberStalled = Math.abs(climberMotorRPM) < 2.0 && climberMotorCurrent > CURRENT_LIMIT * 0.5;
+		return stallDebouncer.calculate(isClimberStalled);
 	}
 
 	private final Debouncer stallDebouncer = new Debouncer(0.1, Debouncer.DebounceType.kBoth);
@@ -230,6 +214,13 @@ public class ClimberSubsystem extends SubsystemBase {
 		}).andThen(Commands.waitUntil(this::isAtGoal)).withTimeout(GO_TO_HEIGHT_TIMEOUT_SECONDS);
 	}
 
+  public Command goToHeightCommand(Distance heightMeters) {
+    return Commands.runOnce(() -> {
+      System.out.println("called set goal");
+      setGoalHeight(heightMeters.in(Meters));
+    }).andThen(Commands.waitUntil(this::isAtGoal)).withTimeout(GO_TO_HEIGHT_TIMEOUT_SECONDS);
+  }
+
 	public Command goToHeightCommand(DoubleSupplier heightMeters) {
 		return Commands.runOnce(() -> setGoalHeight(heightMeters.getAsDouble()), this)
 				.andThen(Commands.waitUntil(this::isAtGoal)).withTimeout(GO_TO_HEIGHT_TIMEOUT_SECONDS);
@@ -237,6 +228,22 @@ public class ClimberSubsystem extends SubsystemBase {
 
 	public Command goToVelocityCommand(AngularVelocity velo) {
 		return Commands.runOnce(() -> this.setGoalVelocity(velo));
+	}
+  public static double minClimberHeightTemp = MIN_HEIGHT.in(Meters);
+	public static double maxClimberHeightTemp = MAX_HEIGHT.in(Meters);
+	public Command homeCommandWithoutRatchet() {
+		return
+		// home min
+		runOnce(() -> goToHeightCommand(MIN_HEIGHT.minus(MAX_HEIGHT)))
+				.andThen(idle().until(this::isClimberStalled))
+				.andThen(runOnce(() -> setGoalHeight(getHeightMeters())))
+				.andThen(runOnce(() -> minClimberHeightTemp = getHeightMeters()))
+				// home max
+				.andThen(() -> goToHeightCommand(MAX_HEIGHT.plus(MAX_HEIGHT))
+				.andThen(idle().until(this::isClimberStalled))
+				.andThen(runOnce(() -> setGoalHeight(getHeightMeters())))
+						.andThen(runOnce(() -> maxClimberHeightTemp = getHeightMeters())))
+				.withName("Home Climber Without Ratchet");
 	}
 
 	/** Manual control; holds position when released. */

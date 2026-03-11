@@ -6,19 +6,8 @@ import static edu.wpi.first.units.Units.DegreesPerSecondPerSecond;
 import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.Volts;
-import static frc.robot.Constants.ShooterConstants.AT_POSITION_DEBOUNCE_TIME;
-import static frc.robot.Constants.ShooterConstants.AT_SPEED_DEBOUNCE_TIME;
-import static frc.robot.Constants.ShooterConstants.CURRENT_DEBOUNCE_TIME;
-import static frc.robot.Constants.ShooterConstants.CURRENT_LIMIT;
-import static frc.robot.Constants.ShooterConstants.HOOD_CURRENT_LIMIT;
-import static frc.robot.Constants.ShooterConstants.HOOD_STALL_RPM;
-import static frc.robot.Constants.ShooterConstants.HOOD_TOLERANCE;
-import static frc.robot.Constants.ShooterConstants.MOTOR_ID;
-import static frc.robot.Constants.ShooterConstants.SHOOTER_KD;
-import static frc.robot.Constants.ShooterConstants.SHOOTER_KG;
-import static frc.robot.Constants.ShooterConstants.SHOOTER_KI;
-import static frc.robot.Constants.ShooterConstants.SHOOTER_KS;
-import static frc.robot.Constants.ShooterConstants.SHOOTER_KV;
+
+import static frc.robot.Constants.ShooterConstants.*;
 
 import java.util.function.Supplier;
 
@@ -354,6 +343,24 @@ public class ShooterSubsystem extends SubsystemBase {
 	 * @param angle
 	 * @return
 	 */
+  public static Angle maxHoodAngleTemp = MAX_HOOD_ANGLE;
+  public static Angle minHoodAngleTemp = MIN_HOOD_ANGLE;
+
+	public Command homeHood() {
+		return
+		// home min
+		runOnce(() -> setHoodAngle(Degrees.of(-360)))
+				.andThen(idle().until(this::isHoodStalled))
+				.andThen(runOnce(() -> setHoodAngle(Degrees.of(hoodEncoder.getPosition()))))
+				.andThen(runOnce(() -> minHoodAngleTemp = Degrees.of(hoodEncoder.getPosition())))
+				// home max
+				.andThen(() -> setHoodAngle(Degrees.of(360)))
+				.andThen(idle().until(this::isHoodStalled))
+				.andThen(runOnce(() -> setHoodAngle(Degrees.of(hoodEncoder.getPosition()))))
+				.andThen(runOnce(() -> maxHoodAngleTemp = Degrees.of(hoodEncoder.getPosition())))
+				.withName("Home Hood");
+	}
+
 	public Command hoodSetpoint(Angle angle) {
 		return Commands.runOnce(() -> setHoodAngle(angle))
 				.andThen(idle().until(() -> isHoodStalled() || isHoodAtPosition()))

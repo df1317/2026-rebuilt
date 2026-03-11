@@ -121,9 +121,11 @@ public final class Constants {
 		public static final int HOOD_CURRENT_LIMIT = 20;
 
 		public static final double HOOD_GEAR_RATIO = 24.0;
+		// Initial values excessive to ensure proper homing
+		public static Angle MIN_HOOD_ANGLE;
+		public static Angle MAX_HOOD_ANGLE;
 
-		public static final Angle MAX_HOOD = Degrees.of(180.0);
-		public static final Angle MIN_HOOD = Degrees.of(0.0);
+		public static final double HOOD_GEAR_RATIO = 12.0;
 
 		public static final AngularVelocity MAX_VELOCITY = DegreesPerSecond.of(1440);
 		public static final AngularAcceleration MAX_ACCELERATION = DegreesPerSecondPerSecond.of(1440);
@@ -166,6 +168,7 @@ public final class Constants {
 
 		public static final Distance MAX_HEIGHT = Meters.of(1.23);
 		public static final Distance MIN_HEIGHT = Meters.of(0.0);
+
 		public static final double ROTATIONS_PER_METER = 42.4;
 		public static final Distance POSITION_TOLERANCE = Centimeters.of(2);
 
