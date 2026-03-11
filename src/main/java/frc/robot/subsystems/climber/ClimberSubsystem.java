@@ -224,12 +224,12 @@ public class ClimberSubsystem extends SubsystemBase {
 	public Command homeCommandWithoutRatchet() {
 		return
 		// home min
-		runOnce(() -> goToHeightCommand(MIN_HEIGHT.minus(Meters.of(1))))
+		runOnce(() -> goToHeightCommand(MIN_HEIGHT.minus(MAX_HEIGHT)))
 				.andThen(idle().until(this::isClimberStalled))
 				.andThen(runOnce(() -> setGoalHeight(getHeightMeters())))
 				.andThen(runOnce(() -> minClimberHeightTemp = getHeightMeters()))
 				// home max
-				.andThen(() -> goToHeightCommand(MAX_HEIGHT.plus(Meters.of(1)))
+				.andThen(() -> goToHeightCommand(MAX_HEIGHT.plus(MAX_HEIGHT.minus(MIN_HEIGHT)))
 				.andThen(idle().until(this::isClimberStalled))
 				.andThen(runOnce(() -> setGoalHeight(getHeightMeters())))
 						.andThen(runOnce(() -> maxClimberHeightTemp = getHeightMeters())))
