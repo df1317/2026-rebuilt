@@ -1,11 +1,17 @@
 package frc.robot;
 
+import static edu.wpi.first.units.Units.Degree;
+import static edu.wpi.first.units.Units.Meters;
+
+import java.io.File;
+
 import dev.doglog.DogLog;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.networktables.BooleanSubscriber;
+import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -29,10 +35,6 @@ import frc.robot.subsystems.shooter.ShooterSubsystem;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
 import frc.robot.util.FieldZones;
 import swervelib.SwerveInputStream;
-
-import java.io.File;
-
-import static edu.wpi.first.units.Units.Meters;
 
 public class RobotContainer {
 
@@ -129,11 +131,24 @@ public class RobotContainer {
 			// Left bumper toggle: field relative
 			driverXbox.leftBumper().onTrue(Commands.runOnce(() -> robotRelative = !robotRelative));
 		}
+		if (Constants.ENABLE_SHOOTER) {
+			driverXbox.rightTrigger(0.3).whileTrue(Commands.runOnce(() -> {
+				System.out.println("move HOOD! 1");
+				final Angle newSetpoint = shooter.getTargetHoodAngle().plus(Degree.of(1));
+				shooter.hoodSetpoint(newSetpoint);
+			}));
+			driverXbox.leftTrigger(0.3).whileTrue(Commands.runOnce(() -> {
+				System.out.println("move HOOD! 2");
+				final Angle newSetpoint = shooter.getTargetHoodAngle().minus(Degree.of(1));
+				shooter.hoodSetpoint(newSetpoint);
+			}));
+		}
 
 		// ===== Test Mode Controls =====
 		if (DriverStation.isTest()) {
 			if (Constants.ENABLE_SHOOTER && shooter != null) {
 				m_JoystickL.button(4).onTrue(shooter.homeHoodCommand());
+				m_JoystickL.button(5).whileTrue(shooter.testFullMotorCommand());
 				m_JoystickL.button(7).whileTrue(shooter.testShooterMotorCommand());
 				m_JoystickL.button(8).whileTrue(shooter.testFeederCommand());
 				m_JoystickL.button(9).whileTrue(shooter.testHoodCommand());
@@ -175,7 +190,7 @@ public class RobotContainer {
 	private Command buildScoreAndClimbAuto(frc.robot.repulsor.Setpoints.GameSetpoint climbSetpoint) {
 		return Commands.sequence(
 				repulsor.navigateTo(
-								() -> _Rebuilt2026.HUB_SCORE_FRONT.poseForCurrentAlliance(SetpointContext.EMPTY))
+						() -> _Rebuilt2026.HUB_SCORE_FRONT.poseForCurrentAlliance(SetpointContext.EMPTY))
 						.until(repulsor.within(Meters.of(0.15))),
 				Commands.waitSeconds(1.0),
 				repulsor.navigateTo(
