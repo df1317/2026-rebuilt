@@ -64,7 +64,7 @@ public class ShooterSubsystem extends SubsystemBase {
 	public AngularVelocity targetFeederVelocity = RPM.of(0);
 	AngularVelocity targetVelocity = RPM.of(0);
 	Angle targetHoodAngle = Degrees.of(0);
-	private double hoodMaxDeg = Double.NaN;
+	double hoodMaxDeg = Double.NaN;
 
 	public ShooterSubsystem() {
 		feeder = new SparkMax(ShooterConstants.FEEDER_ID, MotorType.kBrushless);
