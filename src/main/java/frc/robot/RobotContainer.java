@@ -153,24 +153,8 @@ public class RobotContainer {
 				m_JoystickL.button(11).whileTrue(intake.testRollerCommand());
 			}
 			if (Constants.ENABLE_CLIMBER && climber != null) {
-				if (false) {
-					m_JoystickL.button(12).whileTrue(climber.testClimberCommand());
-					driverXbox.rightTrigger(0.7).whileTrue(Commands.runEnd(() -> {
-						System.out.println("CLIMBER GO UP");
-
-					}, () -> {
-						System.out.println("CLIMBER STOP");
-					}));
-					m_JoystickL.button(12).whileTrue(climber.testClimberCommand());
-					driverXbox.rightTrigger(0.7).whileTrue(Commands.runEnd(() -> {
-						System.out.println("CLIMBER GO DOWN");
-					}, () -> {
-						System.out.println("CLIMBER STOP");
-					}));
-				} else {
-					driverXbox.leftTrigger(0.7).whileTrue(
-							climber.manualControlCommand(() -> (m_JoystickL.getX() / 100)).unless(climber::isClimberStalled));
-				}
+				driverXbox.leftTrigger(0.7).whileTrue(
+						climber.manualControlCommand(() -> (m_JoystickL.getX() / 100)).unless(climber::isClimberStalled));
 			}
 			if (Constants.ENABLE_HOPPER && hopper != null) {
 				m_JoystickL.button(3).whileTrue(hopper.testHopperCommand());
