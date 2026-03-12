@@ -5,6 +5,7 @@ Quick reference documentation for robot controls and configuration.
 ## Documentation
 
 - [Logging & Error Handling](logging.md) - Centralized logging system with Elastic notifications
+- [Shooter](shooter.md) - Flywheel, feeder, hood homing, and distance lookup table
 
 ## Controls
 
@@ -26,16 +27,17 @@ In test mode, hold a button on the joystick to run individual motors at values s
 
 #### Joystick (Operator) [`Port 1`]
 
-| Binding     | Action              | Tunables                |
-|-------------|---------------------|-------------------------|
-| `Button 3`  | Test hopper         | `Test/HopperRPM`       |
-| `Button 4`  | Home hood           | *(auto — finds limits via stall detection)* |
-| `Button 7`  | Test shooter motor  | `Test/ShooterRPM`      |
-| `Button 8`  | Test feeder motor   | `Test/FeederRPM`       |
-| `Button 9`  | Test hood angle     | `Test/HoodAngleDeg`    |
-| `Button 10` | Test intake pivot   | `Test/IntakePivotDeg`  |
-| `Button 11` | Test intake roller  | `Test/IntakeRollerRPM` |
-| `Button 12` | Test climber        | `Test/ClimberHeightM`  |
+| Binding     | Action                       | Notes                                        |
+|-------------|------------------------------|----------------------------------------------|
+| `Button 3`  | Test hopper                  | Tunable: `Test/HopperRPM`                   |
+| `Button 4`  | Auto-home hood               | Drives to hard stops via stall detection     |
+| `Button 5`  | Mark hood min here           | See [Shooter docs](shooter.md#manual-homing) |
+| `Button 6`  | Mark hood max here           | See [Shooter docs](shooter.md#manual-homing) |
+| `Button 7`  | Test shooter motor           | Tunable: `Test/ShooterRPM`                  |
+| `Button 8`  | Test feeder motor            | Tunable: `Test/FeederRPM`                   |
+| `Button 9`  | Jog hood (hold + joystick)   | Holds position on release                    |
+| `Button 10` | Test intake pivot            | Tunable: `Test/IntakePivotDeg`              |
+| `Button 11` | Test intake roller           | Tunable: `Test/IntakeRollerRPM`             |
 
 #### Dashboard Toggles
 

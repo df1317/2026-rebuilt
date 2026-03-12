@@ -1,5 +1,6 @@
 package frc.robot.subsystems.shooter;
 
+import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.RPM;
 
 import dev.doglog.DogLog;
@@ -45,7 +46,7 @@ public class ShooterTelemetry {
 
 		// Hood
 		DogLog.log("Shooter/Hood/CurrentPosition", shooter.hoodEncoder.getPosition());
-		DogLog.log("Shooter/Hood/TargetPosition", shooter.targetHoodAngle);
+		DogLog.log("Shooter/Hood/TargetPosition", shooter.targetHoodAngle.in(Degrees));
 		DogLog.log("Shooter/Hood/CurrentAmps", shooter.hood.getOutputCurrent());
 	}
 
