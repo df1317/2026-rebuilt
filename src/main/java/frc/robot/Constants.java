@@ -1,28 +1,13 @@
 package frc.robot;
 
-import static edu.wpi.first.units.Units.Centimeters;
-import static edu.wpi.first.units.Units.Degrees;
-import static edu.wpi.first.units.Units.DegreesPerSecond;
-import static edu.wpi.first.units.Units.DegreesPerSecondPerSecond;
-import static edu.wpi.first.units.Units.Inches;
-import static edu.wpi.first.units.Units.Meters;
-import static edu.wpi.first.units.Units.MetersPerSecond;
-import static edu.wpi.first.units.Units.MetersPerSecondPerSecond;
-import static edu.wpi.first.units.Units.RPM;
-import static edu.wpi.first.units.Units.Volts;
-
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.units.measure.AngularAcceleration;
-import edu.wpi.first.units.measure.AngularVelocity;
-import edu.wpi.first.units.measure.Distance;
-import edu.wpi.first.units.measure.LinearAcceleration;
-import edu.wpi.first.units.measure.LinearVelocity;
-import edu.wpi.first.units.measure.Voltage;
+import edu.wpi.first.units.measure.*;
 import frc.robot.util.DevMode;
 import swervelib.math.Matter;
 import swervelib.telemetry.SwerveDriveTelemetry.TelemetryVerbosity;
+
+import static edu.wpi.first.units.Units.*;
 
 public final class Constants {
 
@@ -121,9 +106,6 @@ public final class Constants {
 		public static final int HOOD_CURRENT_LIMIT = 20;
 
 		public static final double HOOD_GEAR_RATIO = 24.0;
-
-		public static final Angle MAX_HOOD = Degrees.of(180.0);
-		public static final Angle MIN_HOOD = Degrees.of(0.0);
 
 		public static final AngularVelocity MAX_VELOCITY = DegreesPerSecond.of(1440);
 		public static final AngularAcceleration MAX_ACCELERATION = DegreesPerSecondPerSecond.of(1440);

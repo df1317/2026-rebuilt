@@ -53,6 +53,11 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Constants.ShooterConstants;
 
+import java.util.function.Supplier;
+
+import static edu.wpi.first.units.Units.*;
+import static frc.robot.Constants.ShooterConstants.*;
+
 /**
  * Subsystem controlling a single-motor flywheel shooter.
  */
@@ -85,17 +90,16 @@ public class ShooterSubsystem extends SubsystemBase {
 
 	private final TrapezoidProfile profile;
 	private final ElevatorFeedforward feedforward;
-	TrapezoidProfile.State currentState = new TrapezoidProfile.State();
-	TrapezoidProfile.State goalState = new TrapezoidProfile.State();
-	private double lastUpdateTimestamp;
-
-	// ==================== Control State (package-private for telemetry) ====================
-	AngularVelocity targetVelocity = RPM.of(0);
-	public AngularVelocity targetFeederVelocity = RPM.of(0);
-	Angle targetHoodAngle = Degrees.of(0);
-
 	// ==================== Telemetry ====================
 	private final ShooterTelemetry telemetry;
+	public AngularVelocity targetFeederVelocity = RPM.of(0);
+	TrapezoidProfile.State currentState = new TrapezoidProfile.State();
+	TrapezoidProfile.State goalState = new TrapezoidProfile.State();
+	// ==================== Control State (package-private for telemetry) ====================
+	AngularVelocity targetVelocity = RPM.of(0);
+	Angle targetHoodAngle = Degrees.of(0);
+	private double lastUpdateTimestamp;
+	private double hoodMaxDeg = Double.NaN;
 
 	public ShooterSubsystem() {
 		feeder = new SparkMax(ShooterConstants.FEEDER_ID, MotorType.kBrushless);
@@ -319,6 +323,17 @@ public class ShooterSubsystem extends SubsystemBase {
 		hoodController.setSetpoint(angle.in(Degrees), ControlType.kPosition);
 	}
 
+	/** Sets the hood to a percentage of its full range. 0.0 = min stop, 1.0 = max stop. */
+	public void setHoodPercent(double percent) {
+		if (Double.isNaN(hoodMaxDeg))
+			return; // not homed yet
+		setHoodAngle(Degrees.of(percent * hoodMaxDeg));
+	}
+
+	public boolean isHoodHomed() {
+		return !Double.isNaN(hoodMaxDeg);
+	}
+
 	public void HoodStop() {
 		// return Commands.runOnce(() -> {
 		// System.out.println("STOP HOOD!");
@@ -407,31 +422,48 @@ public class ShooterSubsystem extends SubsystemBase {
 
 	public Command homeHoodCommand() {
 		return Commands.sequence(
+				// Disable soft limits so homing can reach the hard stops
+				Commands.runOnce(() -> {
+					SparkMaxConfig config = new SparkMaxConfig();
+					config.softLimit
+							.forwardSoftLimitEnabled(false)
+							.reverseSoftLimitEnabled(false);
+					hood.configure(config, ResetMode.kNoResetSafeParameters,
+							PersistMode.kNoPersistParameters);
+				}, this),
 				// Drive hood toward min stop
-				Commands.runOnce(() -> hood.setVoltage(-ShooterConstants.HOOD_HOMING_VOLTAGE)),
-				Commands.waitUntil(this::isHoodStalled),
+				Commands.runOnce(() -> {
+					stallDebouncer.calculate(false); // reset stale debouncer state
+					hood.setVoltage(-ShooterConstants.HOOD_HOMING_VOLTAGE);
+				}),
+				Commands.waitUntil(this::isHoodStalled).withTimeout(5.0),
 				Commands.runOnce(() -> {
 					hood.stopMotor();
 					hoodEncoder.setPosition(0.0);
 				}),
 				Commands.waitSeconds(0.25),
 				// Drive hood toward max stop
-				Commands.runOnce(() -> hood.setVoltage(ShooterConstants.HOOD_HOMING_VOLTAGE)),
-				Commands.waitUntil(this::isHoodStalled),
+				Commands.runOnce(() -> {
+					stallDebouncer.calculate(false); // reset debouncer between phases
+					hood.setVoltage(ShooterConstants.HOOD_HOMING_VOLTAGE);
+				}),
+				Commands.waitUntil(this::isHoodStalled).withTimeout(5.0),
 				Commands.runOnce(() -> {
 					hood.stopMotor();
-					double maxDeg = hoodEncoder.getPosition();
-					DogLog.log("Shooter/HoodMaxDeg", maxDeg);
-					// Apply soft limits
+					hoodMaxDeg = hoodEncoder.getPosition();
+					DogLog.log("Shooter/HoodMaxDeg", hoodMaxDeg);
+					// Apply soft limits based on measured range
 					SparkMaxConfig config = new SparkMaxConfig();
 					config.softLimit
-							.forwardSoftLimit((float) maxDeg)
+							.forwardSoftLimit((float) hoodMaxDeg)
 							.forwardSoftLimitEnabled(true)
 							.reverseSoftLimit(0.0f)
 							.reverseSoftLimitEnabled(true);
 					hood.configure(config, ResetMode.kNoResetSafeParameters,
 							PersistMode.kNoPersistParameters);
-				})).finallyDo(() -> hood.stopMotor()).withName("Home Hood");
+				}))
+				.finallyDo(hood::stopMotor)
+				.withName("Home Hood");
 	}
 
 	// ==================== SysId ====================
