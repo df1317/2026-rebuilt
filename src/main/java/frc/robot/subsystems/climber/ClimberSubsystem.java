@@ -6,6 +6,7 @@ import static edu.wpi.first.units.Units.MetersPerSecondPerSecond;
 import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.Volts;
 import static frc.robot.Constants.ClimberConstants.CURRENT_LIMIT;
+import static frc.robot.Constants.ClimberConstants.INVERTED;
 import static frc.robot.Constants.ClimberConstants.KD;
 import static frc.robot.Constants.ClimberConstants.KG;
 import static frc.robot.Constants.ClimberConstants.KI;
@@ -23,11 +24,12 @@ import static frc.robot.Constants.ClimberConstants.ROTATIONS_PER_METER;
 import java.util.function.DoubleSupplier;
 
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import dev.doglog.DogLog;
 import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.signals.InvertedValue;
 
+import dev.doglog.DogLog;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ElevatorFeedforward;
 import edu.wpi.first.math.filter.Debouncer;
@@ -84,6 +86,9 @@ public class ClimberSubsystem extends SubsystemBase {
 		configs.CurrentLimits.SupplyCurrentLimit = CURRENT_LIMIT;
 		configs.CurrentLimits.SupplyCurrentLimitEnable = true;
 
+		configs.MotorOutput.Inverted = INVERTED ? InvertedValue.Clockwise_Positive
+				: InvertedValue.CounterClockwise_Positive;
+
 		motorLeft.getConfigurator().apply(configs);
 
 		profile = new TrapezoidProfile(new TrapezoidProfile.Constraints(MAX_VELOCITY.in(MetersPerSecond),
@@ -135,8 +140,13 @@ public class ClimberSubsystem extends SubsystemBase {
 		lastUpdateTimestamp = now;
 
 		double measuredHeight = getHeightMeters();
-
 		currentState = profile.calculate(dt, currentState, goalState);
+		if (isClimberStalled()) {
+			stop();
+			motorLeft.stopMotor();
+			return;
+		}
+
 		if (!velocityMode) {
 			if (canMove(currentState.velocity)) {
 				double ff = feedforward.calculate(currentState.velocity);
@@ -197,7 +207,7 @@ public class ClimberSubsystem extends SubsystemBase {
 	}
 
 	private void setGoalHeight(double heightMeters) {
-		System.out.println("go to height " + heightMeters);
+		// System.out.println("go to height " + heightMeters);
 		goalState.position = heightMeters;
 		goalState.velocity = 0.0;
 		velocityMode = false;
@@ -208,7 +218,7 @@ public class ClimberSubsystem extends SubsystemBase {
 		targetVelocity = velo;
 	}
 
-	private void stop() {
+	public void stop() {
 		goalState.position = currentState.position;
 		goalState.velocity = 0.0;
 		targetVelocity = RPM.of(0);
@@ -243,6 +253,7 @@ public class ClimberSubsystem extends SubsystemBase {
 	public Command manualControlCommand(DoubleSupplier speedInput) {
 		return Commands.run(() -> {
 			double input = speedInput.getAsDouble();
+			System.out.println("add to goal position! " + input);
 			goalState.position += input;
 		}, this).finallyDo(this::stop);
 	}

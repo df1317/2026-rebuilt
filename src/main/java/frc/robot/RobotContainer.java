@@ -131,7 +131,7 @@ public class RobotContainer {
 			// Left bumper toggle: field relative
 			driverXbox.leftBumper().onTrue(Commands.runOnce(() -> robotRelative = !robotRelative));
 		}
-		if (Constants.ENABLE_SHOOTER) {
+		if (Constants.ENABLE_SHOOTER && false) {
 			driverXbox.rightTrigger(0.3).whileTrue(Commands.runEnd(() -> {
 				// System.out.println("move HOOD! 1");
 				final Angle newSetpoint = shooter.getTargetHoodAngle().plus(Degree.of(5));
@@ -158,7 +158,24 @@ public class RobotContainer {
 				m_JoystickL.button(11).whileTrue(intake.testRollerCommand());
 			}
 			if (Constants.ENABLE_CLIMBER && climber != null) {
-				m_JoystickL.button(12).whileTrue(climber.testClimberCommand());
+				if (false) {
+					m_JoystickL.button(12).whileTrue(climber.testClimberCommand());
+					driverXbox.rightTrigger(0.7).whileTrue(Commands.runEnd(() -> {
+						System.out.println("CLIMBER GO UP");
+
+					}, () -> {
+						System.out.println("CLIMBER STOP");
+					}));
+					m_JoystickL.button(12).whileTrue(climber.testClimberCommand());
+					driverXbox.rightTrigger(0.7).whileTrue(Commands.runEnd(() -> {
+						System.out.println("CLIMBER GO DOWN");
+					}, () -> {
+						System.out.println("CLIMBER STOP");
+					}));
+				} else {
+					driverXbox.leftTrigger(0.7).whileTrue(
+							climber.manualControlCommand(() -> (m_JoystickL.getX() / 100)).unless(climber::isClimberStalled));
+				}
 			}
 			if (Constants.ENABLE_HOPPER && hopper != null) {
 				m_JoystickL.button(3).whileTrue(hopper.testHopperCommand());
