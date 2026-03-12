@@ -3,7 +3,6 @@ package frc.robot.subsystems.climber;
 import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.MetersPerSecond;
 import static edu.wpi.first.units.Units.MetersPerSecondPerSecond;
-import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.Volts;
 import static frc.robot.Constants.ClimberConstants.CURRENT_LIMIT;
 import static frc.robot.Constants.ClimberConstants.INVERTED;
@@ -25,7 +24,6 @@ import java.util.function.DoubleSupplier;
 
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.PositionVoltage;
-import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 
@@ -35,7 +33,6 @@ import edu.wpi.first.math.controller.ElevatorFeedforward;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.networktables.DoubleSubscriber;
-import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.MutDistance;
 import edu.wpi.first.units.measure.MutLinearVelocity;
 import edu.wpi.first.units.measure.MutVoltage;
@@ -52,9 +49,6 @@ public class ClimberSubsystem extends SubsystemBase {
 
 	final TalonFX motorLeft;
 
-	private boolean velocityMode = false;
-	private AngularVelocity targetVelocity = RPM.of(0);
-
 	private final TrapezoidProfile profile;
 	private final ElevatorFeedforward feedforward;
 	TrapezoidProfile.State currentState = new TrapezoidProfile.State();
@@ -65,6 +59,20 @@ public class ClimberSubsystem extends SubsystemBase {
 	private final MutDistance distance = Meters.mutable(0);
 	private final MutLinearVelocity velocity = MetersPerSecond.mutable(0);
 	private final SysIdRoutine sysIdRoutine;
+
+	private final DoubleSubscriber SUB_KP = DogLog.tunable("Test/CLIMBER_KP", KP);
+	private final DoubleSubscriber SUB_KI = DogLog.tunable("Test/CLIMBER_KI", KI);
+	private final DoubleSubscriber SUB_KD = DogLog.tunable("Test/CLIMBER_KP", KD);
+	private final DoubleSubscriber SUB_KV = DogLog.tunable("Test/CLIMBER_KV", KV);
+	private final DoubleSubscriber SUB_KS = DogLog.tunable("Test/CLIMBER_KS", KS);
+	private final DoubleSubscriber SUB_KG = DogLog.tunable("Test/CLIMBER_KS", KS);
+
+	double prevKP = SUB_KP.getAsDouble();
+	double prevKI = SUB_KI.getAsDouble();
+	double prevKD = SUB_KD.getAsDouble();
+	double prevKV = SUB_KV.getAsDouble();
+	double prevKS = SUB_KS.getAsDouble();
+	double prevKG = SUB_KG.getAsDouble();
 
 	private final DoubleSubscriber testClimberHeight = DogLog.tunable("Test/ClimberHeightM",
 			MAX_HEIGHT.in(Meters), Meters);
@@ -123,7 +131,6 @@ public class ClimberSubsystem extends SubsystemBase {
 		currentState.position = getHeightMeters();
 		currentState.velocity = 0.0;
 		goalState.velocity = 0.0;
-		targetVelocity = RPM.of(0);
 	}
 
 	boolean prevEnabled = false;
@@ -134,6 +141,32 @@ public class ClimberSubsystem extends SubsystemBase {
 			onEnabled();
 		}
 		prevEnabled = DriverStation.isEnabled();
+
+		if (prevKP != SUB_KP.getAsDouble() || prevKI != SUB_KI.getAsDouble() || prevKD != SUB_KD.getAsDouble()
+				|| prevKS != SUB_KS.getAsDouble() || prevKG != SUB_KG.getAsDouble() || prevKV != SUB_KV.getAsDouble()) {
+			prevKP = SUB_KP.getAsDouble();
+			prevKI = SUB_KI.getAsDouble();
+			prevKD = SUB_KD.getAsDouble();
+			prevKV = SUB_KV.getAsDouble();
+			prevKS = SUB_KS.getAsDouble();
+			prevKG = SUB_KG.getAsDouble();
+
+			TalonFXConfiguration configs = new TalonFXConfiguration();
+			configs.Slot0.kP = SUB_KP.getAsDouble();
+			configs.Slot0.kI = SUB_KI.getAsDouble();
+			configs.Slot0.kD = SUB_KD.getAsDouble();
+			configs.Slot0.kV = SUB_KV.getAsDouble();
+			configs.Slot0.kA = SUB_KG.getAsDouble();
+			configs.Slot0.kS = SUB_KS.getAsDouble();
+
+			configs.CurrentLimits.SupplyCurrentLimit = CURRENT_LIMIT;
+			configs.CurrentLimits.SupplyCurrentLimitEnable = true;
+
+			configs.MotorOutput.Inverted = INVERTED ? InvertedValue.Clockwise_Positive
+					: InvertedValue.CounterClockwise_Positive;
+
+			motorLeft.getConfigurator().apply(configs);
+		}
 
 		double now = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
 		double dt = now - lastUpdateTimestamp;
@@ -146,19 +179,14 @@ public class ClimberSubsystem extends SubsystemBase {
 			motorLeft.stopMotor();
 			return;
 		}
-
-		if (!velocityMode) {
-			if (canMove(currentState.velocity)) {
-				double ff = feedforward.calculate(currentState.velocity);
-				motorLeft.setControl(
-						new PositionVoltage(currentState.position * ROTATIONS_PER_METER).withFeedForward(ff));
-			} else {
-				currentState.position = measuredHeight;
-				currentState.velocity = 0.0;
-				motorLeft.stopMotor();
-			}
+		if (canMove(currentState.velocity)) {
+			double ff = feedforward.calculate(currentState.velocity);
+			motorLeft.setControl(
+					new PositionVoltage(currentState.position * ROTATIONS_PER_METER).withFeedForward(ff));
 		} else {
-			motorLeft.setControl(new VelocityVoltage(targetVelocity));
+			currentState.position = measuredHeight;
+			currentState.velocity = 0.0;
+			motorLeft.stopMotor();
 		}
 
 		telemetry.log();
@@ -210,18 +238,13 @@ public class ClimberSubsystem extends SubsystemBase {
 		// System.out.println("go to height " + heightMeters);
 		goalState.position = heightMeters;
 		goalState.velocity = 0.0;
-		velocityMode = false;
-	}
-
-	private void setGoalVelocity(AngularVelocity velo) {
-		velocityMode = true;
-		targetVelocity = velo;
 	}
 
 	public void stop() {
-		goalState.position = currentState.position;
+		goalState.position = getHeightMeters();
+		currentState.position = getHeightMeters();
+		currentState.velocity = 0.0;
 		goalState.velocity = 0.0;
-		targetVelocity = RPM.of(0);
 		motorLeft.stopMotor();
 	}
 
@@ -243,10 +266,6 @@ public class ClimberSubsystem extends SubsystemBase {
 	public Command goToHeightCommand(DoubleSupplier heightMeters) {
 		return Commands.runOnce(() -> setGoalHeight(heightMeters.getAsDouble()), this)
 				.andThen(Commands.waitUntil(this::isAtGoal)).withTimeout(GO_TO_HEIGHT_TIMEOUT_SECONDS);
-	}
-
-	public Command goToVelocityCommand(AngularVelocity velo) {
-		return Commands.runOnce(() -> this.setGoalVelocity(velo));
 	}
 
 	/** Manual control; holds position when released. */
