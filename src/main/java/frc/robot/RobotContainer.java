@@ -1,10 +1,6 @@
 package frc.robot;
 
 import dev.doglog.DogLog;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation3d;
-import edu.wpi.first.math.geometry.Transform3d;
-import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.networktables.BooleanSubscriber;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
@@ -20,8 +16,6 @@ import frc.robot.commands.TeleopZoneAutomation;
 import frc.robot.repulsor.Repulsor;
 import frc.robot.repulsor.Setpoints.SetpointContext;
 import frc.robot.repulsor.Setpoints.Specific._Rebuilt2026;
-import frc.robot.repulsor.Tracking.FieldTrackerCore;
-import frc.robot.repulsor.Tracking.Vision.FieldVision;
 import frc.robot.subsystems.climber.ClimberSubsystem;
 import frc.robot.subsystems.hopper.HopperSubsystem;
 import frc.robot.subsystems.intake.IntakeSubsystem;
@@ -53,8 +47,6 @@ public class RobotContainer {
 	// Repulsor
 	private final Repulsor repulsor;
 	private final SwerveInputStream driveAngularVelocity;
-	// Ball camera vision
-	private final FieldVision ballCamera;
 	// Teleop automation
 	private final TeleopZoneAutomation teleopAutomation;
 	public boolean robotRelative = false;
@@ -72,13 +64,6 @@ public class RobotContainer {
 			// Initialize Repulsor path planner
 			repulsor = new Repulsor(drivebase,
 					DrivebaseConstants.ROBOT_HALF_LENGTH, DrivebaseConstants.ROBOT_HALF_WIDTH);
-
-			// Create FieldVision for YOLO camera
-			// TODO: measure actual camera mount position and angle on robot
-			ballCamera = FieldTrackerCore.getInstance().createFieldVision("yolo",
-					new Transform3d(
-							new Translation3d(0.3, 0.0, 0.4),
-							new Rotation3d(0.0, Math.toRadians(-15.0), 0.0)));
 
 			// Setup teleop automation
 			teleopAutomation = new TeleopZoneAutomation(
@@ -201,12 +186,10 @@ public class RobotContainer {
 				repulsor.navigateTo(() -> scoreSetpoint.poseForCurrentAlliance(SetpointContext.EMPTY))
 						.until(repulsor.within(Meters.of(0.15))),
 				Commands.waitSeconds(0.5),
-				// Collect (vision-aware)
-				repulsor.navigateTo(() -> {
-					Pose2d collectPose = FieldTrackerCore.getInstance()
-							.nextCollectionGoalBlue(drivebase.getPose(), 0.0, 0);
-					return collectPose;
-				}).until(repulsor.within(Meters.of(0.15))),
+				// Collect
+				repulsor.navigateTo(
+						() -> _Rebuilt2026.CENTER_COLLECT.poseForCurrentAlliance(SetpointContext.EMPTY))
+						.until(repulsor.within(Meters.of(0.15))),
 				Commands.waitSeconds(1.0),
 				// Score again
 				repulsor.navigateTo(() -> scoreSetpoint.poseForCurrentAlliance(SetpointContext.EMPTY))
@@ -217,7 +200,7 @@ public class RobotContainer {
 	private Command buildScoreAndClimbAuto(frc.robot.repulsor.Setpoints.GameSetpoint climbSetpoint) {
 		return Commands.sequence(
 				repulsor.navigateTo(
-						() -> _Rebuilt2026.HUB_SCORE_FRONT.poseForCurrentAlliance(SetpointContext.EMPTY))
+								() -> _Rebuilt2026.HUB_SCORE_FRONT.poseForCurrentAlliance(SetpointContext.EMPTY))
 						.until(repulsor.within(Meters.of(0.15))),
 				Commands.waitSeconds(1.0),
 				repulsor.navigateTo(
@@ -240,13 +223,9 @@ public class RobotContainer {
 		if (repulsor != null) {
 			repulsor.update();
 		}
-		if (ballCamera != null && drivebase != null) {
-			ballCamera.update(drivebase.getPose());
-		}
 	}
 
 	public void autonomousInit() {
-		FieldTrackerCore.getInstance().resetAll();
 	}
 
 	public void setMotorBrake(boolean brake) {

@@ -19,11 +19,10 @@
 
 package frc.robot.repulsor.Fields;
 
-import frc.robot.repulsor.Tracking.FieldTrackerCore;
 import frc.robot.repulsor.Tracking.Model.GameElement;
 
 public interface FieldLayoutProvider {
-	GameElement[] build(FieldTrackerCore ft);
+	GameElement[] build();
 
 	String gameName();
 

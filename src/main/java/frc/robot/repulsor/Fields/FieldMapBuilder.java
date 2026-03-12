@@ -28,11 +28,9 @@ import edu.wpi.first.units.measure.Distance;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
 import frc.robot.repulsor.Setpoints.RepulsorSetpoint;
-import frc.robot.repulsor.Tracking.FieldTrackerCore;
 import frc.robot.repulsor.Tracking.Model.Alliance;
 import frc.robot.repulsor.Tracking.Model.GameElement;
 import frc.robot.repulsor.Tracking.Model.GameElementModel;
@@ -55,12 +53,10 @@ public final class FieldMapBuilder {
 		CategorySpec category = CategorySpec.kScore;
 	}
 
-	private final FieldTrackerCore ft;
 	private final List<GameElement> elements = new ArrayList<>();
 	private ElementSpec spec;
 
-	public FieldMapBuilder(FieldTrackerCore ft) {
-		this.ft = Objects.requireNonNull(ft);
+	public FieldMapBuilder() {
 	}
 
 	private ElementSpec s() {

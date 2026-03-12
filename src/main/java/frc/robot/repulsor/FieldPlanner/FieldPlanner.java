@@ -44,8 +44,6 @@ import frc.robot.repulsor.Force;
 import frc.robot.repulsor.HeadingGate;
 import frc.robot.repulsor.Setpoints.RepulsorSetpoint;
 import frc.robot.repulsor.Setpoints.SetpointContext;
-import frc.robot.repulsor.Tracking.FieldTrackerCore;
-import frc.robot.repulsor.Tracking.Model.Alliance;
 import frc.robot.repulsor.Tuning.DefaultDriveTuning;
 import frc.robot.repulsor.Tuning.DefaultTurnTuning;
 import frc.robot.repulsor.Tuning.DriveTuning;
@@ -309,12 +307,7 @@ public class FieldPlanner {
 			}
 
 			if (pathBlocked && !suppressFallback) {
-				Alliance preferred = DriverStation.getAlliance().isPresent()
-						&& DriverStation.getAlliance().get() == DriverStation.Alliance.Blue
-								? Alliance.kBlue
-								: Alliance.kRed;
-
-				var cands = FieldTrackerCore.getInstance().getPredictedSetpoints(preferred, curTrans, 3.5, cat, 8);
+				var cands = Collections.<RepulsorSetpoint>emptyList();
 
 				SetpointContext spCtx = new SetpointContext(
 						Optional.of(pose),
