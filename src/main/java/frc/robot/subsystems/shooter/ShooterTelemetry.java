@@ -3,7 +3,6 @@ package frc.robot.subsystems.shooter;
 import dev.doglog.DogLog;
 import edu.wpi.first.wpilibj.util.Color;
 
-import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.RPM;
 
 /**
@@ -45,8 +44,8 @@ public class ShooterTelemetry {
 		DogLog.log("Shooter/Feeder/CurrentAmps", shooter.feeder.getOutputCurrent());
 
 		// Hood
-		DogLog.log("Shooter/Hood/CurrentPosition", shooter.hoodEncoder.getPosition());
-		DogLog.log("Shooter/Hood/TargetPosition", shooter.targetHoodAngle.in(Degrees));
+		DogLog.log("Shooter/Hood/CurrentPercent", shooter.isHoodHomed() ? shooter.hoodEncoder.getPosition() / shooter.hoodMaxDeg : 0.0);
+		DogLog.log("Shooter/Hood/TargetPercent", shooter.getTargetHoodPercent());
 		DogLog.log("Shooter/Hood/CurrentAmps", shooter.hood.getOutputCurrent());
 		DogLog.log("Shooter/Hood/Homed", shooter.isHoodHomed());
 		DogLog.forceNt.log("Shooter/Hood/MaxDeg", shooter.hoodMaxDeg);

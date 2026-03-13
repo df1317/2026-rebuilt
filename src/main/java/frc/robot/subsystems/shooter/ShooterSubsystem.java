@@ -56,7 +56,7 @@ public class ShooterSubsystem extends SubsystemBase {
 	private final VelocityVoltage velocityVoltageRequest = new VelocityVoltage(0);
 	private final DoubleSubscriber testShooterRPM = DogLog.tunable("Test/ShooterRPM", 3000.0, RPM);
 	private final DoubleSubscriber testFeederRPM = DogLog.tunable("Test/FeederRPM", 3000.0, RPM);
-	private final DoubleSubscriber testHoodDeg = DogLog.tunable("Test/HoodAngleDeg", 45.0, Degrees);
+	private final DoubleSubscriber testHoodPercent = DogLog.tunable("Test/HoodPercent", 0.5);
 
 	// ==================== Telemetry ====================
 	private final ShooterTelemetry telemetry;
@@ -304,7 +304,7 @@ public class ShooterSubsystem extends SubsystemBase {
 	}
 
 	public Command testHoodCommand() {
-		return Commands.run(() -> setHoodAngle(Degrees.of(testHoodDeg.get())), this)
+		return Commands.run(() -> setHoodPercent(testHoodPercent.get()), this)
 				.finallyDo(hood::stopMotor)
 				.withName("Test Hood");
 	}
