@@ -58,6 +58,23 @@ public class ShooterSubsystem extends SubsystemBase {
 	private final DoubleSubscriber testFeederRPM = DogLog.tunable("Test/FeederRPM", 3000.0, RPM);
 	private final DoubleSubscriber testHoodPercent = DogLog.tunable("Test/HoodPercent", 0.5);
 
+	// Shooter PID tunables (TalonFX)
+	private final DoubleSubscriber tuneShooterKP = DogLog.tunable("Shooter/Tuning/Shooter/kP", SHOOTER_KP);
+	private final DoubleSubscriber tuneShooterKI = DogLog.tunable("Shooter/Tuning/Shooter/kI", SHOOTER_KI);
+	private final DoubleSubscriber tuneShooterKD = DogLog.tunable("Shooter/Tuning/Shooter/kD", SHOOTER_KD);
+	private final DoubleSubscriber tuneShooterKV = DogLog.tunable("Shooter/Tuning/Shooter/kV", SHOOTER_KV);
+	private final DoubleSubscriber tuneShooterKS = DogLog.tunable("Shooter/Tuning/Shooter/kS", SHOOTER_KS);
+	private double prevShooterKP = SHOOTER_KP, prevShooterKI = SHOOTER_KI, prevShooterKD = SHOOTER_KD,
+			prevShooterKV = SHOOTER_KV, prevShooterKS = SHOOTER_KS;
+
+	// Feeder PID tunables (SparkMax)
+	private final DoubleSubscriber tuneFeederKP = DogLog.tunable("Shooter/Tuning/Feeder/kP", FEEDER_KP);
+	private final DoubleSubscriber tuneFeederKI = DogLog.tunable("Shooter/Tuning/Feeder/kI", FEEDER_KI);
+	private final DoubleSubscriber tuneFeederKD = DogLog.tunable("Shooter/Tuning/Feeder/kD", FEEDER_KD);
+	private final DoubleSubscriber tuneFeederKV = DogLog.tunable("Shooter/Tuning/Feeder/kV", FEEDER_KV);
+	private double prevFeederKP = FEEDER_KP, prevFeederKI = FEEDER_KI, prevFeederKD = FEEDER_KD,
+			prevFeederKV = FEEDER_KV;
+
 	// ==================== Telemetry ====================
 	private final ShooterTelemetry telemetry;
 	// ==================== Control State (package-private for telemetry) ====================
@@ -153,6 +170,33 @@ public class ShooterSubsystem extends SubsystemBase {
 	@Override
 	public void periodic() {
 		telemetry.log();
+		updateShooterPIDIfChanged();
+		updateFeederPIDIfChanged();
+	}
+
+	private void updateShooterPIDIfChanged() {
+		double kP = tuneShooterKP.getAsDouble(), kI = tuneShooterKI.getAsDouble(),
+				kD = tuneShooterKD.getAsDouble(), kV = tuneShooterKV.getAsDouble(),
+				kS = tuneShooterKS.getAsDouble();
+		if (kP == prevShooterKP && kI == prevShooterKI && kD == prevShooterKD
+				&& kV == prevShooterKV && kS == prevShooterKS) return;
+		prevShooterKP = kP; prevShooterKI = kI; prevShooterKD = kD;
+		prevShooterKV = kV; prevShooterKS = kS;
+		var configs = new com.ctre.phoenix6.configs.Slot0Configs();
+		configs.kP = kP; configs.kI = kI; configs.kD = kD;
+		configs.kV = kV; configs.kS = kS;
+		motor.getConfigurator().apply(configs);
+	}
+
+	private void updateFeederPIDIfChanged() {
+		double kP = tuneFeederKP.getAsDouble(), kI = tuneFeederKI.getAsDouble(),
+				kD = tuneFeederKD.getAsDouble(), kV = tuneFeederKV.getAsDouble();
+		if (kP == prevFeederKP && kI == prevFeederKI && kD == prevFeederKD && kV == prevFeederKV) return;
+		prevFeederKP = kP; prevFeederKI = kI; prevFeederKD = kD; prevFeederKV = kV;
+		SparkMaxConfig config = new SparkMaxConfig();
+		config.closedLoop.pid(kP, kI, kD);
+		config.closedLoop.feedForward.kV(kV);
+		feeder.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
 	}
 
 	// ==================== State Queries ====================
