@@ -20,6 +20,24 @@ Quick reference documentation for robot controls and configuration.
 | `Button A`      | Zero gyro             | Resets gyro heading (once)                                |
 | `Left Bumper`   | Toggle field relative | Switches between field and robot relative driving         |
 | `Button Y`      | Auto aim              | Aims at hub while allowing translation (hold)             |
+| `Right Bumper`  | Fire (zone-aware)     | Hold to shoot + feed — only active in own alliance zone   |
+
+#### Dashboard Choosers
+
+| Chooser                | Options              | Description                                                   |
+|------------------------|----------------------|---------------------------------------------------------------|
+| `misc/Teleop Mode`     | Shuttle *(default)*, Shoot | **Shuttle**: auto-extends intake when in own zone. **Shoot**: no auto-intake. |
+
+### Zone Automation (`TeleopZoneAutomation`)
+
+Triggers activate automatically based on field position during teleop.
+
+| Condition                                      | Action                                                   |
+|------------------------------------------------|----------------------------------------------------------|
+| Shuttle mode + in own alliance zone            | Auto-extend intake and run rollers                       |
+| Right Bumper held + in own alliance zone       | Spin up shooter to hub distance, feed hopper concurrently |
+
+The shooter speed is calculated from the live robot-to-hub distance using the distance LUT (see [Shooter docs](shooter.md#distance-lut)).
 
 ### Test Mode
 

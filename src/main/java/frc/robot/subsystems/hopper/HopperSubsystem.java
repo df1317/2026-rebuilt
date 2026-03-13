@@ -139,6 +139,13 @@ public class HopperSubsystem extends SubsystemBase {
 		return runOnce(this::stopHopper).withName("Hopper Stop");
 	}
 
+	/** Runs the hopper at feed speed while held, stops on release. */
+	public Command feedCommand() {
+		return Commands.run(() -> setHopperVelocity(FEED_SPEED), this)
+				.finallyDo(this::stopHopper)
+				.withName("Hopper Feed");
+	}
+
 	public Command testHopperCommand() {
 		return Commands.run(() -> {
 			setHopperVelocity(RPM.of(testHopperRPM.get()));

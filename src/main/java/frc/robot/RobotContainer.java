@@ -1,10 +1,5 @@
 package frc.robot;
 
-import static edu.wpi.first.units.Units.Meters;
-import static edu.wpi.first.units.Units.RPM;
-
-import java.io.File;
-
 import dev.doglog.DogLog;
 import edu.wpi.first.networktables.BooleanSubscriber;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -26,8 +21,12 @@ import frc.robot.subsystems.hopper.HopperSubsystem;
 import frc.robot.subsystems.intake.IntakeSubsystem;
 import frc.robot.subsystems.shooter.ShooterSubsystem;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
-import frc.robot.util.FieldZones;
 import swervelib.SwerveInputStream;
+
+import java.io.File;
+
+import static edu.wpi.first.units.Units.Meters;
+import static edu.wpi.first.units.Units.RPM;
 
 public class RobotContainer {
 
@@ -53,23 +52,23 @@ public class RobotContainer {
 
 	public RobotContainer() {
 		if (Constants.ENABLE_SWERVE) {
-			driveAngularVelocity = SwerveInputStream
-					.of(drivebase.getSwerveDrive(), () -> driverXbox.getLeftY() * -1,
-							() -> driverXbox.getLeftX() * -1)
-					.withControllerRotationAxis(() -> driverXbox.getRightX() * -1)
-					.aim(FieldZones.HUB_POSE_RED).aimWhile(driverXbox.y())
-					.deadband(OperatorConstants.DEADBAND)
-					.scaleTranslation(DrivebaseConstants.TRANSLATION_SCALE).allianceRelativeControl(true);
-
 			// Initialize Repulsor path planner
 			repulsor = new Repulsor(drivebase,
 					DrivebaseConstants.ROBOT_HALF_LENGTH, DrivebaseConstants.ROBOT_HALF_WIDTH);
 
 			// Setup teleop automation
 			teleopAutomation = new TeleopZoneAutomation(
-					repulsor, intake, shooter,
+					repulsor, intake, shooter, hopper,
 					drivebase::getPose);
-			teleopAutomation.configureTriggers();
+			teleopAutomation.configureTriggers(driverXbox.rightBumper());
+
+			driveAngularVelocity = SwerveInputStream
+					.of(drivebase.getSwerveDrive(), () -> driverXbox.getLeftY() * -1,
+							() -> driverXbox.getLeftX() * -1)
+					.withControllerRotationAxis(() -> driverXbox.getRightX() * -1)
+					.aim(teleopAutomation.getShootingPose()).aimWhile(driverXbox.y())
+					.deadband(OperatorConstants.DEADBAND)
+					.scaleTranslation(DrivebaseConstants.TRANSLATION_SCALE).allianceRelativeControl(true);
 
 			// Build auto chooser
 			autoChooser = new SendableChooser<>();
