@@ -2,6 +2,7 @@ package frc.robot.commands;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.repulsor.Repulsor;
@@ -80,6 +81,12 @@ public class TeleopZoneAutomation {
 			return FieldZones.getHubPose(alliance);
 		else
 			return FieldZones.getShuttlePose(alliance, pos);
+	}
+
+	public Distance getTargetDistance() {
+		Translation2d pos = robotPose.get().getTranslation();
+		Translation2d target = getShootingPose().getTranslation();
+		return Meters.of(pos.getDistance(target));
 	}
 
 	public enum TeleopMode {

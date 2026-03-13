@@ -1,19 +1,5 @@
 package frc.robot.subsystems.hopper;
 
-import static edu.wpi.first.units.Units.RPM;
-import static frc.robot.Constants.HopperConstants.FEED_SPEED;
-import static frc.robot.Constants.HopperConstants.GEAR_RATIO;
-import static frc.robot.Constants.HopperConstants.HOPPER_CURRENT_LIMIT;
-import static frc.robot.Constants.HopperConstants.HOPPER_I_ZONE;
-import static frc.robot.Constants.HopperConstants.HOPPER_KD;
-import static frc.robot.Constants.HopperConstants.HOPPER_KI;
-import static frc.robot.Constants.HopperConstants.HOPPER_KP;
-import static frc.robot.Constants.HopperConstants.HOPPER_KV;
-import static frc.robot.Constants.HopperConstants.HOPPER_MOTOR_ID;
-import static frc.robot.Constants.HopperConstants.HOPPER_VELOCITY_TOLERANCE;
-import static frc.robot.Constants.HopperConstants.INVERTED;
-import static frc.robot.Constants.HopperConstants.REVERSE_SPEED;
-
 import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.ResetMode;
@@ -23,13 +9,17 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
-
 import dev.doglog.DogLog;
 import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+
+import java.util.function.Supplier;
+
+import static edu.wpi.first.units.Units.RPM;
+import static frc.robot.Constants.HopperConstants.*;
 
 /**
  * Hopper subsystem
@@ -39,18 +29,15 @@ public class HopperSubsystem extends SubsystemBase {
 	// ==================== Hardware (package-private for telemetry/visualization)
 	// ====================
 	final SparkMax hopperMotor;
-	private final SparkClosedLoopController hopperController;
 	final RelativeEncoder hopperEncoder;
-
+	private final SparkClosedLoopController hopperController;
+	// ==================== Visualization & Telemetry ====================
+	private final HopperTelemetry telemetry;
+	// ==================== Test Mode ====================
+	private final DoubleSubscriber testHopperRPM = DogLog.tunable("Test/HopperRPM", 2000.0);
 	// ==================== Control State (package-private for telemetry/visualization)
 	// ====================
 	AngularVelocity targetHopperVelocity = RPM.of(0);
-
-	// ==================== Visualization & Telemetry ====================
-	private final HopperTelemetry telemetry;
-
-	// ==================== Test Mode ====================
-	private final DoubleSubscriber testHopperRPM = DogLog.tunable("Test/HopperRPM", 2000.0);
 
 	public HopperSubsystem() {
 		hopperMotor = new SparkMax(HOPPER_MOTOR_ID, MotorType.kBrushless);
@@ -117,7 +104,6 @@ public class HopperSubsystem extends SubsystemBase {
 	// ==================== Control Methods ====================
 
 	public void setHopperVelocity(AngularVelocity velocity) {
-		targetHopperVelocity = velocity;
 		hopperController.setSetpoint(velocity.in(RPM), ControlType.kVelocity);
 	}
 
@@ -150,5 +136,13 @@ public class HopperSubsystem extends SubsystemBase {
 		return Commands.run(() -> {
 			setHopperVelocity(RPM.of(testHopperRPM.get()));
 		}, this).finallyDo(this::stopHopper).withName("Test Hopper");
+	}
+
+	public Command setHopperVelocity(Supplier<AngularVelocity> velocity) {
+		return Commands.run(() -> setHopperVelocity(velocity.get()), this);
+	}
+
+	public AngularVelocity getHopperTestRPM() {
+		return RPM.of(testHopperRPM.get());
 	}
 }
