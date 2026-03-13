@@ -47,281 +47,281 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 
 public class ClimberSubsystem extends SubsystemBase {
 
-  final TalonFX motorLeft;
-  boolean isStalled = false;
+	final TalonFX motorLeft;
+	boolean isStalled = false;
 
-  private final TrapezoidProfile profile;
-  private final ElevatorFeedforward feedforward;
-  TrapezoidProfile.State currentState = new TrapezoidProfile.State();
-  TrapezoidProfile.State goalState = new TrapezoidProfile.State();
-  private double lastUpdateTimestamp;
+	private final TrapezoidProfile profile;
+	private final ElevatorFeedforward feedforward;
+	TrapezoidProfile.State currentState = new TrapezoidProfile.State();
+	TrapezoidProfile.State goalState = new TrapezoidProfile.State();
+	private double lastUpdateTimestamp;
 
-  private final MutVoltage appliedVoltage = Volts.mutable(0);
-  private final MutDistance distance = Meters.mutable(0);
-  private final MutLinearVelocity velocity = MetersPerSecond.mutable(0);
-  private final SysIdRoutine sysIdRoutine;
+	private final MutVoltage appliedVoltage = Volts.mutable(0);
+	private final MutDistance distance = Meters.mutable(0);
+	private final MutLinearVelocity velocity = MetersPerSecond.mutable(0);
+	private final SysIdRoutine sysIdRoutine;
 
-  private final DoubleSubscriber SUB_KP = DogLog.tunable("Test/CLIMBER_KP", KP);
-  private final DoubleSubscriber SUB_KI = DogLog.tunable("Test/CLIMBER_KI", KI);
-  private final DoubleSubscriber SUB_KD = DogLog.tunable("Test/CLIMBER_KP", KD);
-  private final DoubleSubscriber SUB_KV = DogLog.tunable("Test/CLIMBER_KV", KV);
-  private final DoubleSubscriber SUB_KS = DogLog.tunable("Test/CLIMBER_KS", KS);
-  private final DoubleSubscriber SUB_KG = DogLog.tunable("Test/CLIMBER_KS", KS);
+	private final DoubleSubscriber SUB_KP = DogLog.tunable("Test/CLIMBER_KP", KP);
+	private final DoubleSubscriber SUB_KI = DogLog.tunable("Test/CLIMBER_KI", KI);
+	private final DoubleSubscriber SUB_KD = DogLog.tunable("Test/CLIMBER_KP", KD);
+	private final DoubleSubscriber SUB_KV = DogLog.tunable("Test/CLIMBER_KV", KV);
+	private final DoubleSubscriber SUB_KS = DogLog.tunable("Test/CLIMBER_KS", KS);
+	private final DoubleSubscriber SUB_KG = DogLog.tunable("Test/CLIMBER_KS", KS);
 
-  double prevKP = SUB_KP.getAsDouble();
-  double prevKI = SUB_KI.getAsDouble();
-  double prevKD = SUB_KD.getAsDouble();
-  double prevKV = SUB_KV.getAsDouble();
-  double prevKS = SUB_KS.getAsDouble();
-  double prevKG = SUB_KG.getAsDouble();
+	double prevKP = SUB_KP.getAsDouble();
+	double prevKI = SUB_KI.getAsDouble();
+	double prevKD = SUB_KD.getAsDouble();
+	double prevKV = SUB_KV.getAsDouble();
+	double prevKS = SUB_KS.getAsDouble();
+	double prevKG = SUB_KG.getAsDouble();
 
-  private final DoubleSubscriber testClimberHeight = DogLog.tunable("Test/ClimberHeightM",
-      MAX_HEIGHT.in(Meters), Meters);
+	private final DoubleSubscriber testClimberHeight = DogLog.tunable("Test/ClimberHeightM",
+			MAX_HEIGHT.in(Meters), Meters);
 
-  private final ClimberVisualization visualization;
-  private final ClimberTelemetry telemetry;
+	private final ClimberVisualization visualization;
+	private final ClimberTelemetry telemetry;
 
-  public ClimberSubsystem() {
-    motorLeft = new TalonFX(MOTOR_LEFT_ID);
+	public ClimberSubsystem() {
+		motorLeft = new TalonFX(MOTOR_LEFT_ID);
 
-    TalonFXConfiguration configs = new TalonFXConfiguration();
-    configs.Slot0.kP = KP;
-    configs.Slot0.kI = KI;
-    configs.Slot0.kD = KD;
-    configs.Slot0.kV = KV;
-    configs.Slot0.kA = KG;
-    configs.Slot0.kS = KS;
+		TalonFXConfiguration configs = new TalonFXConfiguration();
+		configs.Slot0.kP = KP;
+		configs.Slot0.kI = KI;
+		configs.Slot0.kD = KD;
+		configs.Slot0.kV = KV;
+		configs.Slot0.kA = KG;
+		configs.Slot0.kS = KS;
 
-    configs.CurrentLimits.SupplyCurrentLimit = CURRENT_LIMIT;
-    configs.CurrentLimits.SupplyCurrentLimitEnable = true;
+		configs.CurrentLimits.SupplyCurrentLimit = CURRENT_LIMIT;
+		configs.CurrentLimits.SupplyCurrentLimitEnable = true;
 
-    configs.MotorOutput.Inverted = INVERTED ? InvertedValue.Clockwise_Positive
-        : InvertedValue.CounterClockwise_Positive;
+		configs.MotorOutput.Inverted = INVERTED ? InvertedValue.Clockwise_Positive
+				: InvertedValue.CounterClockwise_Positive;
 
-    motorLeft.getConfigurator().apply(configs);
+		motorLeft.getConfigurator().apply(configs);
 
-    profile = new TrapezoidProfile(new TrapezoidProfile.Constraints(MAX_VELOCITY.in(MetersPerSecond),
-        MAX_ACCELERATION.in(MetersPerSecondPerSecond)));
-    feedforward = new ElevatorFeedforward(KS, KG, KV);
+		profile = new TrapezoidProfile(new TrapezoidProfile.Constraints(MAX_VELOCITY.in(MetersPerSecond),
+				MAX_ACCELERATION.in(MetersPerSecondPerSecond)));
+		feedforward = new ElevatorFeedforward(KS, KG, KV);
 
-    lastUpdateTimestamp = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
+		lastUpdateTimestamp = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
 
-    sysIdRoutine = new SysIdRoutine(
-        new SysIdRoutine.Config(null, Voltage.ofBaseUnits(5, Volts), null, null),
-        new SysIdRoutine.Mechanism(
-            (Voltage volts) -> motorLeft.setVoltage(volts.baseUnitMagnitude()),
-            log -> log.motor("climber")
-                .voltage(appliedVoltage.mut_replace(motorLeft.getMotorVoltage().getValueAsDouble()
-                    * motorLeft.getDutyCycle().getValueAsDouble(), Volts))
-                .linearPosition(distance.mut_replace(getHeightMeters(), Meters)).linearVelocity(
-                    velocity.mut_replace(getVelocityMetersPerSecond(), MetersPerSecond)),
-            this));
+		sysIdRoutine = new SysIdRoutine(
+				new SysIdRoutine.Config(null, Voltage.ofBaseUnits(5, Volts), null, null),
+				new SysIdRoutine.Mechanism(
+						(Voltage volts) -> motorLeft.setVoltage(volts.baseUnitMagnitude()),
+						log -> log.motor("climber")
+								.voltage(appliedVoltage.mut_replace(motorLeft.getMotorVoltage().getValueAsDouble()
+										* motorLeft.getDutyCycle().getValueAsDouble(), Volts))
+								.linearPosition(distance.mut_replace(getHeightMeters(), Meters)).linearVelocity(
+										velocity.mut_replace(getVelocityMetersPerSecond(), MetersPerSecond)),
+						this));
 
-    visualization = new ClimberVisualization(this);
-    telemetry = new ClimberTelemetry(this);
+		visualization = new ClimberVisualization(this);
+		telemetry = new ClimberTelemetry(this);
 
-    goalState.position = getHeightMeters();
-    currentState.position = getHeightMeters();
-    currentState.velocity = 0.0;
-    goalState.velocity = 0.0;
-  }
+		goalState.position = getHeightMeters();
+		currentState.position = getHeightMeters();
+		currentState.velocity = 0.0;
+		goalState.velocity = 0.0;
+	}
 
-  public void onEnabled() {
-    System.out.println("just ENABLED!");
-    goalState.position = getHeightMeters();
-    currentState.position = getHeightMeters();
-    currentState.velocity = 0.0;
-    goalState.velocity = 0.0;
-  }
+	public void onEnabled() {
+		System.out.println("just ENABLED!");
+		goalState.position = getHeightMeters();
+		currentState.position = getHeightMeters();
+		currentState.velocity = 0.0;
+		goalState.velocity = 0.0;
+	}
 
-  boolean prevEnabled = false;
+	boolean prevEnabled = false;
 
-  @Override
-  public void periodic() {
-    if (DriverStation.isEnabled() && !prevEnabled) {
-      onEnabled();
-    }
-    prevEnabled = DriverStation.isEnabled();
+	@Override
+	public void periodic() {
+		if (DriverStation.isEnabled() && !prevEnabled) {
+			onEnabled();
+		}
+		prevEnabled = DriverStation.isEnabled();
 
-    if (prevKP != SUB_KP.getAsDouble() || prevKI != SUB_KI.getAsDouble() || prevKD != SUB_KD.getAsDouble()
-        || prevKS != SUB_KS.getAsDouble() || prevKG != SUB_KG.getAsDouble() || prevKV != SUB_KV.getAsDouble()) {
-      prevKP = SUB_KP.getAsDouble();
-      prevKI = SUB_KI.getAsDouble();
-      prevKD = SUB_KD.getAsDouble();
-      prevKV = SUB_KV.getAsDouble();
-      prevKS = SUB_KS.getAsDouble();
-      prevKG = SUB_KG.getAsDouble();
+		if (prevKP != SUB_KP.getAsDouble() || prevKI != SUB_KI.getAsDouble() || prevKD != SUB_KD.getAsDouble()
+				|| prevKS != SUB_KS.getAsDouble() || prevKG != SUB_KG.getAsDouble() || prevKV != SUB_KV.getAsDouble()) {
+			prevKP = SUB_KP.getAsDouble();
+			prevKI = SUB_KI.getAsDouble();
+			prevKD = SUB_KD.getAsDouble();
+			prevKV = SUB_KV.getAsDouble();
+			prevKS = SUB_KS.getAsDouble();
+			prevKG = SUB_KG.getAsDouble();
 
-      TalonFXConfiguration configs = new TalonFXConfiguration();
-      configs.Slot0.kP = SUB_KP.getAsDouble();
-      configs.Slot0.kI = SUB_KI.getAsDouble();
-      configs.Slot0.kD = SUB_KD.getAsDouble();
-      configs.Slot0.kV = SUB_KV.getAsDouble();
-      configs.Slot0.kA = SUB_KG.getAsDouble();
-      configs.Slot0.kS = SUB_KS.getAsDouble();
+			TalonFXConfiguration configs = new TalonFXConfiguration();
+			configs.Slot0.kP = SUB_KP.getAsDouble();
+			configs.Slot0.kI = SUB_KI.getAsDouble();
+			configs.Slot0.kD = SUB_KD.getAsDouble();
+			configs.Slot0.kV = SUB_KV.getAsDouble();
+			configs.Slot0.kA = SUB_KG.getAsDouble();
+			configs.Slot0.kS = SUB_KS.getAsDouble();
 
-      configs.CurrentLimits.SupplyCurrentLimit = CURRENT_LIMIT;
-      configs.CurrentLimits.SupplyCurrentLimitEnable = true;
+			configs.CurrentLimits.SupplyCurrentLimit = CURRENT_LIMIT;
+			configs.CurrentLimits.SupplyCurrentLimitEnable = true;
 
-      configs.MotorOutput.Inverted = INVERTED ? InvertedValue.Clockwise_Positive
-          : InvertedValue.CounterClockwise_Positive;
+			configs.MotorOutput.Inverted = INVERTED ? InvertedValue.Clockwise_Positive
+					: InvertedValue.CounterClockwise_Positive;
 
-      motorLeft.getConfigurator().apply(configs);
-    }
+			motorLeft.getConfigurator().apply(configs);
+		}
 
-    double now = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
-    double dt = now - lastUpdateTimestamp;
-    lastUpdateTimestamp = now;
+		double now = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
+		double dt = now - lastUpdateTimestamp;
+		lastUpdateTimestamp = now;
 
-    double measuredHeight = getHeightMeters();
-    currentState.position = measuredHeight;
-    currentState = profile.calculate(dt, currentState, goalState);
-    if (isClimberStalled()) {
-      isStalled = true;
-      stop();
-      motorLeft.stopMotor();
-      return;
-    } else {
-      isStalled = false;
-    }
-    if (canMove(currentState.velocity)) {
-      double ff = feedforward.calculate(currentState.velocity);
-      motorLeft.setControl(
-          new PositionVoltage(currentState.position * ROTATIONS_PER_METER).withFeedForward(ff));
-    } else {
-      currentState.position = measuredHeight;
-      currentState.velocity = 0.0;
-      motorLeft.stopMotor();
-    }
+		double measuredHeight = getHeightMeters();
+		currentState.position = measuredHeight;
+		currentState = profile.calculate(dt, currentState, goalState);
+		if (isClimberStalled()) {
+			isStalled = true;
+			stop();
+			motorLeft.stopMotor();
+			return;
+		} else {
+			isStalled = false;
+		}
+		if (canMove(currentState.velocity)) {
+			double ff = feedforward.calculate(currentState.velocity);
+			motorLeft.setControl(
+					new PositionVoltage(currentState.position * ROTATIONS_PER_METER).withFeedForward(ff));
+		} else {
+			currentState.position = measuredHeight;
+			currentState.velocity = 0.0;
+			motorLeft.stopMotor();
+		}
 
-    telemetry.log();
-  }
+		telemetry.log();
+	}
 
-  public boolean isClimberStalled() {
-    double climberMotorCurrent = motorLeft.getMotorVoltage().getValueAsDouble();
-    double climberMotorRPM = motorLeft.getVelocity().getValueAsDouble(); // RPM
-    boolean isPivotStalled = Math.abs(climberMotorRPM) < 2.0 && climberMotorCurrent > CURRENT_LIMIT * 0.5;
-    return stallDebouncer.calculate(isPivotStalled);
-  }
+	public boolean isClimberStalled() {
+		double climberMotorCurrent = motorLeft.getMotorVoltage().getValueAsDouble();
+		double climberMotorRPM = motorLeft.getVelocity().getValueAsDouble(); // RPM
+		boolean isPivotStalled = Math.abs(climberMotorRPM) < 2.0 && climberMotorCurrent > CURRENT_LIMIT * 0.5;
+		return stallDebouncer.calculate(isPivotStalled);
+	}
 
-  private final Debouncer stallDebouncer = new Debouncer(0.1, Debouncer.DebounceType.kBoth);
+	private final Debouncer stallDebouncer = new Debouncer(0.1, Debouncer.DebounceType.kBoth);
 
-  double getHeightMeters() {
-    return motorLeft.getPosition().getValueAsDouble() / ROTATIONS_PER_METER;
-  }
+	double getHeightMeters() {
+		return motorLeft.getPosition().getValueAsDouble() / ROTATIONS_PER_METER;
+	}
 
-  private double getVelocityMetersPerSecond() {
-    return motorLeft.getVelocity().getValueAsDouble() / 60.0 / ROTATIONS_PER_METER;
-  }
+	private double getVelocityMetersPerSecond() {
+		return motorLeft.getVelocity().getValueAsDouble() / 60.0 / ROTATIONS_PER_METER;
+	}
 
-  public boolean isAtGoal() {
-    return MathUtil.isNear(goalState.position, getHeightMeters(), POSITION_TOLERANCE.in(Meters));
-  }
+	public boolean isAtGoal() {
+		return MathUtil.isNear(goalState.position, getHeightMeters(), POSITION_TOLERANCE.in(Meters));
+	}
 
-  boolean isAtTop() {
-    return getHeightMeters() >= MAX_HEIGHT.in(Meters);
-  }
+	boolean isAtTop() {
+		return getHeightMeters() >= MAX_HEIGHT.in(Meters);
+	}
 
-  boolean isAtBottom() {
-    return getHeightMeters() <= MIN_HEIGHT.in(Meters);
-  }
+	boolean isAtBottom() {
+		return getHeightMeters() <= MIN_HEIGHT.in(Meters);
+	}
 
-  Color getStatusColor() {
-    if (isAtGoal()) {
-      return Color.kGreen;
-    } else if (isAtTop() || isAtBottom()) {
-      return Color.kOrange;
-    }
-    return Color.kYellow;
-  }
+	Color getStatusColor() {
+		if (isAtGoal()) {
+			return Color.kGreen;
+		} else if (isAtTop() || isAtBottom()) {
+			return Color.kOrange;
+		}
+		return Color.kYellow;
+	}
 
-  private boolean canMove(double requestedVelocity) {
-    return true;
-  }
+	private boolean canMove(double requestedVelocity) {
+		return true;
+	}
 
-  private void setGoalHeight(double heightMeters) {
-    // System.out.println("go to height " + heightMeters);
-    goalState.position = heightMeters;
-    goalState.velocity = 0.0;
-  }
+	private void setGoalHeight(double heightMeters) {
+		// System.out.println("go to height " + heightMeters);
+		goalState.position = heightMeters;
+		goalState.velocity = 0.0;
+	}
 
-  public void stop() {
-    goalState.position = getHeightMeters();
-    currentState.position = getHeightMeters();
-    currentState.velocity = 0.0;
-    goalState.velocity = 0.0;
-    motorLeft.stopMotor();
-  }
+	public void stop() {
+		goalState.position = getHeightMeters();
+		currentState.position = getHeightMeters();
+		currentState.velocity = 0.0;
+		goalState.velocity = 0.0;
+		motorLeft.stopMotor();
+	}
 
-  public void resetEncoders() {
-    motorLeft.setPosition(0);
-    currentState = new TrapezoidProfile.State(0, 0);
-    goalState = new TrapezoidProfile.State(0, 0);
-  }
+	public void resetEncoders() {
+		motorLeft.setPosition(0);
+		currentState = new TrapezoidProfile.State(0, 0);
+		goalState = new TrapezoidProfile.State(0, 0);
+	}
 
-  private static final double GO_TO_HEIGHT_TIMEOUT_SECONDS = 5.0;
+	private static final double GO_TO_HEIGHT_TIMEOUT_SECONDS = 5.0;
 
-  public Command goToHeightCommand(double heightMeters) {
-    return Commands.runOnce(() -> {
-      System.out.println("called set goal");
-      setGoalHeight(heightMeters);
-    }).andThen(Commands.waitUntil(this::isAtGoal)).withTimeout(GO_TO_HEIGHT_TIMEOUT_SECONDS);
-  }
+	public Command goToHeightCommand(double heightMeters) {
+		return Commands.runOnce(() -> {
+			System.out.println("called set goal");
+			setGoalHeight(heightMeters);
+		}).andThen(Commands.waitUntil(this::isAtGoal)).withTimeout(GO_TO_HEIGHT_TIMEOUT_SECONDS);
+	}
 
-  public Command goToHeightCommand(DoubleSupplier heightMeters) {
-    return Commands.runOnce(() -> setGoalHeight(heightMeters.getAsDouble()), this)
-        .andThen(Commands.waitUntil(this::isAtGoal)).withTimeout(GO_TO_HEIGHT_TIMEOUT_SECONDS);
-  }
+	public Command goToHeightCommand(DoubleSupplier heightMeters) {
+		return Commands.runOnce(() -> setGoalHeight(heightMeters.getAsDouble()), this)
+				.andThen(Commands.waitUntil(this::isAtGoal)).withTimeout(GO_TO_HEIGHT_TIMEOUT_SECONDS);
+	}
 
-  /** Manual control; holds position when released. */
-  public Command manualControlCommand(DoubleSupplier speedInput) {
-    return Commands.run(() -> {
-      double input = speedInput.getAsDouble();
-      System.out.println("add to goal position! " + input);
-      goalState.position += input;
-    }, this).finallyDo(this::stop);
-  }
+	/** Manual control; holds position when released. */
+	public Command manualControlCommand(DoubleSupplier speedInput) {
+		return Commands.run(() -> {
+			double input = speedInput.getAsDouble();
+			System.out.println("add to goal position! " + input);
+			goalState.position += input;
+		}, this).finallyDo(this::stop);
+	}
 
-  public Command extendCommand() {
-    return goToHeightCommand(MAX_HEIGHT.in(Meters))
-        // // Uncomment below to enable limit switch
-        // .andThen(idle().until(() -> isClimberStalled() || isAtGoal()))
-        // .andThen(runOnce(() -> goToHeightCommand(this::getHeightMeters)))
-        .withName("Climber Extend");
-  }
+	public Command extendCommand() {
+		return goToHeightCommand(MAX_HEIGHT.in(Meters))
+				// // Uncomment below to enable limit switch
+				// .andThen(idle().until(() -> isClimberStalled() || isAtGoal()))
+				// .andThen(runOnce(() -> goToHeightCommand(this::getHeightMeters)))
+				.withName("Climber Extend");
+	}
 
-  public Command retractCommand() {
-    return goToHeightCommand(MIN_HEIGHT.in(Meters))
-        // // Uncomment below to enable limit switch
-        // .andThen(idle().until(() -> isClimberStalled() || isAtGoal()))
-        // .andThen(runOnce(() -> goToHeightCommand(this::getHeightMeters)))
-        .withName("Climber Retract");
-  }
+	public Command retractCommand() {
+		return goToHeightCommand(MIN_HEIGHT.in(Meters))
+				// // Uncomment below to enable limit switch
+				// .andThen(idle().until(() -> isClimberStalled() || isAtGoal()))
+				// .andThen(runOnce(() -> goToHeightCommand(this::getHeightMeters)))
+				.withName("Climber Retract");
+	}
 
-  public Command zeroCommand() {
-    return Commands.runOnce(this::resetEncoders, this).withName("Climber Zero");
-  }
+	public Command zeroCommand() {
+		return Commands.runOnce(this::resetEncoders, this).withName("Climber Zero");
+	}
 
-  public Command testClimberCommand() {
-    return goToHeightCommand(() -> testClimberHeight.get()).withName("Test Climber");
-  }
+	public Command testClimberCommand() {
+		return goToHeightCommand(() -> testClimberHeight.get()).withName("Test Climber");
+	}
 
-  public Command sysIdQuasistatic(Direction direction) {
-    return sysIdRoutine.quasistatic(direction);
-  }
+	public Command sysIdQuasistatic(Direction direction) {
+		return sysIdRoutine.quasistatic(direction);
+	}
 
-  public Command sysIdDynamic(Direction direction) {
-    return sysIdRoutine.dynamic(direction);
-  }
+	public Command sysIdDynamic(Direction direction) {
+		return sysIdRoutine.dynamic(direction);
+	}
 
-  public Command sysIdFullCommand(double quasiTimeout, double pauseTimeout, double dynamicTimeout) {
-    return sysIdRoutine.quasistatic(Direction.kForward).withTimeout(quasiTimeout)
-        .andThen(Commands.waitSeconds(pauseTimeout))
-        .andThen(sysIdRoutine.quasistatic(Direction.kReverse).withTimeout(quasiTimeout))
-        .andThen(Commands.waitSeconds(pauseTimeout))
-        .andThen(sysIdRoutine.dynamic(Direction.kForward).withTimeout(dynamicTimeout))
-        .andThen(Commands.waitSeconds(pauseTimeout))
-        .andThen(sysIdRoutine.dynamic(Direction.kReverse).withTimeout(dynamicTimeout))
-        .withName("Climber SysId");
-  }
+	public Command sysIdFullCommand(double quasiTimeout, double pauseTimeout, double dynamicTimeout) {
+		return sysIdRoutine.quasistatic(Direction.kForward).withTimeout(quasiTimeout)
+				.andThen(Commands.waitSeconds(pauseTimeout))
+				.andThen(sysIdRoutine.quasistatic(Direction.kReverse).withTimeout(quasiTimeout))
+				.andThen(Commands.waitSeconds(pauseTimeout))
+				.andThen(sysIdRoutine.dynamic(Direction.kForward).withTimeout(dynamicTimeout))
+				.andThen(Commands.waitSeconds(pauseTimeout))
+				.andThen(sysIdRoutine.dynamic(Direction.kReverse).withTimeout(dynamicTimeout))
+				.withName("Climber SysId");
+	}
 }

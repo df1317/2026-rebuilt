@@ -1,9 +1,10 @@
 package frc.robot.subsystems.shooter;
 
-import static edu.wpi.first.units.Units.RPM;
-
 import dev.doglog.DogLog;
 import edu.wpi.first.wpilibj.util.Color;
+
+import static edu.wpi.first.units.Units.Degrees;
+import static edu.wpi.first.units.Units.RPM;
 
 /**
  * Handles telemetry logging for the shooter subsystem.
@@ -45,8 +46,10 @@ public class ShooterTelemetry {
 
 		// Hood
 		DogLog.log("Shooter/Hood/CurrentPosition", shooter.hoodEncoder.getPosition());
-		DogLog.log("Shooter/Hood/TargetPosition", shooter.targetHoodAngle);
+		DogLog.log("Shooter/Hood/TargetPosition", shooter.targetHoodAngle.in(Degrees));
 		DogLog.log("Shooter/Hood/CurrentAmps", shooter.hood.getOutputCurrent());
+		DogLog.log("Shooter/Hood/Homed", shooter.isHoodHomed());
+		DogLog.forceNt.log("Shooter/Hood/MaxDeg", shooter.hoodMaxDeg);
 	}
 
 	private Color getStatusColor() {

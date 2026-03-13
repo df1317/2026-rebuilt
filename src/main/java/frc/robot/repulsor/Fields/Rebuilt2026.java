@@ -38,7 +38,6 @@ import frc.robot.repulsor.Heatmap;
 import frc.robot.repulsor.Setpoints.HeightSetpoint;
 import frc.robot.repulsor.Setpoints.RepulsorSetpoint;
 import frc.robot.repulsor.Setpoints.Setpoints;
-import frc.robot.repulsor.Tracking.FieldTrackerCore;
 import frc.robot.repulsor.Tracking.Model.Alliance;
 import frc.robot.repulsor.Tracking.Model.GameElement;
 
@@ -53,8 +52,8 @@ public final class Rebuilt2026 implements FieldDefinition {
 	private static final double GRID_REGION_HALF_Y_M = RepulsorConstants.FIELD_WIDTH * 0.5;
 
 	@Override
-	public GameElement[] build(FieldTrackerCore ft) {
-		var b = new FieldMapBuilder(ft);
+	public GameElement[] build() {
+		var b = new FieldMapBuilder();
 
 		Pose2d blueOutpost = Setpoints.Rebuilt2026.OUTPOST_COLLECT.approximateBluePose();
 		Pose2d redOutpost = Setpoints.Rebuilt2026.OUTPOST_COLLECT.approximateRedPose();
