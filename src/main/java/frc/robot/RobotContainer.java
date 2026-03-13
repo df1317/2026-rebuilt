@@ -141,11 +141,13 @@ public class RobotContainer {
 				// Button 4: auto-home (drives to hard stops automatically)
 				// Button 7/8: test flywheel / feeder individually
 				m_JoystickL.button(4).onTrue(shooter.homeHoodCommand());
-				m_JoystickL.button(5).onTrue(shooter.markHoodMinHereCommand());
-				m_JoystickL.button(6).onTrue(shooter.markHoodMaxHereCommand());
+				m_JoystickL.button(5).onTrue(shooter.testHoodCommand());
+				m_JoystickL.button(6).onTrue(shooter.testFullMotorCommand());
+				//m_JoystickL.button(5).onTrue(shooter.markHoodMinHereCommand());
+				//m_JoystickL.button(6).onTrue(shooter.markHoodMaxHereCommand());
 				m_JoystickL.button(7).whileTrue(shooter.testShooterMotorCommand());
 				m_JoystickL.button(8).whileTrue(shooter.testFeederCommand());
-				m_JoystickL.button(9).whileTrue(shooter.jogHoodCommand(m_JoystickL::getY));
+				//m_JoystickL.button(9).whileTrue(shooter.jogHoodCommand(m_JoystickL::getY));
 			}
 			if (Constants.ENABLE_INTAKE && intake != null) {
 				m_JoystickL.button(10).whileTrue(intake.testPivotCommand());
@@ -172,7 +174,7 @@ public class RobotContainer {
 				Commands.waitSeconds(0.5),
 				// Collect
 				repulsor.navigateTo(
-						() -> _Rebuilt2026.CENTER_COLLECT.poseForCurrentAlliance(SetpointContext.EMPTY))
+								() -> _Rebuilt2026.CENTER_COLLECT.poseForCurrentAlliance(SetpointContext.EMPTY))
 						.until(repulsor.within(Meters.of(0.15))),
 				Commands.waitSeconds(1.0),
 				// Score again
@@ -184,7 +186,7 @@ public class RobotContainer {
 	private Command buildScoreAndClimbAuto(frc.robot.repulsor.Setpoints.GameSetpoint climbSetpoint) {
 		return Commands.sequence(
 				repulsor.navigateTo(
-						() -> _Rebuilt2026.HUB_SCORE_FRONT.poseForCurrentAlliance(SetpointContext.EMPTY))
+								() -> _Rebuilt2026.HUB_SCORE_FRONT.poseForCurrentAlliance(SetpointContext.EMPTY))
 						.until(repulsor.within(Meters.of(0.15))),
 				Commands.waitSeconds(1.0),
 				repulsor.navigateTo(
