@@ -186,7 +186,7 @@ public class RobotContainer {
 					}));
 				} else {
 					driverXbox.leftTrigger(0.7).whileTrue(
-							climber.manualControlCommand(() -> (m_JoystickL.getX() / 100)).unless(climber::isClimberStalled));
+              climber.manualControlCommand(() -> (m_JoystickL.getY() / 70.0)));
 				}
 			}
 			if (Constants.ENABLE_HOPPER && hopper != null) {
