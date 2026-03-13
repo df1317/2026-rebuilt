@@ -1,5 +1,20 @@
 package frc.robot.subsystems.swervedrive;
 
+import static edu.wpi.first.units.Units.Meter;
+import static edu.wpi.first.units.Units.Radians;
+import static edu.wpi.first.units.Units.Volts;
+import static frc.robot.util.FieldZones.HUB_POSE_RED;
+
+import java.io.File;
+import java.util.Arrays;
+import java.util.Optional;
+import java.util.function.BooleanSupplier;
+import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
+
+import org.photonvision.targeting.PhotonPipelineResult;
+
 import dev.doglog.DogLog;
 import edu.wpi.first.epilogue.NotLogged;
 import edu.wpi.first.math.controller.PIDController;
@@ -25,7 +40,6 @@ import frc.robot.repulsor.DriveRepulsor;
 import frc.robot.subsystems.swervedrive.Vision.Cameras;
 import frc.robot.util.FieldZones;
 import frc.robot.util.RobotLog;
-import org.photonvision.targeting.PhotonPipelineResult;
 import swervelib.SwerveController;
 import swervelib.SwerveDrive;
 import swervelib.SwerveDriveTest;
@@ -35,16 +49,6 @@ import swervelib.parser.SwerveControllerConfiguration;
 import swervelib.parser.SwerveDriveConfiguration;
 import swervelib.parser.SwerveParser;
 import swervelib.telemetry.SwerveDriveTelemetry;
-
-import java.io.File;
-import java.util.Arrays;
-import java.util.Optional;
-import java.util.function.BooleanSupplier;
-import java.util.function.DoubleSupplier;
-import java.util.function.Supplier;
-import java.util.function.UnaryOperator;
-
-import static edu.wpi.first.units.Units.*;
 
 public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 
@@ -122,6 +126,10 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 		}
 
 		DogLog.log("currentPose", swerveDrive.getPose());
+
+		Translation2d rel = swerveDrive.getPose().minus(HUB_POSE_RED).getTranslation();
+		double c = Math.sqrt(Math.pow(rel.getX(), 2.0) + Math.pow(rel.getY(), 2.0));
+		DogLog.log("DistanceToRedHub", c);
 
 		FieldZones.Zone currentZone = FieldZones.getZone(getPose());
 		DogLog.log("Field/Zone", currentZone.name());
@@ -278,7 +286,7 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 			if (ally.isPresent() && !ally.equals(prevAlliance)) {
 				prevAlliance = ally;
 				if (ally.get() == Alliance.Red) {
-					velocity.aim(FieldZones.HUB_POSE_RED);
+					velocity.aim(HUB_POSE_RED);
 					DogLog.log("misc/team", "RED");
 				}
 				if (ally.get() == Alliance.Blue) {
