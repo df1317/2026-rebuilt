@@ -149,33 +149,33 @@ public class Vision {
 				VecBuilder.fill(
 						VisionConstants.CameraStdDevs.MULTI_TAG[0],
 						VisionConstants.CameraStdDevs.MULTI_TAG[1],
-						VisionConstants.CameraStdDevs.MULTI_TAG[2]));
+						VisionConstants.CameraStdDevs.MULTI_TAG[2])),
 
-		//		BACK_CAM(
-		//				"STONE",
-		//				new Rotation3d(0, 0.0, Units.degreesToRadians(90)),
-		//				new Translation3d(Units.inchesToMeters(0), Units.inchesToMeters(0), Units.inchesToMeters(15)),
-		//				VecBuilder.fill(
-		//						VisionConstants.CameraStdDevs.SINGLE_TAG[0],
-		//						VisionConstants.CameraStdDevs.SINGLE_TAG[1],
-		//						VisionConstants.CameraStdDevs.SINGLE_TAG[2]),
-		//				VecBuilder.fill(
-		//						VisionConstants.CameraStdDevs.MULTI_TAG[0],
-		//						VisionConstants.CameraStdDevs.MULTI_TAG[1],
-		//						VisionConstants.CameraStdDevs.MULTI_TAG[2])),
-		//
-		//		CENTER_CAM(
-		//				"BOULDER",
-		//				new Rotation3d(0, Units.degreesToRadians(20.0), Units.degreesToRadians(180)),
-		//				new Translation3d(Units.inchesToMeters(-13.5), Units.inchesToMeters(8.5), Units.inchesToMeters(10.5)),
-		//				VecBuilder.fill(
-		//						VisionConstants.CameraStdDevs.SINGLE_TAG[0],
-		//						VisionConstants.CameraStdDevs.SINGLE_TAG[1],
-		//						VisionConstants.CameraStdDevs.SINGLE_TAG[2]),
-		//				VecBuilder.fill(
-		//						VisionConstants.CameraStdDevs.MULTI_TAG[0],
-		//						VisionConstants.CameraStdDevs.MULTI_TAG[1],
-		//						VisionConstants.CameraStdDevs.MULTI_TAG[2]));
+		BACK_CAM(
+				"STONE",
+				new Rotation3d(0, Units.degreesToRadians(15.0), Units.degreesToRadians(180)),
+				new Translation3d(Units.inchesToMeters(-13), Units.inchesToMeters(-8.5), Units.inchesToMeters(10.5)),
+				VecBuilder.fill(
+						VisionConstants.CameraStdDevs.SINGLE_TAG[0],
+						VisionConstants.CameraStdDevs.SINGLE_TAG[1],
+						VisionConstants.CameraStdDevs.SINGLE_TAG[2]),
+				VecBuilder.fill(
+						VisionConstants.CameraStdDevs.MULTI_TAG[0],
+						VisionConstants.CameraStdDevs.MULTI_TAG[1],
+						VisionConstants.CameraStdDevs.MULTI_TAG[2])),
+
+		CENTER_CAM(
+				"PEBBLE",
+				new Rotation3d(0, Units.degreesToRadians(15.0), Units.degreesToRadians(-90)),
+				new Translation3d(Units.inchesToMeters(7), Units.inchesToMeters(3.5), Units.inchesToMeters(16.0)),
+				VecBuilder.fill(
+						VisionConstants.CameraStdDevs.SINGLE_TAG[0],
+						VisionConstants.CameraStdDevs.SINGLE_TAG[1],
+						VisionConstants.CameraStdDevs.SINGLE_TAG[2]),
+				VecBuilder.fill(
+						VisionConstants.CameraStdDevs.MULTI_TAG[0],
+						VisionConstants.CameraStdDevs.MULTI_TAG[1],
+						VisionConstants.CameraStdDevs.MULTI_TAG[2]));
 
 		public final PhotonCamera camera;
 		public final PhotonPoseEstimator poseEstimator;
