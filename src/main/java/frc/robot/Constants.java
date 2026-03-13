@@ -1,5 +1,6 @@
 package frc.robot;
 
+import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.*;
@@ -31,6 +32,8 @@ public final class Constants {
 	// HIGH in dev mode, LOW at competition to reduce NT traffic
 	public static final TelemetryVerbosity SwerveTelemetryVerbosity = DevMode.isEnabled() ? TelemetryVerbosity.HIGH
 			: TelemetryVerbosity.LOW;
+
+	public static final AprilTagFields FIELD_LAYOUT = AprilTagFields.k2026RebuiltWelded;
 
 	public static final class DrivebaseConstants {
 		public static final double WHEEL_LOCK_TIME = 10; // seconds
