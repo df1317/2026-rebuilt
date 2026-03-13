@@ -254,28 +254,26 @@ public class Vision {
 					? camera.getAllUnreadResults()
 					: cameraSim.getCamera().getAllUnreadResults();
 
-			if (!newResults.isEmpty()) {
-				resultsList.addAll(newResults);
-				resultsList.sort(Comparator.comparingDouble(PhotonPipelineResult::getTimestampSeconds).reversed());
-				if (resultsList.size() > 5) {
-					resultsList = new ArrayList<>(resultsList.subList(0, 5));
-				}
-
-				PhotonPipelineResult latest = resultsList.get(0);
-				double latencyMs = latest.metadata.getLatencyMillis();
-				boolean highLatency = latencyMs > VisionConstants.HIGH_LATENCY_THRESHOLD_MS;
-				RobotLog.setWarningAlert(
-						"Vision/Latency/" + cameraName,
-						"'" + cameraName + "' camera high latency (" + (int) latencyMs + "ms)",
-						highLatency);
-			}
-
-			if (resultsList.isEmpty()) {
+			if (newResults.isEmpty()) {
 				estimatedRobotPose = null;
-				curStdDevs = singleTagStdDevs;
-			} else {
-				updateEstimatedGlobalPose(referencePose);
+				return;
 			}
+
+			resultsList.addAll(newResults);
+			resultsList.sort(Comparator.comparingDouble(PhotonPipelineResult::getTimestampSeconds).reversed());
+			if (resultsList.size() > 5) {
+				resultsList = new ArrayList<>(resultsList.subList(0, 5));
+			}
+
+			PhotonPipelineResult latest = resultsList.get(0);
+			double latencyMs = latest.metadata.getLatencyMillis();
+			boolean highLatency = latencyMs > VisionConstants.HIGH_LATENCY_THRESHOLD_MS;
+			RobotLog.setWarningAlert(
+					"Vision/Latency/" + cameraName,
+					"'" + cameraName + "' camera high latency (" + (int) latencyMs + "ms)",
+					highLatency);
+
+			updateEstimatedGlobalPose(referencePose);
 		}
 
 		private void updateEstimatedGlobalPose(Pose2d referencePose) {
