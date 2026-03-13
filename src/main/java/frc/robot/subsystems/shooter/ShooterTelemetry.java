@@ -44,7 +44,8 @@ public class ShooterTelemetry {
 		DogLog.log("Shooter/Feeder/CurrentAmps", shooter.feeder.getOutputCurrent());
 
 		// Hood
-		DogLog.log("Shooter/Hood/CurrentPercent", shooter.isHoodHomed() ? shooter.hoodEncoder.getPosition() / shooter.hoodMaxDeg : 0.0);
+		DogLog.log("Shooter/Hood/CurrentPercent",
+				shooter.isHoodHomed() ? shooter.hoodEncoder.getPosition() / shooter.hoodMaxDeg : 0.0);
 		DogLog.log("Shooter/Hood/TargetPercent", shooter.getTargetHoodPercent());
 		DogLog.log("Shooter/Hood/CurrentAmps", shooter.hood.getOutputCurrent());
 		DogLog.log("Shooter/Hood/Homed", shooter.isHoodHomed());
