@@ -41,21 +41,68 @@ The shooter speed is calculated from the live robot-to-hub distance using the di
 
 ### Test Mode
 
-In test mode, hold a button on the joystick to run individual motors at values set via dashboard tunables. Adjust the tunable values in Elastic or Glass under the `Tunable/Test/` table.
+In test mode, buttons on the Maypad run individual subsystem commands. Tunable values are adjustable live in Elastic or Glass under the `Tunable/` table.
 
-#### Joystick (Operator) [`Port 1`]
+#### Maypad (Operator Panel) [`Port 2`]
 
-| Binding     | Action                       | Notes                                        |
-|-------------|------------------------------|----------------------------------------------|
-| `Button 3`  | Test hopper                  | Tunable: `Test/HopperRPM`                   |
-| `Button 4`  | Auto-home hood               | Drives to hard stops via stall detection     |
-| `Button 5`  | Mark hood min here           | See [Shooter docs](shooter.md#manual-homing) |
-| `Button 6`  | Mark hood max here           | See [Shooter docs](shooter.md#manual-homing) |
-| `Button 7`  | Test shooter motor           | Tunable: `Test/ShooterRPM`                  |
-| `Button 8`  | Test feeder motor            | Tunable: `Test/FeederRPM`                   |
-| `Button 9`  | Jog hood (hold + joystick)   | Holds position on release                    |
-| `Button 10` | Test intake pivot            | Tunable: `Test/IntakePivotDeg`              |
-| `Button 11` | Test intake roller           | Tunable: `Test/IntakeRollerRPM`             |
+Firmware: [df1317/maypad-frc](https://github.com/df1317/maypad-frc) — grab the latest `.hex` from the Actions tab.
+
+```
+         Col 1            Col 2            Col 3            Col 4
+Row 0  [ testFlywheel ] [ testFeeder   ] [ spinUpShoot  ] [ stop          ]  ← Shooter
+Row 1  [ homeHood     ] [ testHood     ] [ testFullMtr  ] [ ---           ]  ← Hood
+Row 2  [ extend       ] [ retract      ] [ runRoller    ] [ eject         ]  ← Intake
+Row 3  [ testHopper   ] [ feed         ] [ ---          ] [ ---           ]  ← Hopper
+Row 4  [ homeClimber  ] [ extend       ] [ retract      ] [ zero          ]  ← Climber
+```
+
+**Row 0 — Shooter**
+
+| Button | Action | Trigger | Notes |
+|--------|--------|---------|-------|
+| `1` | Test flywheel | hold | Tunable: `Shooter/TestShooterRPM` |
+| `2` | Test feeder | hold | Tunable: `Shooter/TestFeederRPM` |
+| `3` | Spin up + shoot | hold | Spins up then feeds hopper |
+| `4` | Stop shooter | once | |
+
+**Row 1 — Hood**
+
+| Button | Action | Trigger | Notes |
+|--------|--------|---------|-------|
+| `5` | Auto-home hood | once | Drives to both hard stops via stall detection; see [Shooter docs](shooter.md#homing) |
+| `6` | Test hood position | once | Tunable: `Shooter/TestHoodPercent` |
+| `7` | Test full motor | once | |
+
+**Row 2 — Intake**
+
+| Button | Action | Trigger | Notes |
+|--------|--------|---------|-------|
+| `9` | Extend | hold | |
+| `10` | Retract | hold | |
+| `11` | Run roller | hold | |
+| `12` | Eject | hold | |
+
+**Row 3 — Hopper**
+
+| Button | Action | Trigger | Notes |
+|--------|--------|---------|-------|
+| `13` | Test hopper | hold | Tunable: `Hopper/TestRPM` |
+| `14` | Feed | hold | |
+
+**Row 4 — Climber**
+
+| Button | Action | Trigger | Notes |
+|--------|--------|---------|-------|
+| `17` | Auto-home climber | once | Drives to bottom hard stop, zeros encoder |
+| `18` | Extend | once | Goes to `MAX_HEIGHT` |
+| `19` | Retract | once | Goes to `MIN_HEIGHT` |
+| `20` | Zero encoder | once | Sets current position as zero |
+
+#### Xbox Controller (Test fine-control)
+
+| Binding | Action | Notes |
+|---------|--------|-------|
+| `Left Trigger (>0.7)` + Joystick L Y | Climber fine position | Position control; holds on release |
 
 #### Dashboard Toggles
 

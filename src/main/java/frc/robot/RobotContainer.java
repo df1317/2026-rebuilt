@@ -33,6 +33,7 @@ public class RobotContainer {
 	// HID
 	private final CommandXboxController driverXbox = new CommandXboxController(0);
 	private final CommandJoystick m_JoystickL = new CommandJoystick(1);
+	private final OperatorPanel panel = new OperatorPanel(2);
 	// Subsystems
 	private final SwerveSubsystem drivebase = Constants.ENABLE_SWERVE
 			? new SwerveSubsystem(new File(Filesystem.getDeployDirectory(), "swerve/neo"))
@@ -122,11 +123,14 @@ public class RobotContainer {
 			driverXbox.leftTrigger().whileTrue(intake.intakeCommand());
 		}
 
-		// ===== Test Mode Controls =====
+		// ===== Test Mode Controls (Maypad — see OperatorPanel for layout) =====
 		if (DriverStation.isTest()) {
-			if (Constants.ENABLE_SHOOTER) {
-				if (Constants.ENABLE_HOPPER) {
-					m_JoystickL.button(2).whileTrue(
+			// Row 0 — Shooter
+			if (Constants.ENABLE_SHOOTER && shooter != null) {
+				panel.key(0, 0).whileTrue(shooter.testShooterMotorCommand());
+				panel.key(0, 1).whileTrue(shooter.testFeederCommand());
+				if (Constants.ENABLE_HOPPER && hopper != null) {
+					panel.key(0, 2).whileTrue(
 							shooter.spinUpAndWaitCommand(shooter::getShooterTestRPM, shooter::getFeederTestRPM)
 									.andThen(hopper.setHopperVelocityCommand(hopper::getHopperTestRPM))
 									.finallyDo(() -> {
@@ -134,32 +138,35 @@ public class RobotContainer {
 										hopper.setHopperVelocity(RPM.of(0));
 									}));
 				}
+				panel.key(0, 3).onTrue(shooter.stopCommand());
 			}
+			// Row 1 — Hood
 			if (Constants.ENABLE_SHOOTER && shooter != null) {
-				// Hood homing: hold 9 + joystick to jog, press 5 to mark min, press 6 to mark max
-				// Button 4: auto-home (drives to hard stops automatically)
-				// Button 7/8: test flywheel / feeder individually
-				m_JoystickL.button(4).onTrue(shooter.homeHoodCommand());
-				m_JoystickL.button(5).onTrue(shooter.testHoodCommand());
-				m_JoystickL.button(6).onTrue(shooter.testFullMotorCommand());
-				// m_JoystickL.button(5).onTrue(shooter.markHoodMinHereCommand());
-				// m_JoystickL.button(6).onTrue(shooter.markHoodMaxHereCommand());
-				m_JoystickL.button(7).whileTrue(shooter.testShooterMotorCommand());
-				m_JoystickL.button(8).whileTrue(shooter.testFeederCommand());
-				// m_JoystickL.button(9).whileTrue(shooter.jogHoodCommand(m_JoystickL::getY));
+				panel.key(1, 0).onTrue(shooter.homeHoodCommand());
+				panel.key(1, 1).onTrue(shooter.testHoodCommand());
+				panel.key(1, 2).onTrue(shooter.testFullMotorCommand());
 			}
+			// Row 2 — Intake
 			if (Constants.ENABLE_INTAKE && intake != null) {
-				m_JoystickL.button(10).whileTrue(intake.testPivotCommand());
-				m_JoystickL.button(11).whileTrue(intake.testRollerCommand());
+				panel.key(2, 0).whileTrue(intake.extendCommand());
+				panel.key(2, 1).whileTrue(intake.retractCommand());
+				panel.key(2, 2).whileTrue(intake.runRollerCommand());
+				panel.key(2, 3).whileTrue(intake.ejectCommand());
 			}
+			// Row 3 — Hopper
+			if (Constants.ENABLE_HOPPER && hopper != null) {
+				panel.key(3, 0).whileTrue(hopper.testHopperCommand());
+				panel.key(3, 1).whileTrue(hopper.feedCommand());
+			}
+			// Row 4 — Climber
 			if (Constants.ENABLE_CLIMBER && climber != null) {
+				panel.key(4, 0).onTrue(climber.homeClimberCommand());
+				panel.key(4, 1).onTrue(climber.extendCommand());
+				panel.key(4, 2).onTrue(climber.retractCommand());
+				panel.key(4, 3).onTrue(climber.zeroCommand());
+				// Xbox left trigger + joystick: fine position control
 				driverXbox.leftTrigger(0.7).whileTrue(
 						climber.manualControlCommand(() -> (m_JoystickL.getY() / 70.0)));
-				// Hold button 1 + joystick to manually jog climber with raw voltage
-				m_JoystickL.button(1).whileTrue(climber.jogVoltageCommand(m_JoystickL::getY));
-			}
-			if (Constants.ENABLE_HOPPER && hopper != null) {
-				m_JoystickL.button(3).whileTrue(hopper.testHopperCommand());
 			}
 		}
 	}
