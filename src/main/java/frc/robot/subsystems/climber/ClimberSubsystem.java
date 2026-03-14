@@ -5,6 +5,7 @@ import static edu.wpi.first.units.Units.MetersPerSecond;
 import static edu.wpi.first.units.Units.MetersPerSecondPerSecond;
 import static edu.wpi.first.units.Units.Volts;
 import static frc.robot.Constants.ClimberConstants.CURRENT_LIMIT;
+import static frc.robot.Constants.ClimberConstants.HOMING_CURRENT_LIMIT;
 import static frc.robot.Constants.ClimberConstants.HOMING_VOLTAGE;
 import static frc.robot.Constants.ClimberConstants.INVERTED;
 import static frc.robot.Constants.ClimberConstants.KD;
@@ -80,6 +81,8 @@ public class ClimberSubsystem extends SubsystemBase {
 
 	private final DoubleSubscriber testClimberHeight = DogLog.tunable("Climber/Height",
 			MAX_HEIGHT.in(Meters), Meters);
+	private final DoubleSubscriber SUB_HOMING_CURRENT_LIMIT = DogLog.tunable("Climber/HomingCurrentLimit",
+			HOMING_CURRENT_LIMIT);
 
 	private final ClimberVisualization visualization;
 	private final ClimberTelemetry telemetry;
@@ -236,6 +239,20 @@ public class ClimberSubsystem extends SubsystemBase {
 		return Color.kYellow;
 	}
 
+	private void applyHomingCurrentLimit() {
+		TalonFXConfiguration config = new TalonFXConfiguration();
+		config.CurrentLimits.SupplyCurrentLimit = SUB_HOMING_CURRENT_LIMIT.getAsDouble();
+		config.CurrentLimits.SupplyCurrentLimitEnable = true;
+		motorLeft.getConfigurator().apply(config);
+	}
+
+	private void restoreNormalCurrentLimit() {
+		TalonFXConfiguration config = new TalonFXConfiguration();
+		config.CurrentLimits.SupplyCurrentLimit = CURRENT_LIMIT;
+		config.CurrentLimits.SupplyCurrentLimitEnable = true;
+		motorLeft.getConfigurator().apply(config);
+	}
+
 	private void setGoalHeight(double heightMeters) {
 		// System.out.println("go to height " + heightMeters);
 		goalState.position = heightMeters;
@@ -276,6 +293,25 @@ public class ClimberSubsystem extends SubsystemBase {
 		}, this).finallyDo(this::stop);
 	}
 
+	/** Raw voltage jog using a joystick axis [-1, 1]. Bypasses position control loop, uses homing current limit. */
+	public Command jogVoltageCommand(DoubleSupplier axis) {
+		return Commands.runOnce(() -> {
+					isHoming = true;
+					applyHomingCurrentLimit();
+				}, this)
+				.andThen(Commands.run(() -> {
+					double voltage = axis.getAsDouble() * HOMING_VOLTAGE;
+					DogLog.log("Climber/JogVoltage", voltage);
+					motorLeft.setVoltage(voltage);
+				}, this))
+				.finallyDo(() -> {
+					isHoming = false;
+					restoreNormalCurrentLimit();
+					stop();
+				})
+				.withName("Jog Climber");
+	}
+
 	public Command extendCommand() {
 		return goToHeightCommand(MAX_HEIGHT.in(Meters))
 				// // Uncomment below to enable limit switch
@@ -302,6 +338,7 @@ public class ClimberSubsystem extends SubsystemBase {
 						Commands.runOnce(() -> {
 							isHoming = true;
 							isHomed = false;
+							applyHomingCurrentLimit();
 							stallDebouncer.calculate(false); // reset stale debouncer state
 							motorLeft.setVoltage(-HOMING_VOLTAGE);
 						}, this),
@@ -315,6 +352,7 @@ public class ClimberSubsystem extends SubsystemBase {
 						}, this))
 				.finallyDo(() -> {
 					isHoming = false;
+					restoreNormalCurrentLimit();
 					motorLeft.stopMotor();
 					stop();
 				})

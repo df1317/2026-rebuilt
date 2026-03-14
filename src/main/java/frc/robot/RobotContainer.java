@@ -155,8 +155,8 @@ public class RobotContainer {
 			if (Constants.ENABLE_CLIMBER && climber != null) {
 				driverXbox.leftTrigger(0.7).whileTrue(
 						climber.manualControlCommand(() -> (m_JoystickL.getY() / 70.0)));
-				// Button 1: auto-home climber (drives to bottom hard stop, zeros encoder)
-				m_JoystickL.button(1).onTrue(climber.homeClimberCommand());
+				// Hold button 1 + joystick to manually jog climber with raw voltage
+				m_JoystickL.button(1).whileTrue(climber.jogVoltageCommand(m_JoystickL::getY));
 			}
 			if (Constants.ENABLE_HOPPER && hopper != null) {
 				m_JoystickL.button(3).whileTrue(hopper.testHopperCommand());

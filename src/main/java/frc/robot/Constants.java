@@ -165,6 +165,7 @@ public final class Constants {
 		public static final double KV = 4.7; // 4.7
 
 		public static final double HOMING_VOLTAGE = 2.0;
+		public static final double HOMING_CURRENT_LIMIT = 10.0;
 	}
 
 	public static class HopperConstants {
