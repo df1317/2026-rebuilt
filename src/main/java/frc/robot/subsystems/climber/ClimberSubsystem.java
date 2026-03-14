@@ -183,15 +183,9 @@ public class ClimberSubsystem extends SubsystemBase {
 		} else {
 			isStalled = false;
 		}
-		if (canMove(currentState.velocity)) {
-			double ff = feedforward.calculate(currentState.velocity);
-			motorLeft.setControl(
-					new PositionVoltage(currentState.position * ROTATIONS_PER_METER).withFeedForward(ff));
-		} else {
-			currentState.position = measuredHeight;
-			currentState.velocity = 0.0;
-			motorLeft.stopMotor();
-		}
+		double ff = feedforward.calculate(currentState.velocity);
+		motorLeft.setControl(
+				new PositionVoltage(currentState.position * ROTATIONS_PER_METER).withFeedForward(ff));
 
 		telemetry.log();
 	}
@@ -232,10 +226,6 @@ public class ClimberSubsystem extends SubsystemBase {
 			return Color.kOrange;
 		}
 		return Color.kYellow;
-	}
-
-	private boolean canMove(double requestedVelocity) {
-		return true;
 	}
 
 	private void setGoalHeight(double heightMeters) {

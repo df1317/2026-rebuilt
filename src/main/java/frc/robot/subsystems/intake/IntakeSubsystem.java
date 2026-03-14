@@ -213,8 +213,7 @@ public class IntakeSubsystem extends SubsystemBase {
 	}
 
 	public Command intakeCommand() {
-		return Commands
-				.sequence(extendCommand(), Commands.waitUntil(this::isPivotAtPosition), runRollerCommand())
+		return Commands.sequence(extendCommand(), runRollerCommand())
 				.withName("Intake Full Sequence");
 	}
 

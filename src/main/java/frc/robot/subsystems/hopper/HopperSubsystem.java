@@ -111,18 +111,6 @@ public class HopperSubsystem extends SubsystemBase {
 
 	// ==================== Command Factory Methods ====================
 
-	public Command forwardCommand() {
-		return runOnce(() -> setHopperVelocity(FEED_SPEED)).withName("Hopper Forward");
-	}
-
-	public Command reverseCommand() {
-		return runOnce(() -> setHopperVelocity(REVERSE_SPEED)).withName("Hopper Back");
-	}
-
-	public Command stopCommand() {
-		return runOnce(this::stopHopper).withName("Hopper Stop");
-	}
-
 	/** Runs the hopper at feed speed while held, stops on release. */
 	public Command feedCommand() {
 		return Commands.run(() -> setHopperVelocity(FEED_SPEED), this)

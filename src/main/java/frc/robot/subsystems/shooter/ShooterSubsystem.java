@@ -370,7 +370,7 @@ public class ShooterSubsystem extends SubsystemBase {
 			DogLog.log("Shooter/DistanceM", d.in(Meters));
 			DogLog.log("Shooter/ComputedRPM", getRPMForDistance(d).in(RPM));
 			DogLog.log("Shooter/ComputedHoodPercent", getHoodPercentForDistance(d));
-		}, this).andThen(Commands.run(() -> setForDistance(distance)).repeatedly()).finallyDo(this::stop);
+		}, this).finallyDo(this::stop);
 	}
 
 	// ==================== Test Mode ====================
