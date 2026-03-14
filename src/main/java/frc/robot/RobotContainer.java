@@ -117,7 +117,7 @@ public class RobotContainer {
 			driverXbox.leftBumper().onTrue(Commands.runOnce(() -> robotRelative = !robotRelative));
 		}
 		if (Constants.ENABLE_SHOOTER) {
-			driverXbox.rightBumper().whileTrue(teleopAutomation.shootCommand());
+			driverXbox.rightTrigger().whileTrue(teleopAutomation.shootCommand());
 		}
 		if (Constants.ENABLE_INTAKE && intake != null) {
 			driverXbox.x().toggleOnTrue(intake.stowToggleCommand());

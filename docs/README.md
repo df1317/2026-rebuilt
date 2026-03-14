@@ -13,16 +13,16 @@ Quick reference documentation for robot controls and configuration.
 
 #### Xbox Controller (Driver) [`Port 0`]
 
-| Binding        | Action                | Description                                             |
-|----------------|-----------------------|---------------------------------------------------------|
-| `Left Stick`   | Drive translate       | Controls robot translation                              |
-| `Right Stick X` | Drive rotate         | Controls robot rotation                                 |
-| `Button A`     | Zero gyro             | Resets gyro heading (once)                              |
-| `Left Bumper`  | Toggle field relative | Switches between field and robot relative driving       |
-| `Button Y`     | Auto aim (hold)       | Aims at hub while allowing translation                  |
-| `Button X`     | Toggle intake stow    | Extends/retracts intake (no roller)                     |
-| `Left Trigger` | Intake (hold)         | Extends intake and runs roller                          |
-| `Right Bumper` | Fire (hold)           | Shoot + feed — zone-aware, only fires in own alliance zone |
+| Binding         | Action                | Description                                                |
+|-----------------|-----------------------|------------------------------------------------------------|
+| `Left Stick`    | Drive translate       | Controls robot translation                                 |
+| `Right Stick X` | Drive rotate          | Controls robot rotation                                    |
+| `Button A`      | Zero gyro             | Resets gyro heading (once)                                 |
+| `Left Bumper`   | Toggle field relative | Switches between field and robot relative driving          |
+| `Button Y`      | Auto aim (hold)       | Aims at hub while allowing translation                     |
+| `Button X`      | Toggle intake stow    | Extends/retracts intake (no roller)                        |
+| `Left Trigger`  | Intake (hold)         | Extends intake and runs roller                             |
+| `Right Trigger` | Fire (hold)           | Shoot + feed — zone-aware, only fires in own alliance zone |
 
 ### Zone Automation (`TeleopZoneAutomation`)
 
@@ -67,7 +67,6 @@ Firmware: [df1317/maypad-frc](https://github.com/df1317/maypad-frc) — grab the
 | `key(1, 3)`  | Aim at hub (PID)       | `ProfiledPIDController`, trapezoidal constraints. Logs to `AimPID/` |
 | **intake**   |                        |                                                                     |
 | `key(2, 0)`  | Extend intake          |                                                                     |
-| `key(2, 1)`  | Retract intake         |                                                                     |
 | `key(2, 2)`  | Run roller             |                                                                     |
 | `key(2, 3)`  | Eject                  |                                                                     |
 | **hopper**   |                        |                                                                     |
