@@ -34,7 +34,7 @@ public class HopperSubsystem extends SubsystemBase {
 	// ==================== Visualization & Telemetry ====================
 	private final HopperTelemetry telemetry;
 	// ==================== Test Mode ====================
-	private final DoubleSubscriber testHopperRPM = DogLog.tunable("Hopper/RPM", 2000.0);
+	private final DoubleSubscriber testHopperRPM = DogLog.tunable("Hopper/RPM", FEED_SPEED);
 	private final DoubleSubscriber KP = DogLog.tunable("Hopper/kP", HOPPER_KP);
 	private final DoubleSubscriber KI = DogLog.tunable("Hopper/kI", HOPPER_KI);
 	private final DoubleSubscriber KD = DogLog.tunable("Hopper/kD", HOPPER_KD);

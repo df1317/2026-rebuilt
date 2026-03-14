@@ -173,8 +173,8 @@ public final class Constants {
 		public static final int HOPPER_CURRENT_LIMIT = 20;
 		public static final boolean INVERTED = true;
 
-		public static final AngularVelocity FEED_SPEED = RPM.of(0.5);
-		public static final AngularVelocity REVERSE_SPEED = RPM.of(-0.3);
+		public static final AngularVelocity FEED_SPEED = RPM.of(2000);
+		public static final AngularVelocity REVERSE_SPEED = RPM.of(-2000);
 		public static final AngularVelocity HOPPER_VELOCITY_TOLERANCE = RPM.of(100);
 
 		public static final double HOPPER_KP = 2E-4;
