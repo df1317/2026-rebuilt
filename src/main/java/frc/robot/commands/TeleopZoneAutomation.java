@@ -12,6 +12,7 @@ import frc.robot.repulsor.Repulsor;
 import frc.robot.subsystems.hopper.HopperSubsystem;
 import frc.robot.subsystems.intake.IntakeSubsystem;
 import frc.robot.subsystems.shooter.ShooterSubsystem;
+import frc.robot.Constants.ShooterConstants;
 import frc.robot.util.FieldZones;
 
 import java.util.function.Supplier;
@@ -21,8 +22,6 @@ import static edu.wpi.first.units.Units.Meters;
 public class TeleopZoneAutomation {
 
 	private static final double ALIGN_TOLERANCE_M = 0.15;
-	/** Approximate ball speed in m/s for time-of-flight estimation */
-	private static final double BALL_SPEED_M_S = 10.0;
 
 	private final Repulsor repulsor;
 	private final IntakeSubsystem intake;
@@ -76,7 +75,7 @@ public class TeleopZoneAutomation {
 		Translation2d pos = robotPose.get().getTranslation();
 		Translation2d target = getShootingPose().getTranslation();
 		double distance = pos.getDistance(target);
-		double tof = distance / BALL_SPEED_M_S;
+		double tof = distance / ShooterConstants.BALL_SPEED_M_S;
 		ChassisSpeeds vel = fieldVelocity.get();
 		Translation2d predictedPos = new Translation2d(
 				pos.getX() + vel.vxMetersPerSecond * tof,
@@ -92,7 +91,7 @@ public class TeleopZoneAutomation {
 		Translation2d pos = robotPose.get().getTranslation();
 		Translation2d target = getShootingPose().getTranslation();
 		double distance = pos.getDistance(target);
-		double tof = distance / BALL_SPEED_M_S;
+		double tof = distance / ShooterConstants.BALL_SPEED_M_S;
 		ChassisSpeeds vel = fieldVelocity.get();
 		// Shift the aim target opposite to robot motion so the robot leads the shot
 		Translation2d virtualTarget = new Translation2d(
