@@ -61,6 +61,7 @@ public class RobotContainer {
 					repulsor, intake, shooter, hopper,
 					drivebase::getPose);
 			teleopAutomation.configureTriggers(driverXbox.rightBumper());
+			drivebase.setTargetDistanceSupplier(teleopAutomation::getTargetDistance);
 
 			driveAngularVelocity = SwerveInputStream
 					.of(drivebase.getSwerveDrive(), () -> driverXbox.getLeftY() * -1,

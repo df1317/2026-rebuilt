@@ -1,6 +1,7 @@
 package frc.robot.subsystems.swervedrive;
 
 import static edu.wpi.first.units.Units.Meter;
+import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.Radians;
 import static edu.wpi.first.units.Units.Volts;
 import static frc.robot.util.FieldZones.HUB_POSE_RED;
@@ -12,6 +13,8 @@ import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
+
+import edu.wpi.first.units.measure.Distance;
 
 import org.photonvision.targeting.PhotonPipelineResult;
 
@@ -65,6 +68,11 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 	Optional<Alliance> prevAlliance = Optional.empty();
 	private Vision vision;
 	private AutopilotController autopilotController;
+	private Supplier<Distance> targetDistanceSupplier = null;
+
+	public void setTargetDistanceSupplier(Supplier<Distance> supplier) {
+		this.targetDistanceSupplier = supplier;
+	}
 
 	public SwerveSubsystem(File directory) {
 		SwerveDriveTelemetry.verbosity = Constants.SwerveTelemetryVerbosity;
@@ -127,9 +135,9 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 
 		DogLog.log("currentPose", swerveDrive.getPose());
 
-		Translation2d rel = swerveDrive.getPose().minus(HUB_POSE_RED).getTranslation();
-		double c = Math.sqrt(Math.pow(rel.getX(), 2.0) + Math.pow(rel.getY(), 2.0));
-		DogLog.log("DistanceToRedHub", c);
+		if (targetDistanceSupplier != null) {
+			DogLog.log("DistanceToTarget", targetDistanceSupplier.get().in(Meters));
+		}
 
 		FieldZones.Zone currentZone = FieldZones.getZone(getPose());
 		DogLog.log("Field/Zone", currentZone.name());
