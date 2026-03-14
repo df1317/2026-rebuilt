@@ -403,6 +403,15 @@ public class ShooterSubsystem extends SubsystemBase {
 				.withName("Test Shooter Motor");
 	}
 
+	public Command reverseFeederCommand() {
+		return Commands.run(() -> setFeederVelocity(RPM.of(-testFeederRPM.get())), this)
+				.finallyDo(() -> {
+					feeder.stopMotor();
+					targetFeederVelocity = RPM.of(0);
+				})
+				.withName("Reverse Feeder");
+	}
+
 	public Command testFeederCommand() {
 		return Commands.run(() -> setFeederVelocity(RPM.of(testFeederRPM.get())), this)
 				.finallyDo(() -> {

@@ -99,7 +99,10 @@ public class RobotContainer {
 	}
 
 	private void configureBindings() {
-		// ===== Driver Controls (Xbox port 0) =====
+		var inTeleop = new edu.wpi.first.wpilibj2.command.button.Trigger(DriverStation::isTeleop);
+		var inTest = new edu.wpi.first.wpilibj2.command.button.Trigger(DriverStation::isTest);
+
+		// ===== Driver Controls (Xbox port 0) — teleop only =====
 		if (Constants.ENABLE_SWERVE) {
 			drivebase.setDefaultCommand(
 					drivebase.robotDriveCommand(driveAngularVelocity, () -> robotRelative,
@@ -110,14 +113,11 @@ public class RobotContainer {
 								return speeds;
 							}));
 
-			// A once: gyro reset (disabled in test mode)
-			driverXbox.a().onTrue(Commands.runOnce(drivebase::zeroGyro));
-
-			// Left bumper toggle: field relative
-			driverXbox.rightBumper().onTrue(Commands.runOnce(() -> robotRelative = !robotRelative));
+			driverXbox.a().and(inTeleop).onTrue(Commands.runOnce(drivebase::zeroGyro));
+			driverXbox.rightBumper().and(inTeleop).onTrue(Commands.runOnce(() -> robotRelative = !robotRelative));
 		}
 		if (Constants.ENABLE_SHOOTER) {
-			driverXbox.rightTrigger().whileTrue(Constants.ENABLE_SWERVE && drivebase != null
+			driverXbox.rightTrigger().and(inTeleop).whileTrue(Constants.ENABLE_SWERVE && drivebase != null
 					? Commands.parallel(
 							teleopAutomation.shootCommand(),
 							drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY,
@@ -125,58 +125,64 @@ public class RobotContainer {
 					: teleopAutomation.shootCommand());
 		}
 		if (Constants.ENABLE_INTAKE && intake != null) {
-			driverXbox.x().toggleOnTrue(intake.stowToggleCommand());
-			driverXbox.leftTrigger().whileTrue(intake.intakeCommand());
+			driverXbox.x().and(inTeleop).toggleOnTrue(intake.stowToggleCommand());
+			driverXbox.leftTrigger().and(inTeleop).whileTrue(intake.intakeCommand());
 		}
 
-		// ===== Test Mode Controls (Maypad — see OperatorPanel for layout) =====
-		if (DriverStation.isTest()) {
-			// Row 0 — Shooter
-			if (Constants.ENABLE_SHOOTER && shooter != null) {
-				panel.key(0, 0).whileTrue(shooter.testShooterMotorCommand());
-				panel.key(0, 1).whileTrue(shooter.testFeederCommand());
-				if (Constants.ENABLE_HOPPER && hopper != null) {
-					panel.key(0, 2).whileTrue(
-							shooter.spinUpAndWaitCommand(shooter::getShooterTestRPM, shooter::getFeederTestRPM)
-									.andThen(hopper.setHopperVelocityCommand(hopper::getHopperTestRPM))
-									.finallyDo(() -> {
-										shooter.stop();
-										hopper.setHopperVelocity(RPM.of(0));
-									}));
-				}
-			}
-			// Row 1 — Hood
-			if (Constants.ENABLE_SHOOTER && shooter != null) {
-				panel.key(1, 0).onTrue(shooter.homeHoodCommand());
-				panel.key(1, 1).onTrue(shooter.testHoodCommand());
-			}
-			if (Constants.ENABLE_SWERVE && drivebase != null) {
-				Supplier<Pose2d> hubPose = () -> FieldZones.getHubPose(
-						DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue));
-				panel.key(1, 2).whileTrue(drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY, hubPose)); // bang-bang
-				panel.key(1, 3)
-						.whileTrue(drivebase.aimAtPID(driverXbox::getLeftX, driverXbox::getLeftY, hubPose)); // profiled PID
-			}
-			// Row 2 — Intake
-			if (Constants.ENABLE_INTAKE && intake != null) {
-				panel.key(2, 0).whileTrue(intake.extendCommand());
-				panel.key(2, 1).whileTrue(intake.retractCommand());
-				panel.key(2, 2).whileTrue(intake.runRollerCommand());
-				panel.key(2, 3).whileTrue(intake.ejectCommand());
-			}
-			// Row 3 — Hopper + Aim tests
-			if (Constants.ENABLE_HOPPER && hopper != null) {
-				panel.key(3, 0).whileTrue(hopper.testHopperCommand());
-				panel.key(3, 1).whileTrue(hopper.feedCommand());
-				panel.key(3, 2).whileTrue(hopper.reverseCommand());
-			}
-			// Row 4 — Climber
-			if (Constants.ENABLE_CLIMBER && climber != null) {
-				panel.key(4, 0).onTrue(climber.homeClimberCommand());
-				panel.key(4, 1).onTrue(climber.extendCommand());
-				panel.key(4, 2).onTrue(climber.retractCommand());
-				panel.key(4, 3).onTrue(climber.zeroCommand());
-			}
+		// ===== Teleop Panel Controls (Maypad — see docs for layout) =====
+		// Row 2 — Feed / Intake
+		if (Constants.ENABLE_INTAKE && intake != null) {
+			panel.key(2, 1).and(inTeleop).whileTrue(intake.runRollerCommand());   // intakeForward
+			panel.key(3, 1).and(inTeleop).whileTrue(intake.ejectCommand());       // intakeReverse
+		}
+		if (Constants.ENABLE_HOPPER && hopper != null) {
+			panel.key(2, 2).and(inTeleop).whileTrue(hopper.feedCommand());         // hopperForward
+			panel.key(3, 2).and(inTeleop).whileTrue(hopper.reverseCommand());      // hopperReverse
+		}
+		if (Constants.ENABLE_SHOOTER && shooter != null) {
+			panel.key(2, 3).and(inTeleop).whileTrue(teleopAutomation.shootCommand()); // shoot+feed (no aim)
+			panel.key(3, 3).and(inTeleop).whileTrue(shooter.reverseFeederCommand()); // feederReverse
+		}
+
+		// ===== Test Mode Controls (Maypad — see docs for layout) =====
+		// Row 0 — Climber
+		if (Constants.ENABLE_CLIMBER && climber != null) {
+			panel.key(0, 0).and(inTest).onTrue(climber.homeClimberCommand());
+			panel.key(0, 1).and(inTest).onTrue(climber.zeroCommand());
+			panel.key(0, 2).and(inTest).whileTrue(climber.jogVoltageCommand(() -> 1.0));  // climberUp
+			panel.key(0, 3).and(inTest).whileTrue(climber.jogVoltageCommand(() -> -1.0)); // climberDown
+		}
+		// Row 1 — Hood + Aim
+		if (Constants.ENABLE_SHOOTER && shooter != null) {
+			panel.key(1, 1).and(inTest).onTrue(shooter.homeHoodCommand());
+			panel.key(1, 2).and(inTest).whileTrue(shooter.testHoodCommand());
+		}
+		if (Constants.ENABLE_SWERVE && drivebase != null) {
+			Supplier<Pose2d> hubPose = () -> FieldZones.getHubPose(
+					DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue));
+			panel.key(1, 0).and(inTest).whileTrue(drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY, hubPose));
+			panel.key(1, 3).and(inTest).whileTrue(drivebase.aimAtPID(driverXbox::getLeftX, driverXbox::getLeftY, hubPose));
+		}
+		// Row 2 — Shoot all
+		if (Constants.ENABLE_SHOOTER && shooter != null && Constants.ENABLE_HOPPER && hopper != null) {
+			panel.key(2, 3).and(inTest).whileTrue(
+					shooter.spinUpAndWaitCommand(shooter::getShooterTestRPM, shooter::getFeederTestRPM)
+							.andThen(hopper.setHopperVelocityCommand(hopper::getHopperTestRPM))
+							.finallyDo(() -> {
+								shooter.stop();
+								hopper.setHopperVelocity(RPM.of(0));
+							}));
+		}
+		// Row 3 — Individual subsystem tests
+		if (Constants.ENABLE_SHOOTER && shooter != null) {
+			panel.key(3, 0).and(inTest).whileTrue(shooter.testShooterMotorCommand());
+			panel.key(3, 1).and(inTest).whileTrue(shooter.testFeederCommand());
+		}
+		if (Constants.ENABLE_HOPPER && hopper != null) {
+			panel.key(3, 2).and(inTest).whileTrue(hopper.testHopperCommand());
+		}
+		if (Constants.ENABLE_INTAKE && intake != null) {
+			panel.key(3, 3).and(inTest).whileTrue(intake.testPivotCommand());
 		}
 	}
 

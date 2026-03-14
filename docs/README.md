@@ -36,6 +36,46 @@ Triggers activate automatically based on field position during teleop.
 The shooter speed is calculated from the live robot-to-hub distance using the distance LUT
 (see [Shooter docs](shooter.md#distance-lut)).
 
+#### Maypad (Operator Panel) [`Port 1`]
+
+Firmware: [df1317/maypad-frc](https://github.com/df1317/maypad-frc) — grab the latest `.hex` from the Actions tab.
+
+|           | Col 0                    | Col 1                  | Col 2                  | Col 3                  |
+|-----------|--------------------------|------------------------|------------------------|------------------------|
+| **Row 0** | -                        | -                      | -                      | -                      |
+| **Row 1** | `autoDistance` (once)    | -                      | -                      | -                      |
+| **Row 2** | `distanceAdvance` (once) | `intakeForward` (hold) | `hopperForward` (hold) | `Shoot+Feed` (hold)    |
+| **Row 3** | `distanceReduce` (once)  | `intakeReverse` (hold) | `hopperReverse` (hold) | `feederReverse` (hold) |
+| **Row 4** | `climbBottom` (once)     | `climbTop` (once)      | `climbHang` (once)     | `climbRelease` (once)  |
+
+| Key         | Action                | Notes                                                                    |
+|-------------|-----------------------|--------------------------------------------------------------------------|
+| **row 0**   |                       |                                                                          |
+| `key(0, 0)` | -                     |                                                                          |
+| `key(0, 1)` | -                     |                                                                          |
+| `key(0, 2)` | -                     |                                                                          |
+| `key(0, 3)` | -                     |                                                                          |
+| **row 1**   |                       |                                                                          |
+| `key(1, 0)` | Auto Distance         | Returns to auto setting the distance from vision                         |
+| `key(1, 1)` | -                     |                                                                          |
+| `key(1, 2)` | -                     |                                                                          |
+| `key(1, 3)` | -                     |                                                                          |
+| **row 2**   |                       |                                                                          |
+| `key(2, 0)` | Distance Advance      | Switches to manual distance and advances distance map by one increment   |
+| `key(2, 1)` | Intake Forward        |                                                                          |
+| `key(2, 2)` | Hopper Forward        |                                                                          |
+| `key(2, 3)` | Shoot + Feed + Hopper | Shoots and Feeds and runs the hopper but doesn't aim                     |
+| **row 3**   |                       |                                                                          |
+| `key(3, 0)` | Distance Reduce       | Switches to manual distance and decrements distance map by one increment |
+| `key(3, 1)` | Intake Reverse        |                                                                          |
+| `key(3, 2)` | Hopper Reverse        |                                                                          |
+| `key(3, 3)` | Feeder Reverse        |                                                                          |
+| **row 4**   |                       |                                                                          |
+| `key(4, 0)` | Climber Bottom        | Drives to the bottom                                                     |
+| `key(4, 1)` | Climber Top           | Drives to the top                                                        |
+| `key(4, 2)` | Climber Hang          | Drives to the hang position                                              |
+| `key(4, 3)` | Climber Release       | Drives to release position                                               |
+
 ### Test Mode
 
 In test mode, buttons on the Maypad run individual subsystem commands. Tunable values are adjustable live in Elastic or
@@ -43,41 +83,41 @@ Glass under the `Tunable/` table.
 
 #### Maypad (Operator Panel) [`Port 1`]
 
-Firmware: [df1317/maypad-frc](https://github.com/df1317/maypad-frc) — grab the latest `.hex` from the Actions tab.
+|           | Col 0                | Col 1                | Col 2               | Col 3                |
+|-----------|----------------------|----------------------|---------------------|----------------------|
+| **Row 0** | `climberHome` (once) | `climberZero` (once) | `climberUp` (hold)  | `climberDown` (hold) |
+| **Row 1** | -                    | `hoodHome` (once)    | `hoodTest` (hold)   | -                    |
+| **Row 2** |                      | -                    | -                   | `shootAll` (hold)    |
+| **Row 3** | `shooterTest` (hold) | `feederTest` (hold)  | `hopperTest` (hold) | `testIntake` (hold)  |
+| **Row 4** | -                    | -                    | -                   | -                    |
 
-|           | Col 0                 | Col 1               | Col 2                | Col 3                |
-|-----------|-----------------------|---------------------|----------------------|----------------------|
-| **Row 0** | `testFlywheel` (hold) | `testFeeder` (hold) | `spinUpShoot` (hold) | `stop` (once)        |
-| **Row 1** | `homeHood` (once)     | `testHood` (once)   | `aimBangBang` (hold) | `aimPID` (hold)      |
-| **Row 2** | `extend` (hold)       | `retract` (hold)    | `runRoller` (hold)   | `eject` (hold)       |
-| **Row 3** | `testHopper` (hold)   | `feed` (hold)       | `reverse` (hold)     | —                    |
-| **Row 4** | `homeClimber` (once)  | `extend` (once)     | `retract` (once)     | `zeroEncoder` (once) |
-
-| Key          | Action                 | Notes                                                               |
-|--------------|------------------------|---------------------------------------------------------------------|
-| **shooter**  |                        |                                                                     |
-| `key(0, 0)`  | Test flywheel          | Tunable: `Shooter/RPM`                                              |
-| `key(0, 1)`  | Test feeder            | Tunable: `Shooter/Feeder/RPM`                                       |
-| `key(0, 2)`  | Spin up + shoot        | Spins up then feeds hopper                                          |
-| `key(0, 3)`  | Stop shooter           |                                                                     |
-| **hood/aim** |                        |                                                                     |
-| `key(1, 0)`  | Auto-home hood         | Stall-detection homing; see [Shooter docs](shooter.md#homing)       |
-| `key(1, 1)`  | Test hood position     | Tunable: `Shooter/Hood/Percent`                                     |
-| `key(1, 2)`  | Aim at hub (bang-bang) | Stepped omega — 4 tiers by error magnitude. Logs to `Aim/`          |
-| `key(1, 3)`  | Aim at hub (PID)       | `ProfiledPIDController`, trapezoidal constraints. Logs to `AimPID/` |
-| **intake**   |                        |                                                                     |
-| `key(2, 0)`  | Extend intake          |                                                                     |
-| `key(2, 2)`  | Run roller             |                                                                     |
-| `key(2, 3)`  | Eject                  |                                                                     |
-| **hopper**   |                        |                                                                     |
-| `key(3, 0)`  | Test hopper            | Tunable: `Hopper/RPM`                                               |
-| `key(3, 1)`  | Feed                   |                                                                     |
-| `key(3, 2)`  | Reverse hopper         |                                                                     |
-| **climber**  |                        |                                                                     |
-| `key(4, 0)`  | Auto-home climber      | Drives to bottom hard stop, zeros encoder                           |
-| `key(4, 1)`  | Climber extend         | Goes to `MAX_HEIGHT`                                                |
-| `key(4, 2)`  | Climber retract        | Goes to `MIN_HEIGHT`                                                |
-| `key(4, 3)`  | Zero encoder           | Sets current position as zero                                       |
+| Key         | Action                       | Notes                                                |
+|-------------|------------------------------|------------------------------------------------------|
+| **row 0**   |                              |                                                      |
+| `key(0, 0)` | Home Climber                 |                                                      |
+| `key(0, 1)` | Zero Climber                 | Zeroes the encoders                                  |
+| `key(0, 2)` | Climber Up                   |                                                      |
+| `key(0, 3)` | Climber Down                 |                                                      |
+| **row 1**   |                              |                                                      |
+| `key(1, 0)` | -                            |                                                      |
+| `key(1, 1)` | Home the Hood                |                                                      |
+| `key(1, 2)` | Test hood position           | Tunable: `Shooter/Hood/Percent`                      |
+| `key(1, 3)` | -                            |                                                      |
+| **row 2**   |                              |                                                      |
+| `key(2, 0)` | -                            |                                                      |
+| `key(2, 1)` | -                            |                                                      |
+| `key(2, 2)` | -                            |                                                      |
+| `key(2, 3)` | Shoot + Feed + Hopper + Hood | Uses tunables below                                  |
+| **row 3**   |                              |                                                      |
+| `key(3, 0)` | Test shooter flywheel        | Tunable: `Shooter/RPM`                               |
+| `key(3, 1)` | Test feeder                  | Tunable: `Shooter/Feeder/RPM`                        |
+| `key(3, 2)` | Test hopper                  | Tunable: `Hopper/RPM`                                |
+| `key(3, 3)` | Test intake                  | Tunable: `Intake/Pivot/Degrees`, `Intake/Roller/RPM` |
+| **row 4**   |                              |                                                      |
+| `key(4, 0)` | -                            |                                                      |
+| `key(4, 1)` | -                            |                                                      |
+| `key(4, 2)` | -                            |                                                      |
+| `key(4, 3)` | -                            |                                                      |
 
 #### Dashboard Toggles
 
