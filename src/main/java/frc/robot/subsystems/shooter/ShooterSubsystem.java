@@ -160,20 +160,18 @@ public class ShooterSubsystem extends SubsystemBase {
 		distanceToRPM.put(2.86, 2750.0);
 		distanceToRPM.put(3.11, 2850.0);
 		distanceToRPM.put(3.52, 2850.0);
-		distanceToRPM.put(4.0, 2950.0);
+		distanceToRPM.put(4.00, 2950.0);
 		distanceToRPM.put(4.16, 3100.0);
 		distanceToRPM.put(4.53, 3100.0);
-		distanceToRPM.put(4.7, 32500.0);
+		distanceToRPM.put(4.70, 3250.0);
 
 		// Distance (m) -> Hood position (0.0 = min stop, 1.0 = max stop)
-		distanceToHoodPercent.put(2.56, 0.0);
+		distanceToHoodPercent.put(2.56, 0.00);
 		distanceToHoodPercent.put(2.86, 0.17);
-		distanceToHoodPercent.put(3.11, 0.17);
 		distanceToHoodPercent.put(3.52, 0.17);
-		distanceToHoodPercent.put(4.0, 0.36);
-		distanceToHoodPercent.put(4.16, 0.36);
+		distanceToHoodPercent.put(4.00, 0.36);
 		distanceToHoodPercent.put(4.53, 0.36);
-		distanceToHoodPercent.put(4.7, .51);
+		distanceToHoodPercent.put(4.70, 0.51);
 	}
 
 	@Override
@@ -291,9 +289,9 @@ public class ShooterSubsystem extends SubsystemBase {
 	public void stop() {
 		targetVelocity = RPM.of(0);
 		targetFeederVelocity = RPM.of(0.0);
+		setHoodPercent(0);
 		motor.stopMotor();
 		feeder.stopMotor();
-		hoodStop();
 	}
 
 	public void setVelocity(AngularVelocity velocity) {
@@ -403,9 +401,9 @@ public class ShooterSubsystem extends SubsystemBase {
 
 	public Command testFullMotorCommand() {
 		return Commands.run(() -> {
-			setVelocity(RPM.of(testShooterRPM.get()));
-			setFeederVelocity(RPM.of(testFeederRPM.get()));
-		}, this)
+					setVelocity(RPM.of(testShooterRPM.get()));
+					setFeederVelocity(RPM.of(testFeederRPM.get()));
+				}, this)
 				.finallyDo(() -> {
 					motor.stopMotor();
 					feeder.stopMotor();
@@ -430,48 +428,54 @@ public class ShooterSubsystem extends SubsystemBase {
 				.withName("Jog Hood");
 	}
 
+	public Command zeroHood() {
+		return Commands.runOnce(() -> {
+			setHoodPercent(0);
+		}).andThen(Commands.waitUntil(this::isHoodAtPosition));
+	}
+
 	public Command homeHoodCommand() {
 		return Commands.sequence(
-				// Disable soft limits so homing can reach the hard stops
-				Commands.runOnce(() -> {
-					SparkMaxConfig config = new SparkMaxConfig();
-					config.softLimit
-							.forwardSoftLimitEnabled(false)
-							.reverseSoftLimitEnabled(false);
-					hood.configure(config, ResetMode.kNoResetSafeParameters,
-							PersistMode.kNoPersistParameters);
-				}, this),
-				// Drive hood toward min stop
-				Commands.runOnce(() -> {
-					stallDebouncer.calculate(false); // reset stale debouncer state
-					hood.setVoltage(-ShooterConstants.HOOD_HOMING_VOLTAGE);
-				}),
-				Commands.waitUntil(this::isHoodStalled).withTimeout(5.0),
-				Commands.runOnce(() -> {
-					hood.stopMotor();
-					hoodEncoder.setPosition(0.0);
-				}),
-				Commands.waitSeconds(0.25),
-				// Drive hood toward max stop
-				Commands.runOnce(() -> {
-					stallDebouncer.calculate(false); // reset debouncer between phases
-					hood.setVoltage(ShooterConstants.HOOD_HOMING_VOLTAGE);
-				}),
-				Commands.waitUntil(this::isHoodStalled).withTimeout(5.0),
-				Commands.runOnce(() -> {
-					hood.stopMotor();
-					hoodMaxDeg = hoodEncoder.getPosition();
-					DogLog.log("Shooter/HoodMaxDeg", hoodMaxDeg);
-					// Apply soft limits based on measured range
-					SparkMaxConfig config = new SparkMaxConfig();
-					config.softLimit
-							.forwardSoftLimit((float) hoodMaxDeg)
-							.forwardSoftLimitEnabled(true)
-							.reverseSoftLimit(0.0f)
-							.reverseSoftLimitEnabled(true);
-					hood.configure(config, ResetMode.kNoResetSafeParameters,
-							PersistMode.kNoPersistParameters);
-				}))
+						// Disable soft limits so homing can reach the hard stops
+						Commands.runOnce(() -> {
+							SparkMaxConfig config = new SparkMaxConfig();
+							config.softLimit
+									.forwardSoftLimitEnabled(false)
+									.reverseSoftLimitEnabled(false);
+							hood.configure(config, ResetMode.kNoResetSafeParameters,
+									PersistMode.kNoPersistParameters);
+						}, this),
+						// Drive hood toward min stop
+						Commands.runOnce(() -> {
+							stallDebouncer.calculate(false); // reset stale debouncer state
+							hood.setVoltage(-ShooterConstants.HOOD_HOMING_VOLTAGE);
+						}),
+						Commands.waitUntil(this::isHoodStalled).withTimeout(5.0),
+						Commands.runOnce(() -> {
+							hood.stopMotor();
+							hoodEncoder.setPosition(0.0);
+						}),
+						Commands.waitSeconds(0.25),
+						// Drive hood toward max stop
+						Commands.runOnce(() -> {
+							stallDebouncer.calculate(false); // reset debouncer between phases
+							hood.setVoltage(ShooterConstants.HOOD_HOMING_VOLTAGE);
+						}),
+						Commands.waitUntil(this::isHoodStalled).withTimeout(5.0),
+						Commands.runOnce(() -> {
+							hood.stopMotor();
+							hoodMaxDeg = hoodEncoder.getPosition();
+							DogLog.log("Shooter/HoodMaxDeg", hoodMaxDeg);
+							// Apply soft limits based on measured range
+							SparkMaxConfig config = new SparkMaxConfig();
+							config.softLimit
+									.forwardSoftLimit((float) hoodMaxDeg)
+									.forwardSoftLimitEnabled(true)
+									.reverseSoftLimit(0.0f)
+									.reverseSoftLimitEnabled(true);
+							hood.configure(config, ResetMode.kNoResetSafeParameters,
+									PersistMode.kNoPersistParameters);
+						}), zeroHood())
 				.finallyDo(hood::stopMotor)
 				.withName("Home Hood");
 	}
