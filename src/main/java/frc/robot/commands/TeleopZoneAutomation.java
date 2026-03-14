@@ -6,7 +6,8 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj2.command.button.Trigger;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.repulsor.Repulsor;
 import frc.robot.subsystems.hopper.HopperSubsystem;
 import frc.robot.subsystems.intake.IntakeSubsystem;
@@ -52,32 +53,12 @@ public class TeleopZoneAutomation {
 		return FieldZones.isInOwnAllianceZone(robotPose.get(), alliance) ? TeleopMode.SHOOT : TeleopMode.SHUTTLE;
 	}
 
-	public void configureTriggers(Trigger fireTrigger) {
-		Trigger isTeleop = new Trigger(DriverStation::isTeleopEnabled);
-		Trigger isShootMode = new Trigger(() -> getMode() == TeleopMode.SHOOT);
-
-		// Fire button + shoot mode: shoot at hub distance with hopper feeding
-		if (shooter != null && hopper != null) {
-			// hub shooting
-			isTeleop.and(fireTrigger).and(isShootMode)
-					.whileTrue(shooter.shootForDistanceCommand(() -> {
-						Translation2d pos = robotPose.get().getTranslation();
-						DriverStation.Alliance alliance = DriverStation.getAlliance()
-								.orElse(DriverStation.Alliance.Blue);
-						Translation2d hub = FieldZones.getHubPose(alliance).getTranslation();
-						return Meters.of(pos.getDistance(hub));
-					}).alongWith(hopper.feedCommand()));
-
-			// shuttle command
-			isTeleop.and(fireTrigger).and(isShootMode.negate())
-					.whileTrue(shooter.shootForDistanceCommand(() -> {
-						Translation2d pos = robotPose.get().getTranslation();
-						DriverStation.Alliance alliance = DriverStation.getAlliance()
-								.orElse(DriverStation.Alliance.Blue);
-						Translation2d shuttleSpot = FieldZones.getShuttlePose(alliance, pos).getTranslation();
-						return Meters.of(pos.getDistance(shuttleSpot));
-					}).alongWith(hopper.feedCommand()));
-		}
+	public Command shootCommand() {
+		if (shooter == null || hopper == null)
+			return Commands.none();
+		return Commands.parallel(
+				shooter.shootForDistanceCommand(this::getTargetDistance),
+				Commands.waitUntil(shooter::isAtSpeed).andThen(hopper.feedCommand()));
 	}
 
 	public Pose2d getShootingPose() {
