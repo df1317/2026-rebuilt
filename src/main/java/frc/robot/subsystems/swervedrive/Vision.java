@@ -111,6 +111,16 @@ public class Vision {
 		}
 
 		DogLog.log("Vision/AcceptedMeasurements", measurements.size());
+		DogLog.log("Vision/HasVision", hasVision());
+	}
+
+	public boolean hasVision() {
+		for (Cameras camera : Cameras.values()) {
+			if (camera.camera.isConnected() && camera.estimatedRobotPose != null) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private Optional<EstimatedRobotPose> getEstimatedGlobalPose(Cameras camera) {

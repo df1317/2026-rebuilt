@@ -164,31 +164,34 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 	/** Aim at a target pose while allowing translation control (bang-bang). */
 	public Command aimAt(DoubleSupplier translateX, DoubleSupplier translateY, Supplier<Pose2d> target) {
 		return run(() -> {
-			Pose2d currentPose = getPose();
-			Pose2d targetPose = target.get();
-
-			double desiredAngle = Math.atan2(
-					targetPose.getY() - currentPose.getY(),
-					targetPose.getX() - currentPose.getX()) + Math.PI;
-
-			double error = currentPose.getRotation().getRadians() - desiredAngle;
-			error = Math.atan2(Math.sin(error), Math.cos(error));
-
-			double omega = 0.0;
-			if (Math.abs(error) > AIM_TOLERANCE) {
-				double speed = getAimSpeed(Math.abs(error));
-				omega = error > 0 ? -speed : speed;
-			}
-
 			ChassisSpeeds speeds = SwerveInputStream.of(getSwerveDrive(),
 					() -> -translateY.getAsDouble(), () -> -translateX.getAsDouble()).get();
-			speeds.omegaRadiansPerSecond = omega;
-			swerveDrive.driveFieldOrientedAndRobotOriented(speeds, new ChassisSpeeds());
 
-			DogLog.log("Aim/Error", error, Radians);
-			DogLog.log("Aim/DesiredAngle", desiredAngle, Radians);
-			DogLog.log("Aim/CurrentAngle", currentPose.getRotation().getRadians(), Radians);
-			DogLog.log("Aim/Omega", omega);
+			if (vision != null && vision.hasVision()) {
+				Pose2d currentPose = getPose();
+				Pose2d targetPose = target.get();
+
+				double desiredAngle = Math.atan2(
+						targetPose.getY() - currentPose.getY(),
+						targetPose.getX() - currentPose.getX()) + Math.PI;
+
+				double error = currentPose.getRotation().getRadians() - desiredAngle;
+				error = Math.atan2(Math.sin(error), Math.cos(error));
+
+				double omega = 0.0;
+				if (Math.abs(error) > AIM_TOLERANCE) {
+					double speed = getAimSpeed(Math.abs(error));
+					omega = error > 0 ? -speed : speed;
+				}
+
+				speeds.omegaRadiansPerSecond = omega;
+				DogLog.log("Aim/Error", error, Radians);
+				DogLog.log("Aim/DesiredAngle", desiredAngle, Radians);
+				DogLog.log("Aim/CurrentAngle", currentPose.getRotation().getRadians(), Radians);
+				DogLog.log("Aim/Omega", omega);
+			}
+
+			swerveDrive.driveFieldOrientedAndRobotOriented(speeds, new ChassisSpeeds());
 		});
 	}
 
@@ -197,23 +200,26 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 				() -> aimPIDController.reset(getPose().getRotation().getRadians(),
 						getSwerveDrive().getRobotVelocity().omegaRadiansPerSecond),
 				() -> {
-					Pose2d currentPose = getPose();
-					Pose2d targetPose = target.get();
-
-					double desiredAngle = Math.atan2(
-							targetPose.getY() - currentPose.getY(),
-							targetPose.getX() - currentPose.getX()) + Math.PI;
-
-					double omega = aimPIDController.calculate(currentPose.getRotation().getRadians(), desiredAngle);
-
 					ChassisSpeeds speeds = SwerveInputStream.of(getSwerveDrive(),
 							() -> -translateY.getAsDouble(), () -> -translateX.getAsDouble()).get();
-					speeds.omegaRadiansPerSecond = omega;
-					swerveDrive.driveFieldOrientedAndRobotOriented(speeds, new ChassisSpeeds());
 
-					DogLog.log("AimPID/Error", currentPose.getRotation().getRadians() - desiredAngle, Radians);
-					DogLog.log("AimPID/DesiredAngle", desiredAngle, Radians);
-					DogLog.log("AimPID/Omega", omega);
+					if (vision != null && vision.hasVision()) {
+						Pose2d currentPose = getPose();
+						Pose2d targetPose = target.get();
+
+						double desiredAngle = Math.atan2(
+								targetPose.getY() - currentPose.getY(),
+								targetPose.getX() - currentPose.getX()) + Math.PI;
+
+						double omega = aimPIDController.calculate(currentPose.getRotation().getRadians(), desiredAngle);
+						speeds.omegaRadiansPerSecond = omega;
+
+						DogLog.log("AimPID/Error", currentPose.getRotation().getRadians() - desiredAngle, Radians);
+						DogLog.log("AimPID/DesiredAngle", desiredAngle, Radians);
+						DogLog.log("AimPID/Omega", omega);
+					}
+
+					swerveDrive.driveFieldOrientedAndRobotOriented(speeds, new ChassisSpeeds());
 				});
 	}
 
