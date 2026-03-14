@@ -217,7 +217,9 @@ public class IntakeSubsystem extends SubsystemBase {
 	}
 
 	public Command intakeCommand() {
-		return extendCommand().andThen(Commands.idle()).finallyDo(this::stopRollerCommand)
+		return runOnce(() -> setRollerVelocity(ROLLER_INTAKE_VELOCITY))
+				.andThen(Commands.idle(this))
+				.finallyDo(this::stopRoller)
 				.withName("Intake Full Sequence");
 	}
 

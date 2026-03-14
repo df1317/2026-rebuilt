@@ -102,7 +102,7 @@ public class RobotContainer {
 		var inTeleop = new edu.wpi.first.wpilibj2.command.button.Trigger(DriverStation::isTeleop);
 		var inTest = new edu.wpi.first.wpilibj2.command.button.Trigger(DriverStation::isTest);
 
-		// ===== Driver Controls (Xbox port 0) — teleop only =====
+		// ===== Driver Controls (Xbox port 0) =====
 		if (Constants.ENABLE_SWERVE) {
 			drivebase.setDefaultCommand(
 					drivebase.robotDriveCommand(driveAngularVelocity, () -> robotRelative,
@@ -113,11 +113,11 @@ public class RobotContainer {
 								return speeds;
 							}));
 
-			driverXbox.a().and(inTeleop).onTrue(Commands.runOnce(drivebase::zeroGyro));
-			driverXbox.rightBumper().and(inTeleop).onTrue(Commands.runOnce(() -> robotRelative = !robotRelative));
+			driverXbox.a().onTrue(Commands.runOnce(drivebase::zeroGyro));
+			driverXbox.rightBumper().onTrue(Commands.runOnce(() -> robotRelative = !robotRelative));
 		}
 		if (Constants.ENABLE_SHOOTER) {
-			driverXbox.rightTrigger().and(inTeleop).whileTrue(Constants.ENABLE_SWERVE && drivebase != null
+			driverXbox.rightTrigger().whileTrue(Constants.ENABLE_SWERVE && drivebase != null
 					? Commands.parallel(
 							teleopAutomation.shootCommand(),
 							drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY,
@@ -125,8 +125,8 @@ public class RobotContainer {
 					: teleopAutomation.shootCommand());
 		}
 		if (Constants.ENABLE_INTAKE && intake != null) {
-			driverXbox.x().and(inTeleop).toggleOnTrue(intake.stowToggleCommand());
-			driverXbox.leftTrigger().and(inTeleop).whileTrue(intake.intakeCommand());
+			driverXbox.x().toggleOnTrue(intake.stowToggleCommand());
+			driverXbox.leftTrigger().whileTrue(intake.intakeCommand());
 		}
 
 		// ===== Teleop Panel Controls (Maypad — see docs for layout) =====
