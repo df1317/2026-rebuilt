@@ -45,6 +45,7 @@ import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
@@ -219,6 +220,13 @@ public class IntakeSubsystem extends SubsystemBase {
 
 	public Command stowCommand() {
 		return sequence(stopRollerCommand(), retractCommand()).withName("Intake Stow");
+	}
+
+	/** Extends and runs roller until toggled off, then stows. */
+	public Command intakeToggleCommand() {
+		return Commands.sequence(extendCommand(), runRollerCommand(), Commands.idle(this))
+				.finallyDo(interrupted -> CommandScheduler.getInstance().schedule(stowCommand()))
+				.withName("Intake Toggle");
 	}
 
 	// ==================== Test Mode ====================

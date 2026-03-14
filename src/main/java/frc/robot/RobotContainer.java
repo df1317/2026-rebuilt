@@ -117,6 +117,10 @@ public class RobotContainer {
 		if (Constants.ENABLE_SHOOTER) {
 			driverXbox.rightBumper().whileTrue(teleopAutomation.shootCommand());
 		}
+		if (Constants.ENABLE_INTAKE && intake != null) {
+			driverXbox.x().toggleOnTrue(intake.intakeToggleCommand());
+			driverXbox.leftTrigger().whileTrue(intake.intakeCommand());
+		}
 
 		// ===== Test Mode Controls =====
 		if (DriverStation.isTest()) {
