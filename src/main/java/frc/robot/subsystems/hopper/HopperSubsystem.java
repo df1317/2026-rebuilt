@@ -118,6 +118,12 @@ public class HopperSubsystem extends SubsystemBase {
 				.withName("Hopper Feed");
 	}
 
+	public Command reverseCommand() {
+		return Commands.run(() -> setHopperVelocity(REVERSE_SPEED), this)
+				.finallyDo(this::stopHopper)
+				.withName("Hopper Reverse");
+	}
+
 	public Command testHopperCommand() {
 		return Commands.run(() -> {
 			setHopperVelocity(RPM.of(testHopperRPM.get()));

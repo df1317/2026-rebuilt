@@ -9,7 +9,6 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Constants.DrivebaseConstants;
 import frc.robot.Constants.OperatorConstants;
@@ -35,8 +34,7 @@ public class RobotContainer {
 
 	// HID
 	private final CommandXboxController driverXbox = new CommandXboxController(0);
-	private final CommandJoystick m_JoystickL = new CommandJoystick(1);
-	private final OperatorPanel panel = new OperatorPanel(2);
+	private final OperatorPanel panel = new OperatorPanel(1);
 	// Subsystems
 	private final SwerveSubsystem drivebase = Constants.ENABLE_SWERVE
 			? new SwerveSubsystem(new File(Filesystem.getDeployDirectory(), "swerve/neo"))
@@ -141,13 +139,18 @@ public class RobotContainer {
 										hopper.setHopperVelocity(RPM.of(0));
 									}));
 				}
-				panel.key(0, 3).onTrue(shooter.stopCommand());
 			}
 			// Row 1 — Hood
 			if (Constants.ENABLE_SHOOTER && shooter != null) {
 				panel.key(1, 0).onTrue(shooter.homeHoodCommand());
 				panel.key(1, 1).onTrue(shooter.testHoodCommand());
-				panel.key(1, 2).onTrue(shooter.testFullMotorCommand());
+			}
+			if (Constants.ENABLE_SWERVE && drivebase != null) {
+				Supplier<Pose2d> hubPose = () -> FieldZones.getHubPose(
+						DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue));
+				panel.key(1, 2).whileTrue(drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY, hubPose)); // bang-bang
+				panel.key(1, 3)
+						.whileTrue(drivebase.aimAtPID(driverXbox::getLeftX, driverXbox::getLeftY, hubPose)); // profiled PID
 			}
 			// Row 2 — Intake
 			if (Constants.ENABLE_INTAKE && intake != null) {
@@ -160,13 +163,7 @@ public class RobotContainer {
 			if (Constants.ENABLE_HOPPER && hopper != null) {
 				panel.key(3, 0).whileTrue(hopper.testHopperCommand());
 				panel.key(3, 1).whileTrue(hopper.feedCommand());
-			}
-			if (Constants.ENABLE_SWERVE && drivebase != null) {
-				Supplier<Pose2d> hubPose = () -> FieldZones.getHubPose(
-						DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue));
-				panel.key(3, 2).whileTrue(drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY, hubPose)); // bang-bang
-				panel.key(3, 3)
-						.whileTrue(drivebase.aimAtPID(driverXbox::getLeftX, driverXbox::getLeftY, hubPose)); // profiled PID
+				panel.key(3, 2).whileTrue(hopper.reverseCommand());
 			}
 			// Row 4 — Climber
 			if (Constants.ENABLE_CLIMBER && climber != null) {
@@ -174,9 +171,6 @@ public class RobotContainer {
 				panel.key(4, 1).onTrue(climber.extendCommand());
 				panel.key(4, 2).onTrue(climber.retractCommand());
 				panel.key(4, 3).onTrue(climber.zeroCommand());
-				// Xbox left trigger + joystick: fine position control
-				driverXbox.leftTrigger(0.7).whileTrue(
-						climber.manualControlCommand(() -> (m_JoystickL.getY() / 70.0)));
 			}
 		}
 	}
