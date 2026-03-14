@@ -34,8 +34,7 @@ public class ClimberTelemetry {
 		// Motor data
 		DogLog.log("Climber/EncoderRotations", climber.motorLeft.getPosition().getValueAsDouble());
 		DogLog.log("Climber/MotorCurrentAmps", climber.motorLeft.getStatorCurrent().getValueAsDouble());
-		DogLog.log("Climber/MotorVoltage", climber.motorLeft.getMotorVoltage().getValueAsDouble()
-				* climber.motorLeft.getMotorVoltage().getValueAsDouble());
+		DogLog.log("Climber/MotorVoltage", climber.motorLeft.getMotorVoltage().getValueAsDouble());
 
 		DogLog.log("Climber/isStalled", climber.isStalled);
 	}

@@ -68,9 +68,9 @@ public class IntakeSubsystem extends SubsystemBase {
 	AngularVelocity targetRollerVelocity = RPM.of(0);
 	private final Debouncer atPositionDebouncer;
 	private final Debouncer stallDebouncer = new Debouncer(0.1, DebounceType.kBoth);
-	private final DoubleSubscriber testPivotDeg = DogLog.tunable("Test/IntakePivotDeg",
+	private final DoubleSubscriber testPivotDeg = DogLog.tunable("Intake/Pivot/Degrees",
 			PIVOT_EXTENDED_ANGLE.in(Degrees), Degrees);
-	private final DoubleSubscriber testRollerRPM = DogLog.tunable("Test/IntakeRollerRPM",
+	private final DoubleSubscriber testRollerRPM = DogLog.tunable("Intake/Roller/RPM",
 			ROLLER_INTAKE_VELOCITY.in(RPM), RPM);
 
 	// ==================== Visualization & Telemetry ====================
@@ -117,11 +117,11 @@ public class IntakeSubsystem extends SubsystemBase {
 		rollerMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
 	}
 
-	private final DoubleSubscriber KP = DogLog.tunable("Test/PIVOT_KP", PIVOT_KP);
-	private final DoubleSubscriber KI = DogLog.tunable("Test/PIVOT_KI", PIVOT_KI);
-	private final DoubleSubscriber KD = DogLog.tunable("Test/PIVOT_KP", PIVOT_KD);
-	private final DoubleSubscriber KV = DogLog.tunable("Test/PIVOT_KV", 0.0);
-	private final DoubleSubscriber KS = DogLog.tunable("Test/PIVOT_KS", 0.0);
+	private final DoubleSubscriber KP = DogLog.tunable("Intake/Pivot/kP", PIVOT_KP);
+	private final DoubleSubscriber KI = DogLog.tunable("Intake/Pivot/kI", PIVOT_KI);
+	private final DoubleSubscriber KD = DogLog.tunable("Intake/Pivot/kD", PIVOT_KD);
+	private final DoubleSubscriber KV = DogLog.tunable("Intake/Pivot/kV", 0.0);
+	private final DoubleSubscriber KS = DogLog.tunable("Intake/Pivot/kS", 0.0);
 
 	double prevKP = KP.getAsDouble();
 	double prevKI = KI.getAsDouble();
@@ -227,8 +227,7 @@ public class IntakeSubsystem extends SubsystemBase {
 	public Command testPivotCommand() {
 		return Commands.run(() -> {
 			setPivotAngle(Degrees.of(testPivotDeg.get()));
-			System.out.println("testPivotCommand!!!!");
-		}, this)
+			}, this)
 				.finallyDo(() -> pivotMotor.stopMotor())
 				.withName("Test Intake Pivot");
 	}

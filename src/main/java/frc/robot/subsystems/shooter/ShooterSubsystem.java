@@ -54,9 +54,9 @@ public class ShooterSubsystem extends SubsystemBase {
 	private final InterpolatingDoubleTreeMap distanceToHoodPercent = new InterpolatingDoubleTreeMap();
 	private final SysIdRoutine sysIdRoutine;
 	private final VelocityVoltage velocityVoltageRequest = new VelocityVoltage(0);
-	private final DoubleSubscriber testShooterRPM = DogLog.tunable("Test/ShooterRPM", 3000.0, RPM);
-	private final DoubleSubscriber testFeederRPM = DogLog.tunable("Test/FeederRPM", 3000.0, RPM);
-	private final DoubleSubscriber testHoodPercent = DogLog.tunable("Test/HoodPercent", 0.5);
+	private final DoubleSubscriber testShooterRPM = DogLog.tunable("Shooter/RPM", 3000.0, RPM);
+	private final DoubleSubscriber testFeederRPM = DogLog.tunable("Shooter/Feeder/RPM", 3000.0, RPM);
+	private final DoubleSubscriber testHoodPercent = DogLog.tunable("Shooter/Hood/Percent", 0.5);
 
 	// Shooter PID tunables (TalonFX)
 	private final DoubleSubscriber tuneShooterKP = DogLog.tunable("Shooter/Shooter/kP", SHOOTER_KP);

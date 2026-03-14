@@ -61,12 +61,12 @@ public class ClimberSubsystem extends SubsystemBase {
 	private final MutLinearVelocity velocity = MetersPerSecond.mutable(0);
 	private final SysIdRoutine sysIdRoutine;
 
-	private final DoubleSubscriber SUB_KP = DogLog.tunable("Test/CLIMBER_KP", KP);
-	private final DoubleSubscriber SUB_KI = DogLog.tunable("Test/CLIMBER_KI", KI);
-	private final DoubleSubscriber SUB_KD = DogLog.tunable("Test/CLIMBER_KP", KD);
-	private final DoubleSubscriber SUB_KV = DogLog.tunable("Test/CLIMBER_KV", KV);
-	private final DoubleSubscriber SUB_KS = DogLog.tunable("Test/CLIMBER_KS", KS);
-	private final DoubleSubscriber SUB_KG = DogLog.tunable("Test/CLIMBER_KS", KS);
+	private final DoubleSubscriber SUB_KP = DogLog.tunable("Climber/kP", KP);
+	private final DoubleSubscriber SUB_KI = DogLog.tunable("Climber/kI", KI);
+	private final DoubleSubscriber SUB_KD = DogLog.tunable("Climber/kD", KD);
+	private final DoubleSubscriber SUB_KV = DogLog.tunable("Climber/kV", KV);
+	private final DoubleSubscriber SUB_KS = DogLog.tunable("Climber/kS", KS);
+	private final DoubleSubscriber SUB_KG = DogLog.tunable("Climber/kG", KG);
 
 	double prevKP = SUB_KP.getAsDouble();
 	double prevKI = SUB_KI.getAsDouble();
@@ -75,7 +75,7 @@ public class ClimberSubsystem extends SubsystemBase {
 	double prevKS = SUB_KS.getAsDouble();
 	double prevKG = SUB_KG.getAsDouble();
 
-	private final DoubleSubscriber testClimberHeight = DogLog.tunable("Test/ClimberHeightM",
+	private final DoubleSubscriber testClimberHeight = DogLog.tunable("Climber/Height",
 			MAX_HEIGHT.in(Meters), Meters);
 
 	private final ClimberVisualization visualization;
@@ -127,7 +127,6 @@ public class ClimberSubsystem extends SubsystemBase {
 	}
 
 	public void onEnabled() {
-		System.out.println("just ENABLED!");
 		goalState.position = getHeightMeters();
 		currentState.position = getHeightMeters();
 		currentState.velocity = 0.0;
@@ -198,7 +197,7 @@ public class ClimberSubsystem extends SubsystemBase {
 	}
 
 	public boolean isClimberStalled() {
-		double climberMotorCurrent = motorLeft.getMotorVoltage().getValueAsDouble();
+		double climberMotorCurrent = motorLeft.getStatorCurrent().getValueAsDouble();
 		double climberMotorRPM = motorLeft.getVelocity().getValueAsDouble(); // RPM
 		boolean isPivotStalled = Math.abs(climberMotorRPM) < 2.0 && climberMotorCurrent > CURRENT_LIMIT * 0.5;
 		return stallDebouncer.calculate(isPivotStalled);
@@ -262,10 +261,8 @@ public class ClimberSubsystem extends SubsystemBase {
 	private static final double GO_TO_HEIGHT_TIMEOUT_SECONDS = 5.0;
 
 	public Command goToHeightCommand(double heightMeters) {
-		return Commands.runOnce(() -> {
-			System.out.println("called set goal");
-			setGoalHeight(heightMeters);
-		}).andThen(Commands.waitUntil(this::isAtGoal)).withTimeout(GO_TO_HEIGHT_TIMEOUT_SECONDS);
+		return Commands.runOnce(() -> setGoalHeight(heightMeters), this)
+				.andThen(Commands.waitUntil(this::isAtGoal)).withTimeout(GO_TO_HEIGHT_TIMEOUT_SECONDS);
 	}
 
 	public Command goToHeightCommand(DoubleSupplier heightMeters) {
@@ -277,8 +274,7 @@ public class ClimberSubsystem extends SubsystemBase {
 	public Command manualControlCommand(DoubleSupplier speedInput) {
 		return Commands.run(() -> {
 			double input = speedInput.getAsDouble();
-			System.out.println("add to goal position! " + input);
-			goalState.position += input;
+				goalState.position += input;
 		}, this).finallyDo(this::stop);
 	}
 

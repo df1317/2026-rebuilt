@@ -34,12 +34,12 @@ public class HopperSubsystem extends SubsystemBase {
 	// ==================== Visualization & Telemetry ====================
 	private final HopperTelemetry telemetry;
 	// ==================== Test Mode ====================
-	private final DoubleSubscriber testHopperRPM = DogLog.tunable("Test/HopperRPM", 2000.0);
-	private final DoubleSubscriber KP = DogLog.tunable("Test/KP", HOPPER_KP);
-	private final DoubleSubscriber KI = DogLog.tunable("Test/KI", HOPPER_KI);
-	private final DoubleSubscriber KD = DogLog.tunable("Test/KP", HOPPER_KD);
-	private final DoubleSubscriber KV = DogLog.tunable("Test/KV", HOPPER_KV);
-	private final DoubleSubscriber KS = DogLog.tunable("Test/KS", HOPPER_KS);
+	private final DoubleSubscriber testHopperRPM = DogLog.tunable("Hopper/RPM", 2000.0);
+	private final DoubleSubscriber KP = DogLog.tunable("Hopper/kP", HOPPER_KP);
+	private final DoubleSubscriber KI = DogLog.tunable("Hopper/kI", HOPPER_KI);
+	private final DoubleSubscriber KD = DogLog.tunable("Hopper/kD", HOPPER_KD);
+	private final DoubleSubscriber KV = DogLog.tunable("Hopper/kV", HOPPER_KV);
+	private final DoubleSubscriber KS = DogLog.tunable("Hopper/kS", HOPPER_KS);
 	// ==================== Control State (package-private for telemetry/visualization)
 	// ====================
 	AngularVelocity targetHopperVelocity = RPM.of(0);
@@ -112,11 +112,11 @@ public class HopperSubsystem extends SubsystemBase {
 	// ==================== Command Factory Methods ====================
 
 	public Command forwardCommand() {
-		return runOnce(() -> setHopperVelocity(REVERSE_SPEED)).withName("Hopper Forward");
+		return runOnce(() -> setHopperVelocity(FEED_SPEED)).withName("Hopper Forward");
 	}
 
 	public Command reverseCommand() {
-		return runOnce(() -> setHopperVelocity(FEED_SPEED)).withName("Hopper Back");
+		return runOnce(() -> setHopperVelocity(REVERSE_SPEED)).withName("Hopper Back");
 	}
 
 	public Command stopCommand() {
