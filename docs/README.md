@@ -13,16 +13,16 @@ Quick reference documentation for robot controls and configuration.
 
 #### Xbox Controller (Driver) [`Port 0`]
 
-| Binding         | Action                | Description                                                |
-|-----------------|-----------------------|------------------------------------------------------------|
-| `Left Stick`    | Drive translate       | Controls robot translation                                 |
-| `Right Stick X` | Drive rotate          | Controls robot rotation                                    |
-| `Button A`      | Zero gyro             | Resets gyro heading (once)                                 |
-| `Left Bumper`   | Toggle field relative | Switches between field and robot relative driving          |
-| `Button Y`      | Auto aim (hold)       | Aims at hub while allowing translation                     |
-| `Button X`      | Toggle intake stow    | Extends/retracts intake (no roller)                        |
-| `Left Trigger`  | Intake (hold)         | Extends intake and runs roller                             |
-| `Right Trigger` | Fire (hold)           | Shoot + feed — zone-aware, only fires in own alliance zone |
+| Binding         | Action                | Description                                                      |
+|-----------------|-----------------------|------------------------------------------------------------------|
+| `Left Stick`    | Drive translate       | Controls robot translation                                       |
+| `Right Stick X` | Drive rotate          | Controls robot rotation                                          |
+| `Button A`      | Zero gyro             | Resets gyro heading (once)                                       |
+| `Left Bumper`   | Climber Align         | Aligns robot to nearest side of the climber                      |
+| `Right Bumper`  | Toggle field relative | Switches between field and robot relative driving                |
+| `Button X`      | Toggle intake stow    | Extends/retracts intake (no roller)                              |
+| `Left Trigger`  | Intake (hold)         | Extends intake and runs roller                                   |
+| `Right Trigger` | Fire (hold)           | Shoot + feed + aim — zone-aware, only fires in own alliance zone |
 
 ### Zone Automation (`TeleopZoneAutomation`)
 

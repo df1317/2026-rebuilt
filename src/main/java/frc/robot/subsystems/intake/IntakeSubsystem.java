@@ -1,31 +1,5 @@
 package frc.robot.subsystems.intake;
 
-import static edu.wpi.first.units.Units.Degrees;
-import static edu.wpi.first.units.Units.RPM;
-import static edu.wpi.first.wpilibj2.command.Commands.sequence;
-import static frc.robot.Constants.IntakeConstants.AT_POSITION_DEBOUNCE_TIME;
-import static frc.robot.Constants.IntakeConstants.PIVOT_ANGLE_TOLERANCE;
-import static frc.robot.Constants.IntakeConstants.PIVOT_CURRENT_LIMIT;
-import static frc.robot.Constants.IntakeConstants.PIVOT_EXTENDED_ANGLE;
-import static frc.robot.Constants.IntakeConstants.PIVOT_GEAR_RATIO;
-import static frc.robot.Constants.IntakeConstants.PIVOT_INVERTED;
-import static frc.robot.Constants.IntakeConstants.PIVOT_KD;
-import static frc.robot.Constants.IntakeConstants.PIVOT_KI;
-import static frc.robot.Constants.IntakeConstants.PIVOT_KP;
-import static frc.robot.Constants.IntakeConstants.PIVOT_MOTOR_ID;
-import static frc.robot.Constants.IntakeConstants.PIVOT_RETRACTED_ANGLE;
-import static frc.robot.Constants.IntakeConstants.ROLLER_CURRENT_LIMIT;
-import static frc.robot.Constants.IntakeConstants.ROLLER_EJECT_VELOCITY;
-import static frc.robot.Constants.IntakeConstants.ROLLER_INTAKE_VELOCITY;
-import static frc.robot.Constants.IntakeConstants.ROLLER_INVERTED;
-import static frc.robot.Constants.IntakeConstants.ROLLER_I_ZONE;
-import static frc.robot.Constants.IntakeConstants.ROLLER_KD;
-import static frc.robot.Constants.IntakeConstants.ROLLER_KI;
-import static frc.robot.Constants.IntakeConstants.ROLLER_KP;
-import static frc.robot.Constants.IntakeConstants.ROLLER_KV;
-import static frc.robot.Constants.IntakeConstants.ROLLER_MOTOR_ID;
-import static frc.robot.Constants.IntakeConstants.ROLLER_VELOCITY_TOLERANCE;
-
 import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.ResetMode;
@@ -37,7 +11,6 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
-
 import dev.doglog.DogLog;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
@@ -49,6 +22,11 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
+import static edu.wpi.first.units.Units.Degrees;
+import static edu.wpi.first.units.Units.RPM;
+import static edu.wpi.first.wpilibj2.command.Commands.sequence;
+import static frc.robot.Constants.IntakeConstants.*;
+
 /**
  * Intake subsystem with a pivoting arm and roller mechanism.
  */
@@ -58,25 +36,33 @@ public class IntakeSubsystem extends SubsystemBase {
 	// ====================
 	final SparkMax pivotMotor;
 	final SparkFlex rollerMotor;
-	private final SparkClosedLoopController pivotController;
-	private final SparkClosedLoopController rollerController;
 	final RelativeEncoder pivotEncoder;
 	final RelativeEncoder rollerEncoder;
-
-	// ==================== Control State (package-private for telemetry/visualization)
-	// ====================
-	Angle targetPivotAngle = PIVOT_RETRACTED_ANGLE;
-	AngularVelocity targetRollerVelocity = RPM.of(0);
+	private final SparkClosedLoopController pivotController;
+	private final SparkClosedLoopController rollerController;
 	private final Debouncer atPositionDebouncer;
 	private final Debouncer stallDebouncer = new Debouncer(0.1, DebounceType.kBoth);
 	private final DoubleSubscriber testPivotDeg = DogLog.tunable("Intake/Pivot/Degrees",
 			PIVOT_EXTENDED_ANGLE.in(Degrees), Degrees);
 	private final DoubleSubscriber testRollerRPM = DogLog.tunable("Intake/Roller/RPM",
 			ROLLER_INTAKE_VELOCITY.in(RPM), RPM);
-
 	// ==================== Visualization & Telemetry ====================
 	private final IntakeVisualization visualization;
 	private final IntakeTelemetry telemetry;
+	private final DoubleSubscriber KP = DogLog.tunable("Intake/Pivot/kP", PIVOT_KP);
+	private final DoubleSubscriber KI = DogLog.tunable("Intake/Pivot/kI", PIVOT_KI);
+	private final DoubleSubscriber KD = DogLog.tunable("Intake/Pivot/kD", PIVOT_KD);
+	private final DoubleSubscriber KV = DogLog.tunable("Intake/Pivot/kV", 0.0);
+	private final DoubleSubscriber KS = DogLog.tunable("Intake/Pivot/kS", 0.0);
+	// ==================== Control State (package-private for telemetry/visualization)
+	// ====================
+	Angle targetPivotAngle = PIVOT_RETRACTED_ANGLE;
+	AngularVelocity targetRollerVelocity = RPM.of(0);
+	double prevKP = KP.getAsDouble();
+	double prevKI = KI.getAsDouble();
+	double prevKD = KD.getAsDouble();
+	double prevKV = KV.getAsDouble();
+	double prevKS = KS.getAsDouble();
 
 	public IntakeSubsystem() {
 		pivotMotor = new SparkMax(PIVOT_MOTOR_ID, MotorType.kBrushless);
@@ -117,18 +103,6 @@ public class IntakeSubsystem extends SubsystemBase {
 
 		rollerMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
 	}
-
-	private final DoubleSubscriber KP = DogLog.tunable("Intake/Pivot/kP", PIVOT_KP);
-	private final DoubleSubscriber KI = DogLog.tunable("Intake/Pivot/kI", PIVOT_KI);
-	private final DoubleSubscriber KD = DogLog.tunable("Intake/Pivot/kD", PIVOT_KD);
-	private final DoubleSubscriber KV = DogLog.tunable("Intake/Pivot/kV", 0.0);
-	private final DoubleSubscriber KS = DogLog.tunable("Intake/Pivot/kS", 0.0);
-
-	double prevKP = KP.getAsDouble();
-	double prevKI = KI.getAsDouble();
-	double prevKD = KD.getAsDouble();
-	double prevKV = KV.getAsDouble();
-	double prevKS = KS.getAsDouble();
 
 	@Override
 	public void periodic() {
@@ -214,7 +188,7 @@ public class IntakeSubsystem extends SubsystemBase {
 	}
 
 	public Command intakeCommand() {
-		return Commands.sequence(extendCommand(), runRollerCommand())
+		return extendCommand().finallyDo(this::stopRollerCommand)
 				.withName("Intake Full Sequence");
 	}
 
@@ -240,8 +214,8 @@ public class IntakeSubsystem extends SubsystemBase {
 
 	public Command testPivotCommand() {
 		return Commands.run(() -> {
-			setPivotAngle(Degrees.of(testPivotDeg.get()));
-			}, this)
+					setPivotAngle(Degrees.of(testPivotDeg.get()));
+				}, this)
 				.finallyDo(() -> pivotMotor.stopMotor())
 				.withName("Test Intake Pivot");
 	}

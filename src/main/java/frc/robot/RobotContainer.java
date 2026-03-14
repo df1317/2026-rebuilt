@@ -114,10 +114,15 @@ public class RobotContainer {
 			driverXbox.a().onTrue(Commands.runOnce(drivebase::zeroGyro));
 
 			// Left bumper toggle: field relative
-			driverXbox.leftBumper().onTrue(Commands.runOnce(() -> robotRelative = !robotRelative));
+			driverXbox.rightBumper().onTrue(Commands.runOnce(() -> robotRelative = !robotRelative));
 		}
 		if (Constants.ENABLE_SHOOTER) {
-			driverXbox.rightTrigger().whileTrue(teleopAutomation.shootCommand());
+			driverXbox.rightTrigger().whileTrue(Constants.ENABLE_SWERVE && drivebase != null
+					? Commands.parallel(
+							teleopAutomation.shootCommand(),
+							drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY,
+									teleopAutomation::getShootingPose))
+					: teleopAutomation.shootCommand());
 		}
 		if (Constants.ENABLE_INTAKE && intake != null) {
 			driverXbox.x().toggleOnTrue(intake.stowToggleCommand());
