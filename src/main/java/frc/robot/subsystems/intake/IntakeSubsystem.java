@@ -49,20 +49,22 @@ public class IntakeSubsystem extends SubsystemBase {
 	// ==================== Visualization & Telemetry ====================
 	private final IntakeVisualization visualization;
 	private final IntakeTelemetry telemetry;
-	private final DoubleSubscriber KP = DogLog.tunable("Intake/Pivot/kP", PIVOT_KP);
-	private final DoubleSubscriber KI = DogLog.tunable("Intake/Pivot/kI", PIVOT_KI);
-	private final DoubleSubscriber KD = DogLog.tunable("Intake/Pivot/kD", PIVOT_KD);
-	private final DoubleSubscriber KV = DogLog.tunable("Intake/Pivot/kV", 0.0);
-	private final DoubleSubscriber KS = DogLog.tunable("Intake/Pivot/kS", 0.0);
+	// Pivot PID tunables
+	private final DoubleSubscriber tunePivotKP = DogLog.tunable("Intake/Pivot/kP", PIVOT_KP);
+	private final DoubleSubscriber tunePivotKI = DogLog.tunable("Intake/Pivot/kI", PIVOT_KI);
+	private final DoubleSubscriber tunePivotKD = DogLog.tunable("Intake/Pivot/kD", PIVOT_KD);
+	private final DoubleSubscriber tunePivotKV = DogLog.tunable("Intake/Pivot/kV", 0.0);
+	// Roller PID tunables
+	private final DoubleSubscriber tuneRollerKP = DogLog.tunable("Intake/Roller/kP", ROLLER_KP);
+	private final DoubleSubscriber tuneRollerKI = DogLog.tunable("Intake/Roller/kI", ROLLER_KI);
+	private final DoubleSubscriber tuneRollerKD = DogLog.tunable("Intake/Roller/kD", ROLLER_KD);
+	private final DoubleSubscriber tuneRollerKV = DogLog.tunable("Intake/Roller/kV", ROLLER_KV);
 	// ==================== Control State (package-private for telemetry/visualization)
 	// ====================
 	Angle targetPivotAngle = PIVOT_RETRACTED_ANGLE;
 	AngularVelocity targetRollerVelocity = RPM.of(0);
-	double prevKP = KP.getAsDouble();
-	double prevKI = KI.getAsDouble();
-	double prevKD = KD.getAsDouble();
-	double prevKV = KV.getAsDouble();
-	double prevKS = KS.getAsDouble();
+	private double prevPivotKP = PIVOT_KP, prevPivotKI = PIVOT_KI, prevPivotKD = PIVOT_KD, prevPivotKV = 0.0;
+	private double prevRollerKP = ROLLER_KP, prevRollerKI = ROLLER_KI, prevRollerKD = ROLLER_KD, prevRollerKV = ROLLER_KV;
 
 	public IntakeSubsystem() {
 		pivotMotor = new SparkMax(PIVOT_MOTOR_ID, MotorType.kBrushless);
@@ -107,22 +109,38 @@ public class IntakeSubsystem extends SubsystemBase {
 	@Override
 	public void periodic() {
 		telemetry.log();
-		if (prevKP != KP.getAsDouble() || prevKI != KI.getAsDouble() || prevKD != KD.getAsDouble()
-				|| prevKV != KV.getAsDouble()) {
+		updatePivotPIDIfChanged();
+		updateRollerPIDIfChanged();
+	}
 
-			prevKP = KP.getAsDouble();
-			prevKI = KI.getAsDouble();
-			prevKD = KD.getAsDouble();
-			prevKV = KV.getAsDouble();
+	private void updatePivotPIDIfChanged() {
+		double kP = tunePivotKP.getAsDouble(), kI = tunePivotKI.getAsDouble(),
+				kD = tunePivotKD.getAsDouble(), kV = tunePivotKV.getAsDouble();
+		if (kP == prevPivotKP && kI == prevPivotKI && kD == prevPivotKD && kV == prevPivotKV)
+			return;
+		prevPivotKP = kP;
+		prevPivotKI = kI;
+		prevPivotKD = kD;
+		prevPivotKV = kV;
+		SparkMaxConfig config = new SparkMaxConfig();
+		config.closedLoop.pid(kP, kI, kD);
+		config.closedLoop.feedForward.kV(kV);
+		pivotMotor.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
+	}
 
-			SparkMaxConfig config = new SparkMaxConfig();
-			config.idleMode(IdleMode.kCoast).smartCurrentLimit(PIVOT_CURRENT_LIMIT)
-					.inverted(PIVOT_INVERTED);
-			config.closedLoop.pid(KP.getAsDouble(), KI.getAsDouble(), KD.getAsDouble());
-			config.closedLoop.feedForward.kV(KV.getAsDouble());
-
-			pivotMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
-		}
+	private void updateRollerPIDIfChanged() {
+		double kP = tuneRollerKP.getAsDouble(), kI = tuneRollerKI.getAsDouble(),
+				kD = tuneRollerKD.getAsDouble(), kV = tuneRollerKV.getAsDouble();
+		if (kP == prevRollerKP && kI == prevRollerKI && kD == prevRollerKD && kV == prevRollerKV)
+			return;
+		prevRollerKP = kP;
+		prevRollerKI = kI;
+		prevRollerKD = kD;
+		prevRollerKV = kV;
+		SparkMaxConfig config = new SparkMaxConfig();
+		config.closedLoop.pid(kP, kI, kD);
+		config.closedLoop.feedForward.kV(kV);
+		rollerMotor.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
 	}
 
 	// ==================== State Query Methods ====================
