@@ -245,8 +245,8 @@ public class IntakeSubsystem extends SubsystemBase {
 
 	public Command testPivotCommand() {
 		return Commands.run(() -> {
-					setPivotAngle(Degrees.of(testPivotDeg.get()));
-				}, this)
+			setPivotAngle(Degrees.of(testPivotDeg.get()));
+		}, this)
 				.finallyDo(pivotMotor::stopMotor)
 				.withName("Test Intake Pivot");
 	}

@@ -132,12 +132,12 @@ public class RobotContainer {
 		// ===== Teleop Panel Controls (Maypad — see docs for layout) =====
 		// Row 2 — Feed / Intake
 		if (Constants.ENABLE_INTAKE && intake != null) {
-			panel.key(2, 1).and(inTeleop).whileTrue(intake.runRollerCommand());   // intakeForward
-			panel.key(3, 1).and(inTeleop).whileTrue(intake.ejectCommand());       // intakeReverse
+			panel.key(2, 1).and(inTeleop).whileTrue(intake.runRollerCommand()); // intakeForward
+			panel.key(3, 1).and(inTeleop).whileTrue(intake.ejectCommand()); // intakeReverse
 		}
 		if (Constants.ENABLE_HOPPER && hopper != null) {
-			panel.key(2, 2).and(inTeleop).whileTrue(hopper.feedCommand());         // hopperForward
-			panel.key(3, 2).and(inTeleop).whileTrue(hopper.reverseCommand());      // hopperReverse
+			panel.key(2, 2).and(inTeleop).whileTrue(hopper.feedCommand()); // hopperForward
+			panel.key(3, 2).and(inTeleop).whileTrue(hopper.reverseCommand()); // hopperReverse
 		}
 		if (Constants.ENABLE_SHOOTER && shooter != null) {
 			panel.key(2, 3).and(inTeleop).whileTrue(teleopAutomation.shootCommand()); // shoot+feed (no aim)
@@ -149,7 +149,7 @@ public class RobotContainer {
 		if (Constants.ENABLE_CLIMBER && climber != null) {
 			panel.key(0, 0).and(inTest).onTrue(climber.homeClimberCommand());
 			panel.key(0, 1).and(inTest).onTrue(climber.zeroCommand());
-			panel.key(0, 2).and(inTest).whileTrue(climber.jogVoltageCommand(() -> 1.0));  // climberUp
+			panel.key(0, 2).and(inTest).whileTrue(climber.jogVoltageCommand(() -> 1.0)); // climberUp
 			panel.key(0, 3).and(inTest).whileTrue(climber.jogVoltageCommand(() -> -1.0)); // climberDown
 		}
 		// Row 1 — Hood + Aim
@@ -196,7 +196,7 @@ public class RobotContainer {
 				Commands.waitSeconds(0.5),
 				// Collect
 				repulsor.navigateTo(
-								() -> _Rebuilt2026.CENTER_COLLECT.poseForCurrentAlliance(SetpointContext.EMPTY))
+						() -> _Rebuilt2026.CENTER_COLLECT.poseForCurrentAlliance(SetpointContext.EMPTY))
 						.until(repulsor.within(Meters.of(0.15))),
 				Commands.waitSeconds(1.0),
 				// Score again
@@ -208,7 +208,7 @@ public class RobotContainer {
 	private Command buildScoreAndClimbAuto(frc.robot.repulsor.Setpoints.GameSetpoint climbSetpoint) {
 		return Commands.sequence(
 				repulsor.navigateTo(
-								() -> _Rebuilt2026.HUB_SCORE_FRONT.poseForCurrentAlliance(SetpointContext.EMPTY))
+						() -> _Rebuilt2026.HUB_SCORE_FRONT.poseForCurrentAlliance(SetpointContext.EMPTY))
 						.until(repulsor.within(Meters.of(0.15))),
 				Commands.waitSeconds(1.0),
 				repulsor.navigateTo(

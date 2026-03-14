@@ -289,16 +289,16 @@ public class ClimberSubsystem extends SubsystemBase {
 	public Command manualControlCommand(DoubleSupplier speedInput) {
 		return Commands.run(() -> {
 			double input = speedInput.getAsDouble();
-				goalState.position += input;
+			goalState.position += input;
 		}, this).finallyDo(this::stop);
 	}
 
 	/** Raw voltage jog using a joystick axis [-1, 1]. Bypasses position control loop, uses homing current limit. */
 	public Command jogVoltageCommand(DoubleSupplier axis) {
 		return Commands.runOnce(() -> {
-					isHoming = true;
-					applyHomingCurrentLimit();
-				}, this)
+			isHoming = true;
+			applyHomingCurrentLimit();
+		}, this)
 				.andThen(Commands.run(() -> {
 					double voltage = axis.getAsDouble() * HOMING_VOLTAGE;
 					DogLog.log("Climber/JogVoltage", voltage);
@@ -334,22 +334,22 @@ public class ClimberSubsystem extends SubsystemBase {
 
 	public Command homeClimberCommand() {
 		return Commands.sequence(
-						// Drive toward the bottom hard stop
-						Commands.runOnce(() -> {
-							isHoming = true;
-							isHomed = false;
-							applyHomingCurrentLimit();
-							stallDebouncer.calculate(false); // reset stale debouncer state
-							motorLeft.setVoltage(-HOMING_VOLTAGE);
-						}, this),
-						Commands.waitUntil(this::isClimberStalled).withTimeout(10.0),
-						// Zero encoder at the bottom
-						Commands.runOnce(() -> {
-							motorLeft.stopMotor();
-							resetEncoders();
-							isHomed = true;
-							DogLog.log("Climber/IsHomed", true);
-						}, this))
+				// Drive toward the bottom hard stop
+				Commands.runOnce(() -> {
+					isHoming = true;
+					isHomed = false;
+					applyHomingCurrentLimit();
+					stallDebouncer.calculate(false); // reset stale debouncer state
+					motorLeft.setVoltage(-HOMING_VOLTAGE);
+				}, this),
+				Commands.waitUntil(this::isClimberStalled).withTimeout(10.0),
+				// Zero encoder at the bottom
+				Commands.runOnce(() -> {
+					motorLeft.stopMotor();
+					resetEncoders();
+					isHomed = true;
+					DogLog.log("Climber/IsHomed", true);
+				}, this))
 				.finallyDo(() -> {
 					isHoming = false;
 					restoreNormalCurrentLimit();
