@@ -93,7 +93,7 @@ public class OurSwerveInputStream implements Supplier<ChassisSpeeds> {
 	/**
 	 * Target to aim at.
 	 */
-	private Optional<Pose2d> aimTarget = Optional.empty();
+	private Optional<Supplier<Pose2d>> aimTarget = Optional.empty();
 	/**
 	 * Target {@link Supplier<Pose2d>} to drive towards when driveToPose is enabled.
 	 */
@@ -546,7 +546,12 @@ public class OurSwerveInputStream implements Supplier<ChassisSpeeds> {
 	 * @return this
 	 */
 	public OurSwerveInputStream aim(Pose2d aimTarget) {
-		this.aimTarget = aimTarget.equals(Pose2d.kZero) ? Optional.empty() : Optional.of(aimTarget);
+		this.aimTarget = aimTarget.equals(Pose2d.kZero) ? Optional.empty() : Optional.of(() -> aimTarget);
+		return this;
+	}
+
+	public OurSwerveInputStream aimDynamic(Supplier<Pose2d> aimTargetSupplier) {
+		this.aimTarget = Optional.of(aimTargetSupplier);
 		return this;
 	}
 
@@ -906,7 +911,7 @@ public class OurSwerveInputStream implements Supplier<ChassisSpeeds> {
 			}
 			case AIM -> {
 				Rotation2d currentHeading = swerveDrive.getOdometryHeading();
-				Translation2d relativeTrl = aimTarget.get().relativeTo(swerveDrive.getPose()).getTranslation();
+				Translation2d relativeTrl = aimTarget.get().get().relativeTo(swerveDrive.getPose()).getTranslation();
 				Rotation2d target = new Rotation2d(relativeTrl.getX(), relativeTrl.getY()).plus(currentHeading);
 				DogLog.log("HeadingSetpoint", currentHeading.getDegrees());
 				omegaRadiansPerSecond = swerveController.headingCalculate(currentHeading.getRadians(), target.getRadians());

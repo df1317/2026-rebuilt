@@ -69,9 +69,14 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 	private Vision vision;
 	private AutopilotController autopilotController;
 	private Supplier<Distance> targetDistanceSupplier = null;
+	private Supplier<Pose2d> aimTargetSupplier = null;
 
 	public void setTargetDistanceSupplier(Supplier<Distance> supplier) {
 		this.targetDistanceSupplier = supplier;
+	}
+
+	public void setAimTargetSupplier(Supplier<Pose2d> supplier) {
+		this.aimTargetSupplier = supplier;
 	}
 
 	public SwerveSubsystem(File directory) {
@@ -291,7 +296,9 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 		return run(() -> {
 			Optional<Alliance> ally = DriverStation.getAlliance();
 
-			if (ally.isPresent() && !ally.equals(prevAlliance)) {
+			if (aimTargetSupplier != null) {
+				velocity.aim(aimTargetSupplier.get());
+			} else if (ally.isPresent() && !ally.equals(prevAlliance)) {
 				prevAlliance = ally;
 				if (ally.get() == Alliance.Red) {
 					velocity.aim(HUB_POSE_RED);

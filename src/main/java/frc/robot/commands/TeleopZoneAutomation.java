@@ -1,7 +1,9 @@
 package frc.robot.commands;
 
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
@@ -18,23 +20,29 @@ import static edu.wpi.first.units.Units.Meters;
 public class TeleopZoneAutomation {
 
 	private static final double ALIGN_TOLERANCE_M = 0.15;
+	/** Approximate ball speed in m/s for time-of-flight estimation */
+	private static final double BALL_SPEED_M_S = 10.0;
+
 	private final Repulsor repulsor;
 	private final IntakeSubsystem intake;
 	private final ShooterSubsystem shooter;
 	private final HopperSubsystem hopper;
 	private final Supplier<Pose2d> robotPose;
+	private final Supplier<ChassisSpeeds> fieldVelocity;
 
 	public TeleopZoneAutomation(
 			Repulsor repulsor,
 			IntakeSubsystem intake,
 			ShooterSubsystem shooter,
 			HopperSubsystem hopper,
-			Supplier<Pose2d> robotPose) {
+			Supplier<Pose2d> robotPose,
+			Supplier<ChassisSpeeds> fieldVelocity) {
 		this.repulsor = repulsor;
 		this.intake = intake;
 		this.shooter = shooter;
 		this.hopper = hopper;
 		this.robotPose = robotPose;
+		this.fieldVelocity = fieldVelocity;
 	}
 
 	public TeleopMode getMode() {
@@ -86,7 +94,30 @@ public class TeleopZoneAutomation {
 	public Distance getTargetDistance() {
 		Translation2d pos = robotPose.get().getTranslation();
 		Translation2d target = getShootingPose().getTranslation();
-		return Meters.of(pos.getDistance(target));
+		double distance = pos.getDistance(target);
+		double tof = distance / BALL_SPEED_M_S;
+		ChassisSpeeds vel = fieldVelocity.get();
+		Translation2d predictedPos = new Translation2d(
+				pos.getX() + vel.vxMetersPerSecond * tof,
+				pos.getY() + vel.vyMetersPerSecond * tof);
+		return Meters.of(predictedPos.getDistance(target));
+	}
+
+	/**
+	 * Returns a virtual aim target adjusted for robot velocity so the robot leads
+	 * its shot when moving.
+	 */
+	public Pose2d getVirtualAimTarget() {
+		Translation2d pos = robotPose.get().getTranslation();
+		Translation2d target = getShootingPose().getTranslation();
+		double distance = pos.getDistance(target);
+		double tof = distance / BALL_SPEED_M_S;
+		ChassisSpeeds vel = fieldVelocity.get();
+		// Shift the aim target opposite to robot motion so the robot leads the shot
+		Translation2d virtualTarget = new Translation2d(
+				target.getX() - vel.vxMetersPerSecond * tof,
+				target.getY() - vel.vyMetersPerSecond * tof);
+		return new Pose2d(virtualTarget, new Rotation2d());
 	}
 
 	public enum TeleopMode {

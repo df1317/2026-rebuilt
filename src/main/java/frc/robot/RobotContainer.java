@@ -59,15 +59,16 @@ public class RobotContainer {
 			// Setup teleop automation
 			teleopAutomation = new TeleopZoneAutomation(
 					repulsor, intake, shooter, hopper,
-					drivebase::getPose);
+					drivebase::getPose, drivebase::getFieldVelocity);
 			teleopAutomation.configureTriggers(driverXbox.rightBumper());
 			drivebase.setTargetDistanceSupplier(teleopAutomation::getTargetDistance);
+			drivebase.setAimTargetSupplier(teleopAutomation::getVirtualAimTarget);
 
 			driveAngularVelocity = SwerveInputStream
 					.of(drivebase.getSwerveDrive(), () -> driverXbox.getLeftY() * -1,
 							() -> driverXbox.getLeftX() * -1)
 					.withControllerRotationAxis(() -> driverXbox.getRightX() * -1)
-					.aim(teleopAutomation.getShootingPose()).aimWhile(driverXbox.y())
+					.aimWhile(driverXbox.y())
 					.deadband(OperatorConstants.DEADBAND)
 					.scaleTranslation(DrivebaseConstants.TRANSLATION_SCALE).allianceRelativeControl(true);
 
