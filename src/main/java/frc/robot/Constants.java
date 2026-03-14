@@ -1,11 +1,9 @@
 package frc.robot;
 
 import edu.wpi.first.apriltag.AprilTagFields;
-import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.*;
 import frc.robot.util.DevMode;
-import swervelib.math.Matter;
 import swervelib.telemetry.SwerveDriveTelemetry.TelemetryVerbosity;
 
 import static edu.wpi.first.units.Units.*;
@@ -19,8 +17,7 @@ public final class Constants {
 	public static final boolean ENABLE_SHOOTER = true;
 	public static final boolean ENABLE_HOPPER = true;
 
-	public static final double ROBOT_MASS = 60 * 0.453592; // 60lbs * kg per pound
-	public static final Matter CHASSIS = new Matter(new Translation3d(0, 0, Inches.of(8).in(Meters)), ROBOT_MASS);
+	public static final double ROBOT_MASS = Units.lbsToKilograms(120.4); // 60lbs * kg per pound
 
 	@Deprecated
 	public static final double LOOP_TIME = 0.13; // s, 20ms + 110ms spark max velocity lag
