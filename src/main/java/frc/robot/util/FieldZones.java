@@ -162,10 +162,10 @@ public final class FieldZones {
 	public static Pose2d getShuttlePose(Alliance alliance, Translation2d robotPose) {
 		// return the closest shuttle position right behind bump.
 		Pose2d pose = alliance == Alliance.Red ? CENTER_OF_ALLIANCE_RED : CENTER_OF_ALLIANCE_BLUE;
-		double fieldSideY = robotPose.getX() / FIELD_WIDTH < 0.5 ? -1 : 1;
+		double fieldSideY = robotPose.getY() / FIELD_WIDTH < 0.5 ? -1 : 1;
 		return new Pose2d(
 				new Translation2d(pose.getX(),
-						pose.getY() + (robotPose.getX() / FIELD_WIDTH) * fieldSideY),
+						pose.getY() + (robotPose.getY() / FIELD_WIDTH) * fieldSideY),
 				Rotation2d.kZero);
 	}
 
