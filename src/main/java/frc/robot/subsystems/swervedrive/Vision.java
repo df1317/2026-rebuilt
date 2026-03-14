@@ -137,8 +137,9 @@ public class Vision {
 		return telemetry;
 	}
 
+	// named according to closest part of the robot
 	public enum Cameras {
-		FRONT_CAM(
+		BATTERY(
 				"BOULDER",
 				new Rotation3d(0, Units.degreesToRadians(15.0), 0),
 				new Translation3d(Units.inchesToMeters(13), Units.inchesToMeters(-8.5), Units.inchesToMeters(10.5)),
@@ -151,7 +152,7 @@ public class Vision {
 						VisionConstants.CameraStdDevs.MULTI_TAG[1],
 						VisionConstants.CameraStdDevs.MULTI_TAG[2])),
 
-		BACK_CAM(
+		SHOOTER(
 				"STONE",
 				new Rotation3d(0, Units.degreesToRadians(15.0), Units.degreesToRadians(180)),
 				new Translation3d(Units.inchesToMeters(-13), Units.inchesToMeters(-8.5), Units.inchesToMeters(10.5)),
@@ -164,7 +165,7 @@ public class Vision {
 						VisionConstants.CameraStdDevs.MULTI_TAG[1],
 						VisionConstants.CameraStdDevs.MULTI_TAG[2])),
 
-		CENTER_CAM(
+		INTAKE(
 				"PEBBLE",
 				new Rotation3d(0, Units.degreesToRadians(15.0), Units.degreesToRadians(-90)),
 				new Translation3d(Units.inchesToMeters(7), Units.inchesToMeters(3.5), Units.inchesToMeters(16.0)),

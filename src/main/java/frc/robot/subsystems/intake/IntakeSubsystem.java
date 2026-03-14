@@ -222,6 +222,13 @@ public class IntakeSubsystem extends SubsystemBase {
 		return sequence(stopRollerCommand(), retractCommand()).withName("Intake Stow");
 	}
 
+	/** Extends (no roller) until toggled off, then stows. */
+	public Command stowToggleCommand() {
+		return Commands.sequence(extendCommand(), Commands.idle(this))
+				.finallyDo(interrupted -> CommandScheduler.getInstance().schedule(stowCommand()))
+				.withName("Intake Stow Toggle");
+	}
+
 	/** Extends and runs roller until toggled off, then stows. */
 	public Command intakeToggleCommand() {
 		return Commands.sequence(extendCommand(), runRollerCommand(), Commands.idle(this))

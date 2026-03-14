@@ -1,6 +1,7 @@
 package frc.robot;
 
 import dev.doglog.DogLog;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.networktables.BooleanSubscriber;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
@@ -26,7 +27,6 @@ import swervelib.SwerveInputStream;
 
 import java.io.File;
 import java.util.function.Supplier;
-import edu.wpi.first.math.geometry.Pose2d;
 
 import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.RPM;
@@ -122,7 +122,7 @@ public class RobotContainer {
 			driverXbox.rightBumper().whileTrue(teleopAutomation.shootCommand());
 		}
 		if (Constants.ENABLE_INTAKE && intake != null) {
-			driverXbox.x().toggleOnTrue(intake.intakeToggleCommand());
+			driverXbox.x().toggleOnTrue(intake.stowToggleCommand());
 			driverXbox.leftTrigger().whileTrue(intake.intakeCommand());
 		}
 
@@ -165,7 +165,8 @@ public class RobotContainer {
 				Supplier<Pose2d> hubPose = () -> FieldZones.getHubPose(
 						DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue));
 				panel.key(3, 2).whileTrue(drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY, hubPose)); // bang-bang
-				panel.key(3, 3).whileTrue(drivebase.aimAtPID(driverXbox::getLeftX, driverXbox::getLeftY, hubPose)); // profiled PID
+				panel.key(3, 3)
+						.whileTrue(drivebase.aimAtPID(driverXbox::getLeftX, driverXbox::getLeftY, hubPose)); // profiled PID
 			}
 			// Row 4 — Climber
 			if (Constants.ENABLE_CLIMBER && climber != null) {
