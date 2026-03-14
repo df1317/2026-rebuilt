@@ -37,5 +37,7 @@ public class ClimberTelemetry {
 		DogLog.log("Climber/MotorVoltage", climber.motorLeft.getMotorVoltage().getValueAsDouble());
 
 		DogLog.log("Climber/isStalled", climber.isStalled);
+		DogLog.log("Climber/IsHomed", climber.isHomed);
+		DogLog.log("Climber/IsHoming", climber.isHoming);
 	}
 }

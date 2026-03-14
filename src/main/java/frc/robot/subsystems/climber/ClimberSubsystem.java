@@ -5,6 +5,7 @@ import static edu.wpi.first.units.Units.MetersPerSecond;
 import static edu.wpi.first.units.Units.MetersPerSecondPerSecond;
 import static edu.wpi.first.units.Units.Volts;
 import static frc.robot.Constants.ClimberConstants.CURRENT_LIMIT;
+import static frc.robot.Constants.ClimberConstants.HOMING_VOLTAGE;
 import static frc.robot.Constants.ClimberConstants.INVERTED;
 import static frc.robot.Constants.ClimberConstants.KD;
 import static frc.robot.Constants.ClimberConstants.KG;
@@ -49,6 +50,8 @@ public class ClimberSubsystem extends SubsystemBase {
 
 	final TalonFX motorLeft;
 	boolean isStalled = false;
+	boolean isHomed = false;
+	boolean isHoming = false;
 
 	private final TrapezoidProfile profile;
 	private final ElevatorFeedforward feedforward;
@@ -172,6 +175,11 @@ public class ClimberSubsystem extends SubsystemBase {
 		double dt = now - lastUpdateTimestamp;
 		lastUpdateTimestamp = now;
 
+		if (isHoming) {
+			telemetry.log();
+			return;
+		}
+
 		double measuredHeight = getHeightMeters();
 		currentState.position = measuredHeight;
 		currentState = profile.calculate(dt, currentState, goalState);
@@ -286,6 +294,31 @@ public class ClimberSubsystem extends SubsystemBase {
 
 	public Command zeroCommand() {
 		return Commands.runOnce(this::resetEncoders, this).withName("Climber Zero");
+	}
+
+	public Command homeClimberCommand() {
+		return Commands.sequence(
+						// Drive toward the bottom hard stop
+						Commands.runOnce(() -> {
+							isHoming = true;
+							isHomed = false;
+							stallDebouncer.calculate(false); // reset stale debouncer state
+							motorLeft.setVoltage(-HOMING_VOLTAGE);
+						}, this),
+						Commands.waitUntil(this::isClimberStalled).withTimeout(10.0),
+						// Zero encoder at the bottom
+						Commands.runOnce(() -> {
+							motorLeft.stopMotor();
+							resetEncoders();
+							isHomed = true;
+							DogLog.log("Climber/IsHomed", true);
+						}, this))
+				.finallyDo(() -> {
+					isHoming = false;
+					motorLeft.stopMotor();
+					stop();
+				})
+				.withName("Home Climber");
 	}
 
 	public Command testClimberCommand() {

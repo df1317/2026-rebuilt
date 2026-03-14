@@ -163,6 +163,8 @@ public final class Constants {
 		public static final double KS = 0.31; // 0.37
 		public static final double KG = 0.0; // 0.49
 		public static final double KV = 4.7; // 4.7
+
+		public static final double HOMING_VOLTAGE = 2.0;
 	}
 
 	public static class HopperConstants {
