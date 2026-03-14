@@ -136,8 +136,9 @@ public class HopperSubsystem extends SubsystemBase {
 		}, this).finallyDo(this::stopHopper).withName("Test Hopper");
 	}
 
-	public Command setHopperVelocity(Supplier<AngularVelocity> velocity) {
-		return Commands.run(() -> setHopperVelocity(velocity.get()), this);
+	public Command setHopperVelocityCommand(Supplier<AngularVelocity> velocity) {
+		return Commands.run(() -> setHopperVelocity(velocity.get()), this)
+				.finallyDo(this::stopHopper);
 	}
 
 	public AngularVelocity getHopperTestRPM() {

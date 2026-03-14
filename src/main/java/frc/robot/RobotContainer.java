@@ -125,12 +125,12 @@ public class RobotContainer {
 			// }));
 			//
 			// }
-			//			driverXbox.rightTrigger(0.3).whileTrue(Commands.runEnd(() -> {
-			//				shooter.setHoodPercent(shooter.getTargetHoodPercent() + 0.05);
-			//			}, shooter::hoodStop, shooter));
-			//			driverXbox.leftTrigger(0.3).whileTrue(Commands.runEnd(() -> {
-			//				shooter.setHoodPercent(shooter.getTargetHoodPercent() - 0.05);
-			//			}, shooter::hoodStop, shooter));
+			// driverXbox.rightTrigger(0.3).whileTrue(Commands.runEnd(() -> {
+			// shooter.setHoodPercent(shooter.getTargetHoodPercent() + 0.05);
+			// }, shooter::hoodStop, shooter));
+			// driverXbox.leftTrigger(0.3).whileTrue(Commands.runEnd(() -> {
+			// shooter.setHoodPercent(shooter.getTargetHoodPercent() - 0.05);
+			// }, shooter::hoodStop, shooter));
 
 			if (Constants.ENABLE_HOPPER) {
 				driverXbox.rightBumper().whileTrue(Commands.parallel(
@@ -147,7 +147,7 @@ public class RobotContainer {
 				if (Constants.ENABLE_HOPPER) {
 					m_JoystickL.button(2).whileTrue(
 							shooter.spinUpAndWaitCommand(shooter::getShooterTestRPM, shooter::getFeederTestRPM)
-									.andThen(hopper.setHopperVelocity(hopper::getHopperTestRPM))
+									.andThen(hopper.setHopperVelocityCommand(hopper::getHopperTestRPM))
 									.finallyDo(() -> {
 										shooter.stop();
 										hopper.setHopperVelocity(RPM.of(0));
@@ -192,7 +192,7 @@ public class RobotContainer {
 				Commands.waitSeconds(0.5),
 				// Collect
 				repulsor.navigateTo(
-								() -> _Rebuilt2026.CENTER_COLLECT.poseForCurrentAlliance(SetpointContext.EMPTY))
+						() -> _Rebuilt2026.CENTER_COLLECT.poseForCurrentAlliance(SetpointContext.EMPTY))
 						.until(repulsor.within(Meters.of(0.15))),
 				Commands.waitSeconds(1.0),
 				// Score again
@@ -204,7 +204,7 @@ public class RobotContainer {
 	private Command buildScoreAndClimbAuto(frc.robot.repulsor.Setpoints.GameSetpoint climbSetpoint) {
 		return Commands.sequence(
 				repulsor.navigateTo(
-								() -> _Rebuilt2026.HUB_SCORE_FRONT.poseForCurrentAlliance(SetpointContext.EMPTY))
+						() -> _Rebuilt2026.HUB_SCORE_FRONT.poseForCurrentAlliance(SetpointContext.EMPTY))
 						.until(repulsor.within(Meters.of(0.15))),
 				Commands.waitSeconds(1.0),
 				repulsor.navigateTo(
