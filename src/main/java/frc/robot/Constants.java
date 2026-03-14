@@ -126,7 +126,7 @@ public final class Constants {
 
 		public static final double FEEDER_RPM = 3000;
 
-		public static final double HOOD_KP = 0.0012;
+		public static final double HOOD_KP = 0.013;
 		public static final double HOOD_KI = 0.0;
 		public static final double HOOD_KD = 0.000;
 
