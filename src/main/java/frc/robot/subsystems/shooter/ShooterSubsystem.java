@@ -59,16 +59,20 @@ public class ShooterSubsystem extends SubsystemBase {
 	private final DoubleSubscriber testHoodPercent = DogLog.tunable("Test/HoodPercent", 0.5);
 
 	// Shooter PID tunables (TalonFX)
-	private final DoubleSubscriber tuneShooterKP = DogLog.tunable("Shooter/Tuning/Shooter/kP", SHOOTER_KP);
-	private final DoubleSubscriber tuneShooterKI = DogLog.tunable("Shooter/Tuning/Shooter/kI", SHOOTER_KI);
-	private final DoubleSubscriber tuneShooterKD = DogLog.tunable("Shooter/Tuning/Shooter/kD", SHOOTER_KD);
-	private final DoubleSubscriber tuneShooterKV = DogLog.tunable("Shooter/Tuning/Shooter/kV", SHOOTER_KV);
-	private final DoubleSubscriber tuneShooterKS = DogLog.tunable("Shooter/Tuning/Shooter/kS", SHOOTER_KS);
+	private final DoubleSubscriber tuneShooterKP = DogLog.tunable("Shooter/Shooter/kP", SHOOTER_KP);
+	private final DoubleSubscriber tuneShooterKI = DogLog.tunable("Shooter/Shooter/kI", SHOOTER_KI);
+	private final DoubleSubscriber tuneShooterKD = DogLog.tunable("Shooter/Shooter/kD", SHOOTER_KD);
+	private final DoubleSubscriber tuneShooterKV = DogLog.tunable("Shooter/Shooter/kV", SHOOTER_KV);
+	private final DoubleSubscriber tuneShooterKS = DogLog.tunable("Shooter/Shooter/kS", SHOOTER_KS);
 	// Feeder PID tunables (SparkMax)
-	private final DoubleSubscriber tuneFeederKP = DogLog.tunable("Shooter/Tuning/Feeder/kP", FEEDER_KP);
-	private final DoubleSubscriber tuneFeederKI = DogLog.tunable("Shooter/Tuning/Feeder/kI", FEEDER_KI);
-	private final DoubleSubscriber tuneFeederKD = DogLog.tunable("Shooter/Tuning/Feeder/kD", FEEDER_KD);
-	private final DoubleSubscriber tuneFeederKV = DogLog.tunable("Shooter/Tuning/Feeder/kV", FEEDER_KV);
+	private final DoubleSubscriber tuneFeederKP = DogLog.tunable("Shooter/Feeder/kP", FEEDER_KP);
+	private final DoubleSubscriber tuneFeederKI = DogLog.tunable("Shooter/Feeder/kI", FEEDER_KI);
+	private final DoubleSubscriber tuneFeederKD = DogLog.tunable("Shooter/Feeder/kD", FEEDER_KD);
+	private final DoubleSubscriber tuneFeederKV = DogLog.tunable("Shooter/Feeder/kV", FEEDER_KV);
+	// Hood PID tunables (SparkMax)
+	private final DoubleSubscriber tuneHoodKP = DogLog.tunable("Shooter/Hood/kP", HOOD_KP);
+	private final DoubleSubscriber tuneHoodKI = DogLog.tunable("Shooter/Hood/kI", HOOD_KI);
+	private final DoubleSubscriber tuneHoodKD = DogLog.tunable("Shooter/Hood/kD", HOOD_KD);
 	// ==================== Telemetry ====================
 	private final ShooterTelemetry telemetry;
 	// ==================== Control State (package-private for telemetry) ====================
@@ -80,6 +84,7 @@ public class ShooterSubsystem extends SubsystemBase {
 			prevShooterKV = SHOOTER_KV, prevShooterKS = SHOOTER_KS;
 	private double prevFeederKP = FEEDER_KP, prevFeederKI = FEEDER_KI, prevFeederKD = FEEDER_KD,
 			prevFeederKV = FEEDER_KV;
+	private double prevHoodKP = HOOD_KP, prevHoodKI = HOOD_KI, prevHoodKD = HOOD_KD;
 
 	public ShooterSubsystem() {
 		feeder = new SparkMax(ShooterConstants.FEEDER_ID, MotorType.kBrushless);
@@ -176,6 +181,7 @@ public class ShooterSubsystem extends SubsystemBase {
 		telemetry.log();
 		updateShooterPIDIfChanged();
 		updateFeederPIDIfChanged();
+		updateHoodPIDIfChanged();
 	}
 
 	private void updateShooterPIDIfChanged() {
@@ -212,6 +218,18 @@ public class ShooterSubsystem extends SubsystemBase {
 		config.closedLoop.pid(kP, kI, kD);
 		config.closedLoop.feedForward.kV(kV);
 		feeder.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
+	}
+
+	private void updateHoodPIDIfChanged() {
+		double kP = tuneHoodKP.getAsDouble(), kI = tuneHoodKI.getAsDouble(), kD = tuneHoodKD.getAsDouble();
+		if (kP == prevHoodKP && kI == prevHoodKI && kD == prevHoodKD)
+			return;
+		prevHoodKP = kP;
+		prevHoodKI = kI;
+		prevHoodKD = kD;
+		SparkMaxConfig config = new SparkMaxConfig();
+		config.closedLoop.pid(kP, kI, kD);
+		hood.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
 	}
 
 	// ==================== State Queries ====================
@@ -260,9 +278,10 @@ public class ShooterSubsystem extends SubsystemBase {
 		return distanceToHoodPercent.get(clampedDistance);
 	}
 
-	public void setForDistance(Distance distance) {
-		setVelocity(getRPMForDistance(distance));
-		setHoodPercent(getHoodPercentForDistance(distance));
+	public void setForDistance(Supplier<Distance> distance) {
+		setVelocity(getRPMForDistance(distance.get()));
+		setFeederVelocity(RPM.of(FEEDER_RPM));
+		setHoodPercent(getHoodPercentForDistance(distance.get()));
 	}
 
 	public void setVelocityForDistance(Distance distance) {
@@ -349,11 +368,11 @@ public class ShooterSubsystem extends SubsystemBase {
 	public Command shootForDistanceCommand(Supplier<Distance> distance) {
 		return Commands.run(() -> {
 			Distance d = distance.get();
-			setForDistance(d);
+			setForDistance(distance);
 			DogLog.log("Shooter/DistanceM", d.in(Meters));
 			DogLog.log("Shooter/ComputedRPM", getRPMForDistance(d).in(RPM));
 			DogLog.log("Shooter/ComputedHoodPercent", getHoodPercentForDistance(d));
-		}, this).finallyDo(this::stop);
+		}, this).andThen(Commands.run(() -> setForDistance(distance)).repeatedly()).finallyDo(this::stop);
 	}
 
 	// ==================== Test Mode ====================
