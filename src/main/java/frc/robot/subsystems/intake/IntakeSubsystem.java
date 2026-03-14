@@ -206,7 +206,7 @@ public class IntakeSubsystem extends SubsystemBase {
 	}
 
 	public Command intakeCommand() {
-		return extendCommand().finallyDo(this::stopRollerCommand)
+		return extendCommand().andThen(Commands.idle()).finallyDo(this::stopRollerCommand)
 				.withName("Intake Full Sequence");
 	}
 
@@ -234,7 +234,7 @@ public class IntakeSubsystem extends SubsystemBase {
 		return Commands.run(() -> {
 					setPivotAngle(Degrees.of(testPivotDeg.get()));
 				}, this)
-				.finallyDo(() -> pivotMotor.stopMotor())
+				.finallyDo(pivotMotor::stopMotor)
 				.withName("Test Intake Pivot");
 	}
 
