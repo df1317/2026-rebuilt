@@ -114,17 +114,17 @@ public class RobotContainer {
 			driverXbox.leftBumper().onTrue(Commands.runOnce(() -> robotRelative = !robotRelative));
 		}
 		if (Constants.ENABLE_SHOOTER) {
-			//			if (Constants.ENABLE_HOPPER) {
-			//				m_JoystickL.button(2).toggleOnTrue(shooter.spinUpAndWaitCommand(RPM.of(3000))
-			//						.andThen(Commands.sequence(Commands.runOnce(() -> shooter.setFeederVelocity(RPM.of(3000))),
-			//								Commands.waitUntil(shooter::isFeederAtSpeed)))
-			//						.andThen(Commands.runOnce(() -> hopper.setHopperVelocity(RPM.of(2000))))
-			//						.finallyDo(() -> {
-			//							shooter.stop();
-			//							hopper.setHopperVelocity(RPM.of(0.0));
-			//						}));
+			// if (Constants.ENABLE_HOPPER) {
+			// m_JoystickL.button(2).toggleOnTrue(shooter.spinUpAndWaitCommand(RPM.of(3000))
+			// .andThen(Commands.sequence(Commands.runOnce(() -> shooter.setFeederVelocity(RPM.of(3000))),
+			// Commands.waitUntil(shooter::isFeederAtSpeed)))
+			// .andThen(Commands.runOnce(() -> hopper.setHopperVelocity(RPM.of(2000))))
+			// .finallyDo(() -> {
+			// shooter.stop();
+			// hopper.setHopperVelocity(RPM.of(0.0));
+			// }));
 			//
-			//			}
+			// }
 			driverXbox.rightTrigger(0.3).whileTrue(Commands.runEnd(() -> {
 				shooter.setHoodPercent(shooter.getTargetHoodPercent() + 0.05);
 			}, shooter::hoodStop, shooter));
@@ -143,8 +143,7 @@ public class RobotContainer {
 									.finallyDo(() -> {
 										shooter.stop();
 										hopper.setHopperVelocity(RPM.of(0));
-									})
-					);
+									}));
 				}
 			}
 			if (Constants.ENABLE_SHOOTER && shooter != null) {
@@ -158,6 +157,13 @@ public class RobotContainer {
 				// m_JoystickL.button(6).onTrue(shooter.markHoodMaxHereCommand());
 				m_JoystickL.button(7).whileTrue(shooter.testShooterMotorCommand());
 				m_JoystickL.button(8).whileTrue(shooter.testFeederCommand());
+				if (Constants.ENABLE_HOPPER) {
+					m_JoystickL.button(9).whileTrue(Commands.parallel(
+							shooter.shootForDistanceCommand(teleopAutomation::getTargetDistance),
+							Commands.waitUntil(shooter::isAtSpeed).andThen(hopper.testHopperCommand())));
+				} else {
+					m_JoystickL.button(9).whileTrue(shooter.shootForDistanceCommand(teleopAutomation::getTargetDistance));
+				}
 				// m_JoystickL.button(9).whileTrue(shooter.jogHoodCommand(m_JoystickL::getY));
 			}
 			if (Constants.ENABLE_INTAKE && intake != null) {
@@ -185,7 +191,7 @@ public class RobotContainer {
 				Commands.waitSeconds(0.5),
 				// Collect
 				repulsor.navigateTo(
-								() -> _Rebuilt2026.CENTER_COLLECT.poseForCurrentAlliance(SetpointContext.EMPTY))
+						() -> _Rebuilt2026.CENTER_COLLECT.poseForCurrentAlliance(SetpointContext.EMPTY))
 						.until(repulsor.within(Meters.of(0.15))),
 				Commands.waitSeconds(1.0),
 				// Score again
@@ -197,7 +203,7 @@ public class RobotContainer {
 	private Command buildScoreAndClimbAuto(frc.robot.repulsor.Setpoints.GameSetpoint climbSetpoint) {
 		return Commands.sequence(
 				repulsor.navigateTo(
-								() -> _Rebuilt2026.HUB_SCORE_FRONT.poseForCurrentAlliance(SetpointContext.EMPTY))
+						() -> _Rebuilt2026.HUB_SCORE_FRONT.poseForCurrentAlliance(SetpointContext.EMPTY))
 						.until(repulsor.within(Meters.of(0.15))),
 				Commands.waitSeconds(1.0),
 				repulsor.navigateTo(

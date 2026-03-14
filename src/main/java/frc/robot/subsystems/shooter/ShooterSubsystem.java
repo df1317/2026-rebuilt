@@ -18,6 +18,7 @@ import dev.doglog.DogLog;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
@@ -64,17 +65,11 @@ public class ShooterSubsystem extends SubsystemBase {
 	private final DoubleSubscriber tuneShooterKD = DogLog.tunable("Shooter/Tuning/Shooter/kD", SHOOTER_KD);
 	private final DoubleSubscriber tuneShooterKV = DogLog.tunable("Shooter/Tuning/Shooter/kV", SHOOTER_KV);
 	private final DoubleSubscriber tuneShooterKS = DogLog.tunable("Shooter/Tuning/Shooter/kS", SHOOTER_KS);
-	private double prevShooterKP = SHOOTER_KP, prevShooterKI = SHOOTER_KI, prevShooterKD = SHOOTER_KD,
-			prevShooterKV = SHOOTER_KV, prevShooterKS = SHOOTER_KS;
-
 	// Feeder PID tunables (SparkMax)
 	private final DoubleSubscriber tuneFeederKP = DogLog.tunable("Shooter/Tuning/Feeder/kP", FEEDER_KP);
 	private final DoubleSubscriber tuneFeederKI = DogLog.tunable("Shooter/Tuning/Feeder/kI", FEEDER_KI);
 	private final DoubleSubscriber tuneFeederKD = DogLog.tunable("Shooter/Tuning/Feeder/kD", FEEDER_KD);
 	private final DoubleSubscriber tuneFeederKV = DogLog.tunable("Shooter/Tuning/Feeder/kV", FEEDER_KV);
-	private double prevFeederKP = FEEDER_KP, prevFeederKI = FEEDER_KI, prevFeederKD = FEEDER_KD,
-			prevFeederKV = FEEDER_KV;
-
 	// ==================== Telemetry ====================
 	private final ShooterTelemetry telemetry;
 	// ==================== Control State (package-private for telemetry) ====================
@@ -82,6 +77,10 @@ public class ShooterSubsystem extends SubsystemBase {
 	AngularVelocity targetVelocity = RPM.of(0);
 	Angle targetHoodAngle = Degrees.of(0);
 	double hoodMaxDeg = Double.NaN;
+	private double prevShooterKP = SHOOTER_KP, prevShooterKI = SHOOTER_KI, prevShooterKD = SHOOTER_KD,
+			prevShooterKV = SHOOTER_KV, prevShooterKS = SHOOTER_KS;
+	private double prevFeederKP = FEEDER_KP, prevFeederKI = FEEDER_KI, prevFeederKD = FEEDER_KD,
+			prevFeederKV = FEEDER_KV;
 
 	public ShooterSubsystem() {
 		feeder = new SparkMax(ShooterConstants.FEEDER_ID, MotorType.kBrushless);
@@ -150,12 +149,12 @@ public class ShooterSubsystem extends SubsystemBase {
 
 	private void populateLookupTable() {
 		// Distance (m) -> Flywheel RPM
-		distanceToRPM.put(1.0, 2500.0);
-		distanceToRPM.put(2.0, 3000.0);
-		distanceToRPM.put(3.0, 3500.0);
-		distanceToRPM.put(4.0, 4000.0);
-		distanceToRPM.put(5.0, 4500.0);
-		distanceToRPM.put(6.0, 5000.0);
+		distanceToRPM.put(Units.feetToMeters(4), 2500.0);
+		distanceToRPM.put(Units.feetToMeters(5), 3000.0);
+		distanceToRPM.put(Units.feetToMeters(6), 3500.0);
+		distanceToRPM.put(Units.feetToMeters(7), 4000.0);
+		distanceToRPM.put(Units.feetToMeters(8), 4500.0);
+		distanceToRPM.put(Units.feetToMeters(9), 5000.0);
 
 		// Distance (m) -> Hood position (0.0 = min stop, 1.0 = max stop)
 		// TODO: tune these values on the real robot
@@ -179,20 +178,31 @@ public class ShooterSubsystem extends SubsystemBase {
 				kD = tuneShooterKD.getAsDouble(), kV = tuneShooterKV.getAsDouble(),
 				kS = tuneShooterKS.getAsDouble();
 		if (kP == prevShooterKP && kI == prevShooterKI && kD == prevShooterKD
-				&& kV == prevShooterKV && kS == prevShooterKS) return;
-		prevShooterKP = kP; prevShooterKI = kI; prevShooterKD = kD;
-		prevShooterKV = kV; prevShooterKS = kS;
+				&& kV == prevShooterKV && kS == prevShooterKS)
+			return;
+		prevShooterKP = kP;
+		prevShooterKI = kI;
+		prevShooterKD = kD;
+		prevShooterKV = kV;
+		prevShooterKS = kS;
 		var configs = new com.ctre.phoenix6.configs.Slot0Configs();
-		configs.kP = kP; configs.kI = kI; configs.kD = kD;
-		configs.kV = kV; configs.kS = kS;
+		configs.kP = kP;
+		configs.kI = kI;
+		configs.kD = kD;
+		configs.kV = kV;
+		configs.kS = kS;
 		motor.getConfigurator().apply(configs);
 	}
 
 	private void updateFeederPIDIfChanged() {
 		double kP = tuneFeederKP.getAsDouble(), kI = tuneFeederKI.getAsDouble(),
 				kD = tuneFeederKD.getAsDouble(), kV = tuneFeederKV.getAsDouble();
-		if (kP == prevFeederKP && kI == prevFeederKI && kD == prevFeederKD && kV == prevFeederKV) return;
-		prevFeederKP = kP; prevFeederKI = kI; prevFeederKD = kD; prevFeederKV = kV;
+		if (kP == prevFeederKP && kI == prevFeederKI && kD == prevFeederKD && kV == prevFeederKV)
+			return;
+		prevFeederKP = kP;
+		prevFeederKI = kI;
+		prevFeederKD = kD;
+		prevFeederKV = kV;
 		SparkMaxConfig config = new SparkMaxConfig();
 		config.closedLoop.pid(kP, kI, kD);
 		config.closedLoop.feedForward.kV(kV);
@@ -320,8 +330,7 @@ public class ShooterSubsystem extends SubsystemBase {
 		return Commands.sequence(
 				spinUpCommand(shooterVelocity),
 				spinUpFeederCommand(feederVelocity),
-				Commands.waitUntil(() -> isFeederAtSpeed() && isAtSpeed())
-		);
+				Commands.waitUntil(() -> isFeederAtSpeed() && isAtSpeed()));
 	}
 
 	public Command stopCommand() {
@@ -333,7 +342,13 @@ public class ShooterSubsystem extends SubsystemBase {
 	}
 
 	public Command shootForDistanceCommand(Supplier<Distance> distance) {
-		return Commands.run(() -> setForDistance(distance.get()), this).finallyDo(this::stop);
+		return Commands.run(() -> {
+			Distance d = distance.get();
+			setForDistance(d);
+			DogLog.log("Shooter/DistanceM", d.in(Meters));
+			DogLog.log("Shooter/ComputedRPM", getRPMForDistance(d).in(RPM));
+			DogLog.log("Shooter/ComputedHoodPercent", getHoodPercentForDistance(d));
+		}, this).finallyDo(this::stop);
 	}
 
 	// ==================== Test Mode ====================
@@ -364,9 +379,9 @@ public class ShooterSubsystem extends SubsystemBase {
 
 	public Command testFullMotorCommand() {
 		return Commands.run(() -> {
-					setVelocity(RPM.of(testShooterRPM.get()));
-					setFeederVelocity(RPM.of(testFeederRPM.get()));
-				}, this)
+			setVelocity(RPM.of(testShooterRPM.get()));
+			setFeederVelocity(RPM.of(testFeederRPM.get()));
+		}, this)
 				.finallyDo(() -> {
 					motor.stopMotor();
 					feeder.stopMotor();
@@ -393,46 +408,46 @@ public class ShooterSubsystem extends SubsystemBase {
 
 	public Command homeHoodCommand() {
 		return Commands.sequence(
-						// Disable soft limits so homing can reach the hard stops
-						Commands.runOnce(() -> {
-							SparkMaxConfig config = new SparkMaxConfig();
-							config.softLimit
-									.forwardSoftLimitEnabled(false)
-									.reverseSoftLimitEnabled(false);
-							hood.configure(config, ResetMode.kNoResetSafeParameters,
-									PersistMode.kNoPersistParameters);
-						}, this),
-						// Drive hood toward min stop
-						Commands.runOnce(() -> {
-							stallDebouncer.calculate(false); // reset stale debouncer state
-							hood.setVoltage(-ShooterConstants.HOOD_HOMING_VOLTAGE);
-						}),
-						Commands.waitUntil(this::isHoodStalled).withTimeout(5.0),
-						Commands.runOnce(() -> {
-							hood.stopMotor();
-							hoodEncoder.setPosition(0.0);
-						}),
-						Commands.waitSeconds(0.25),
-						// Drive hood toward max stop
-						Commands.runOnce(() -> {
-							stallDebouncer.calculate(false); // reset debouncer between phases
-							hood.setVoltage(ShooterConstants.HOOD_HOMING_VOLTAGE);
-						}),
-						Commands.waitUntil(this::isHoodStalled).withTimeout(5.0),
-						Commands.runOnce(() -> {
-							hood.stopMotor();
-							hoodMaxDeg = hoodEncoder.getPosition();
-							DogLog.log("Shooter/HoodMaxDeg", hoodMaxDeg);
-							// Apply soft limits based on measured range
-							SparkMaxConfig config = new SparkMaxConfig();
-							config.softLimit
-									.forwardSoftLimit((float) hoodMaxDeg)
-									.forwardSoftLimitEnabled(true)
-									.reverseSoftLimit(0.0f)
-									.reverseSoftLimitEnabled(true);
-							hood.configure(config, ResetMode.kNoResetSafeParameters,
-									PersistMode.kNoPersistParameters);
-						}))
+				// Disable soft limits so homing can reach the hard stops
+				Commands.runOnce(() -> {
+					SparkMaxConfig config = new SparkMaxConfig();
+					config.softLimit
+							.forwardSoftLimitEnabled(false)
+							.reverseSoftLimitEnabled(false);
+					hood.configure(config, ResetMode.kNoResetSafeParameters,
+							PersistMode.kNoPersistParameters);
+				}, this),
+				// Drive hood toward min stop
+				Commands.runOnce(() -> {
+					stallDebouncer.calculate(false); // reset stale debouncer state
+					hood.setVoltage(-ShooterConstants.HOOD_HOMING_VOLTAGE);
+				}),
+				Commands.waitUntil(this::isHoodStalled).withTimeout(5.0),
+				Commands.runOnce(() -> {
+					hood.stopMotor();
+					hoodEncoder.setPosition(0.0);
+				}),
+				Commands.waitSeconds(0.25),
+				// Drive hood toward max stop
+				Commands.runOnce(() -> {
+					stallDebouncer.calculate(false); // reset debouncer between phases
+					hood.setVoltage(ShooterConstants.HOOD_HOMING_VOLTAGE);
+				}),
+				Commands.waitUntil(this::isHoodStalled).withTimeout(5.0),
+				Commands.runOnce(() -> {
+					hood.stopMotor();
+					hoodMaxDeg = hoodEncoder.getPosition();
+					DogLog.log("Shooter/HoodMaxDeg", hoodMaxDeg);
+					// Apply soft limits based on measured range
+					SparkMaxConfig config = new SparkMaxConfig();
+					config.softLimit
+							.forwardSoftLimit((float) hoodMaxDeg)
+							.forwardSoftLimitEnabled(true)
+							.reverseSoftLimit(0.0f)
+							.reverseSoftLimitEnabled(true);
+					hood.configure(config, ResetMode.kNoResetSafeParameters,
+							PersistMode.kNoPersistParameters);
+				}))
 				.finallyDo(hood::stopMotor)
 				.withName("Home Hood");
 	}
