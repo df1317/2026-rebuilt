@@ -12,8 +12,10 @@ import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import dev.doglog.DogLog;
+import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
+import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
@@ -65,6 +67,8 @@ public class IntakeSubsystem extends SubsystemBase {
 	AngularVelocity targetRollerVelocity = RPM.of(0);
 	private double prevPivotKP = PIVOT_KP, prevPivotKI = PIVOT_KI, prevPivotKD = PIVOT_KD, prevPivotKV = 0.0;
 	private double prevRollerKP = ROLLER_KP, prevRollerKI = ROLLER_KI, prevRollerKD = ROLLER_KD, prevRollerKV = ROLLER_KV;
+	private final ProfiledPIDController pivotProfiler = new ProfiledPIDController(0, 0, 0,
+			new TrapezoidProfile.Constraints(PIVOT_MAX_VELOCITY_DEG_PER_S, PIVOT_MAX_ACCEL_DEG_PER_S2));
 
 	public IntakeSubsystem() {
 		pivotMotor = new SparkMax(PIVOT_MOTOR_ID, MotorType.kBrushless);
@@ -81,6 +85,8 @@ public class IntakeSubsystem extends SubsystemBase {
 
 		visualization = new IntakeVisualization(this);
 		telemetry = new IntakeTelemetry(this);
+
+		pivotProfiler.reset(PIVOT_RETRACTED_ANGLE.in(Degrees));
 	}
 
 	private void configurePivotMotor() {
@@ -111,6 +117,11 @@ public class IntakeSubsystem extends SubsystemBase {
 		telemetry.log();
 		updatePivotPIDIfChanged();
 		updateRollerPIDIfChanged();
+		// Step the profiler and feed the intermediate position to the SparkMax
+		double profiledSetpoint = pivotProfiler.calculate(pivotEncoder.getPosition());
+		pivotController.setSetpoint(pivotProfiler.getSetpoint().position, ControlType.kPosition);
+		DogLog.log("Intake/Pivot/ProfiledSetpoint", profiledSetpoint);
+		DogLog.log("Intake/Pivot/ProfiledVelocity", pivotProfiler.getSetpoint().velocity);
 	}
 
 	private void updatePivotPIDIfChanged() {
@@ -160,7 +171,7 @@ public class IntakeSubsystem extends SubsystemBase {
 
 	public void setPivotAngle(Angle angle) {
 		targetPivotAngle = angle;
-		pivotController.setSetpoint(angle.in(Degrees), ControlType.kPosition);
+		pivotProfiler.setGoal(angle.in(Degrees));
 	}
 
 	public void setRollerVelocity(AngularVelocity velocity) {
