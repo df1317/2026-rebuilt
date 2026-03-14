@@ -74,7 +74,7 @@ public class TeleopZoneAutomation {
 		Translation2d pos = robotPose.get().getTranslation();
 		Translation2d target = getShootingPose().getTranslation();
 		double distance = pos.getDistance(target);
-		double tof = distance / shooter.getBallSpeedMPS();
+		double tof = distance / shooter.getHorizontalBallSpeedMPS(Meters.of(distance));
 		ChassisSpeeds vel = fieldVelocity.get();
 		Translation2d predictedPos = new Translation2d(
 				pos.getX() + vel.vxMetersPerSecond * tof,
@@ -90,7 +90,7 @@ public class TeleopZoneAutomation {
 		Translation2d pos = robotPose.get().getTranslation();
 		Translation2d target = getShootingPose().getTranslation();
 		double distance = pos.getDistance(target);
-		double tof = distance / shooter.getBallSpeedMPS();
+		double tof = distance / shooter.getHorizontalBallSpeedMPS(Meters.of(distance));
 		ChassisSpeeds vel = fieldVelocity.get();
 		// Shift the aim target opposite to robot motion so the robot leads the shot
 		Translation2d virtualTarget = new Translation2d(

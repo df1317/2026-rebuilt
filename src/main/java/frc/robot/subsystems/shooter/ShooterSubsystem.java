@@ -53,6 +53,7 @@ public class ShooterSubsystem extends SubsystemBase {
 	private final InterpolatingDoubleTreeMap distanceToRPM = new InterpolatingDoubleTreeMap();
 	private final InterpolatingDoubleTreeMap distanceToHoodPercent = new InterpolatingDoubleTreeMap();
 	private final InterpolatingDoubleTreeMap rpmToBallSpeed = new InterpolatingDoubleTreeMap();
+	private final InterpolatingDoubleTreeMap hoodPercentToLaunchAngle = new InterpolatingDoubleTreeMap();
 	private final SysIdRoutine sysIdRoutine;
 	private final VelocityVoltage velocityVoltageRequest = new VelocityVoltage(0);
 	private final DoubleSubscriber testShooterRPM = DogLog.tunable("Shooter/RPM", 3000.0, RPM);
@@ -170,6 +171,12 @@ public class ShooterSubsystem extends SubsystemBase {
 		rpmToBallSpeed.put(2555.0, BALL_SPEED_LOW_M_S);
 		rpmToBallSpeed.put(3250.0, BALL_SPEED_HIGH_M_S);
 
+		// Hood position (0.0-1.0) -> Ball launch angle (degrees) - NEEDS MEASUREMENT
+		hoodPercentToLaunchAngle.put(0.00, 20.0);
+		hoodPercentToLaunchAngle.put(0.17, 25.0);
+		hoodPercentToLaunchAngle.put(0.36, 32.0);
+		hoodPercentToLaunchAngle.put(0.51, 38.0);
+
 		// Distance (m) -> Hood position (0.0 = min stop, 1.0 = max stop)
 		distanceToHoodPercent.put(2.56, 0.00);
 		distanceToHoodPercent.put(2.86, 0.17);
@@ -260,8 +267,11 @@ public class ShooterSubsystem extends SubsystemBase {
 		return stallDebouncer.calculate(isHoodStalled);
 	}
 
-	public double getBallSpeedMPS() {
-		return rpmToBallSpeed.get(targetVelocity.in(RPM));
+	public double getHorizontalBallSpeedMPS(Distance distance) {
+		double exitSpeed = rpmToBallSpeed.get(targetVelocity.in(RPM));
+		double hoodPercent = getHoodPercentForDistance(distance);
+		double launchAngleDeg = hoodPercentToLaunchAngle.get(hoodPercent);
+		return exitSpeed * Math.cos(Math.toRadians(launchAngleDeg));
 	}
 
 	public AngularVelocity getRPMForDistance(Distance distance) {
