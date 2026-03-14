@@ -173,7 +173,7 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 
 				double desiredAngle = Math.atan2(
 						targetPose.getY() - currentPose.getY(),
-						targetPose.getX() - currentPose.getX());
+						targetPose.getX() - currentPose.getX()) + Math.PI;
 
 				double error = currentPose.getRotation().getRadians() - desiredAngle;
 				error = Math.atan2(Math.sin(error), Math.cos(error));
@@ -209,7 +209,7 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 
 						double desiredAngle = Math.atan2(
 								targetPose.getY() - currentPose.getY(),
-								targetPose.getX() - currentPose.getX());
+								targetPose.getX() - currentPose.getX()) + Math.PI;
 
 						double omega = aimPIDController.calculate(currentPose.getRotation().getRadians(), desiredAngle);
 						speeds.omegaRadiansPerSecond = omega;
