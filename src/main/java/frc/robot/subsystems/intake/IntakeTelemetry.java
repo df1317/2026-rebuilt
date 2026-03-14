@@ -2,6 +2,7 @@ package frc.robot.subsystems.intake;
 
 import dev.doglog.DogLog;
 import edu.wpi.first.wpilibj.util.Color;
+import frc.robot.util.RobotLog;
 
 import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.RPM;
@@ -74,12 +75,12 @@ public class IntakeTelemetry {
 	private Color getStatusColor() {
 		double targetRPM = intake.targetRollerVelocity.in(RPM);
 		if (targetRPM > 0 && isExtended()) {
-			return intake.isRollerAtSpeed() ? Color.kGreen : Color.kYellow;
+			return intake.isRollerAtSpeed() ? RobotLog.GREEN : RobotLog.YELLOW;
 		} else if (targetRPM < 0) {
-			return Color.kOrange;
+			return RobotLog.BLUE;
 		} else if (!isRetracted()) {
-			return Color.kYellow;
+			return RobotLog.YELLOW;
 		}
-		return Color.kRed;
+		return RobotLog.RED;
 	}
 }

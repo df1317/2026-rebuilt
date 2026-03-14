@@ -35,9 +35,19 @@ public class HopperSubsystem extends SubsystemBase {
 	private final HopperTelemetry telemetry;
 	// ==================== Test Mode ====================
 	private final DoubleSubscriber testHopperRPM = DogLog.tunable("Test/HopperRPM", 2000.0);
+	private final DoubleSubscriber KP = DogLog.tunable("Test/KP", HOPPER_KP);
+	private final DoubleSubscriber KI = DogLog.tunable("Test/KI", HOPPER_KI);
+	private final DoubleSubscriber KD = DogLog.tunable("Test/KP", HOPPER_KD);
+	private final DoubleSubscriber KV = DogLog.tunable("Test/KV", HOPPER_KV);
+	private final DoubleSubscriber KS = DogLog.tunable("Test/KS", HOPPER_KS);
 	// ==================== Control State (package-private for telemetry/visualization)
 	// ====================
 	AngularVelocity targetHopperVelocity = RPM.of(0);
+	double prevKP = KP.getAsDouble();
+	double prevKI = KI.getAsDouble();
+	double prevKD = KD.getAsDouble();
+	double prevKV = KV.getAsDouble();
+	double prevKS = KS.getAsDouble();
 
 	public HopperSubsystem() {
 		hopperMotor = new SparkMax(HOPPER_MOTOR_ID, MotorType.kBrushless);
@@ -62,37 +72,25 @@ public class HopperSubsystem extends SubsystemBase {
 		hopperMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
 	}
 
-	// private final DoubleSubscriber KP = DogLog.tunable("Test/KP", HopperConstants.HOPPER_KP);
-	// private final DoubleSubscriber KI = DogLog.tunable("Test/KI", HopperConstants.HOPPER_KI);
-	// private final DoubleSubscriber KD = DogLog.tunable("Test/KP", HopperConstants.HOPPER_KD);
-	// private final DoubleSubscriber KV = DogLog.tunable("Test/KV", HopperConstants.HOPPER_KV);
-	// private final DoubleSubscriber KS = DogLog.tunable("Test/KS", HopperConstants.HOPPER_KS);
-
-	// double prevKP = KP.getAsDouble();
-	// double prevKI = KI.getAsDouble();
-	// double prevKD = KD.getAsDouble();
-	// double prevKV = KV.getAsDouble();
-	// double prevKS = KS.getAsDouble();
-
 	@Override
 	public void periodic() {
 		telemetry.log();
-		// if (prevKP != KP.getAsDouble() || prevKI != KI.getAsDouble() || prevKD != KD.getAsDouble()
-		// || prevKV != KV.getAsDouble()) {
+		if (prevKP != KP.getAsDouble() || prevKI != KI.getAsDouble() || prevKD != KD.getAsDouble()
+				|| prevKV != KV.getAsDouble()) {
 
-		// prevKP = KP.getAsDouble();
-		// prevKI = KI.getAsDouble();
-		// prevKD = KD.getAsDouble();
-		// prevKV = KV.getAsDouble();
+			prevKP = KP.getAsDouble();
+			prevKI = KI.getAsDouble();
+			prevKD = KD.getAsDouble();
+			prevKV = KV.getAsDouble();
 
-		// SparkMaxConfig config = new SparkMaxConfig();
-		// config.idleMode(IdleMode.kCoast).smartCurrentLimit(HOPPER_CURRENT_LIMIT)
-		// .inverted(INVERTED);
-		// config.closedLoop.pid(KP.getAsDouble(), KI.getAsDouble(), KD.getAsDouble()).iZone(HOPPER_I_ZONE);
-		// config.closedLoop.feedForward.kV(KV.getAsDouble());
+			SparkMaxConfig config = new SparkMaxConfig();
+			config.idleMode(IdleMode.kCoast).smartCurrentLimit(HOPPER_CURRENT_LIMIT)
+					.inverted(INVERTED);
+			config.closedLoop.pid(KP.getAsDouble(), KI.getAsDouble(), KD.getAsDouble()).iZone(HOPPER_I_ZONE);
+			config.closedLoop.feedForward.kV(KV.getAsDouble());
 
-		// hopperMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
-		// }
+			hopperMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
+		}
 	}
 
 	// ==================== State Query Methods ====================

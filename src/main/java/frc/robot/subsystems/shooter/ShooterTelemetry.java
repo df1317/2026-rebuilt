@@ -1,7 +1,9 @@
 package frc.robot.subsystems.shooter;
 
 import dev.doglog.DogLog;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.util.Color;
+import frc.robot.util.RobotLog;
 
 import static edu.wpi.first.units.Units.RPM;
 
@@ -26,7 +28,7 @@ public class ShooterTelemetry {
 		double feederCurrentRPM = shooter.feederEncoder.getVelocity();
 		double feederTargetRPM = shooter.targetFeederVelocity.in(RPM);
 
-		// Status for LED strip
+		// Status color for dashboard
 		DogLog.forceNt.log("Shooter/Status", getStatusColor().toHexString());
 
 		// Shooter motor
@@ -54,12 +56,12 @@ public class ShooterTelemetry {
 
 	private Color getStatusColor() {
 		double targetRPM = shooter.targetVelocity.in(RPM);
-		if (targetRPM <= 0) {
-			return Color.kRed;
+		if (MathUtil.isNear(0, targetRPM, 2)) {
+			return RobotLog.RED;
 		} else if (shooter.isAtSpeed()) {
-			return Color.kGreen;
+			return RobotLog.GREEN;
 		} else {
-			return Color.kYellow;
+			return RobotLog.YELLOW;
 		}
 	}
 }
