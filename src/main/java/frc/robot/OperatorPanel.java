@@ -15,7 +15,7 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
  * Row 0  [ testFlywheel    ] [ testFeeder      ] [ spinUpShoot     ] [ stop          ]  Shooter
  * Row 1  [ homeHood        ] [ testHood        ] [ testFullMotor   ] [ ---           ]  Hood
  * Row 2  [ intakeExtend    ] [ intakeRetract   ] [ runRoller       ] [ eject         ]  Intake
- * Row 3  [ testHopper      ] [ feed            ] [ ---             ] [ ---           ]  Hopper
+ * Row 3  [ testHopper      ] [ feed            ] [ aimBangBang     ] [ aimPID        ]  Hopper/Aim
  * Row 4  [ homeClimber     ] [ climberExtend   ] [ climberRetract  ] [ zeroEncoder   ]  Climber
  * </pre>
  */

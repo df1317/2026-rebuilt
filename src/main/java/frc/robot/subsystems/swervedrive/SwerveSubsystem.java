@@ -21,7 +21,9 @@ import org.photonvision.targeting.PhotonPipelineResult;
 import dev.doglog.DogLog;
 import edu.wpi.first.epilogue.NotLogged;
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
+import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -64,6 +66,15 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 	private final double AIM_SPEED_MID = 1.0;
 	private final double AIM_SPEED_SLOW = 2.0;
 	private final double AIM_SPEED_LOWEST = 0.3;
+
+	private final ProfiledPIDController aimPIDController = new ProfiledPIDController(
+			3.0, 0.1, 0.05,
+			new TrapezoidProfile.Constraints(Constants.MAX_ANGULAR_SPEED / 2, Constants.MAX_ANGULAR_ACCELERATION / 2));
+
+	{
+		aimPIDController.enableContinuousInput(-Math.PI, Math.PI);
+		aimPIDController.setTolerance(AIM_TOLERANCE);
+	}
 
 	Optional<Alliance> prevAlliance = Optional.empty();
 	private Vision vision;
@@ -151,13 +162,14 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 	}
 
 	/** Aim at a target pose while allowing translation control (bang-bang). */
-	public Command aimAt(DoubleSupplier translateX, DoubleSupplier translateY, Pose2d target) {
+	public Command aimAt(DoubleSupplier translateX, DoubleSupplier translateY, Supplier<Pose2d> target) {
 		return run(() -> {
 			Pose2d currentPose = getPose();
+			Pose2d targetPose = target.get();
 
 			double desiredAngle = Math.atan2(
-					target.getY() - currentPose.getY(),
-					target.getX() - currentPose.getX());
+					targetPose.getY() - currentPose.getY(),
+					targetPose.getX() - currentPose.getX()) + Math.PI;
 
 			double error = currentPose.getRotation().getRadians() - desiredAngle;
 			error = Math.atan2(Math.sin(error), Math.cos(error));
@@ -178,6 +190,31 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 			DogLog.log("Aim/CurrentAngle", currentPose.getRotation().getRadians(), Radians);
 			DogLog.log("Aim/Omega", omega);
 		});
+	}
+
+	public Command aimAtPID(DoubleSupplier translateX, DoubleSupplier translateY, Supplier<Pose2d> target) {
+		return startRun(
+				() -> aimPIDController.reset(getPose().getRotation().getRadians(),
+						getSwerveDrive().getRobotVelocity().omegaRadiansPerSecond),
+				() -> {
+					Pose2d currentPose = getPose();
+					Pose2d targetPose = target.get();
+
+					double desiredAngle = Math.atan2(
+							targetPose.getY() - currentPose.getY(),
+							targetPose.getX() - currentPose.getX()) + Math.PI;
+
+					double omega = aimPIDController.calculate(currentPose.getRotation().getRadians(), desiredAngle);
+
+					ChassisSpeeds speeds = SwerveInputStream.of(getSwerveDrive(),
+							() -> -translateY.getAsDouble(), () -> -translateX.getAsDouble()).get();
+					speeds.omegaRadiansPerSecond = omega;
+					swerveDrive.driveFieldOrientedAndRobotOriented(speeds, new ChassisSpeeds());
+
+					DogLog.log("AimPID/Error", currentPose.getRotation().getRadians() - desiredAngle, Radians);
+					DogLog.log("AimPID/DesiredAngle", desiredAngle, Radians);
+					DogLog.log("AimPID/Omega", omega);
+				});
 	}
 
 	private double getAimSpeed(double absError) {

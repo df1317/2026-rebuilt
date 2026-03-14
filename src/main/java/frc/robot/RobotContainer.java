@@ -21,9 +21,12 @@ import frc.robot.subsystems.hopper.HopperSubsystem;
 import frc.robot.subsystems.intake.IntakeSubsystem;
 import frc.robot.subsystems.shooter.ShooterSubsystem;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
+import frc.robot.util.FieldZones;
 import swervelib.SwerveInputStream;
 
 import java.io.File;
+import java.util.function.Supplier;
+import edu.wpi.first.math.geometry.Pose2d;
 
 import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.RPM;
@@ -153,10 +156,16 @@ public class RobotContainer {
 				panel.key(2, 2).whileTrue(intake.runRollerCommand());
 				panel.key(2, 3).whileTrue(intake.ejectCommand());
 			}
-			// Row 3 — Hopper
+			// Row 3 — Hopper + Aim tests
 			if (Constants.ENABLE_HOPPER && hopper != null) {
 				panel.key(3, 0).whileTrue(hopper.testHopperCommand());
 				panel.key(3, 1).whileTrue(hopper.feedCommand());
+			}
+			if (Constants.ENABLE_SWERVE && drivebase != null) {
+				Supplier<Pose2d> hubPose = () -> FieldZones.getHubPose(
+						DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue));
+				panel.key(3, 2).whileTrue(drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY, hubPose)); // bang-bang
+				panel.key(3, 3).whileTrue(drivebase.aimAtPID(driverXbox::getLeftX, driverXbox::getLeftY, hubPose)); // profiled PID
 			}
 			// Row 4 — Climber
 			if (Constants.ENABLE_CLIMBER && climber != null) {
