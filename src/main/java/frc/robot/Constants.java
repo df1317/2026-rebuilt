@@ -136,7 +136,8 @@ public final class Constants {
 		public static final Voltage SYSID_STEP_VOLTAGE = Volts.of(7);
 
 		public static final double HOOD_STALL_RPM = 2.0;
-		public static final double BALL_SPEED_M_S = 6.0;
+		public static final double BALL_SPEED_LOW_M_S = 4.97;  // ball speed at min RPM (2555)
+		public static final double BALL_SPEED_HIGH_M_S = 6.15; // ball speed at max RPM (3250)
 		public static final double CURRENT_DEBOUNCE_TIME = 0.1;
 		public static final double HOOD_HOMING_VOLTAGE = 2.0;
 	}
