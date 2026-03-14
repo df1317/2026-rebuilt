@@ -138,8 +138,9 @@ public class Vision {
 	}
 
 	// named according to closest part of the robot
+	// positive x is towards front of robot and positive y is perpendicularly left
 	public enum Cameras {
-		BATTERY(
+		SHOOTER(
 				"BOULDER",
 				new Rotation3d(0, Units.degreesToRadians(15.0), 0),
 				new Translation3d(Units.inchesToMeters(13), Units.inchesToMeters(-8.5), Units.inchesToMeters(10.5)),
@@ -152,7 +153,7 @@ public class Vision {
 						VisionConstants.CameraStdDevs.MULTI_TAG[1],
 						VisionConstants.CameraStdDevs.MULTI_TAG[2])),
 
-		SHOOTER(
+		BATTERY(
 				"STONE",
 				new Rotation3d(0, Units.degreesToRadians(15.0), Units.degreesToRadians(180)),
 				new Translation3d(Units.inchesToMeters(-13), Units.inchesToMeters(-8.5), Units.inchesToMeters(10.5)),
@@ -167,8 +168,8 @@ public class Vision {
 
 		INTAKE(
 				"PEBBLE",
-				new Rotation3d(0, Units.degreesToRadians(15.0), Units.degreesToRadians(-90)),
-				new Translation3d(Units.inchesToMeters(7), Units.inchesToMeters(3.5), Units.inchesToMeters(16.0)),
+				new Rotation3d(0, Units.degreesToRadians(0), Units.degreesToRadians(90)),
+				new Translation3d(Units.inchesToMeters(8), Units.inchesToMeters(3.5), Units.inchesToMeters(16.0)),
 				VecBuilder.fill(
 						VisionConstants.CameraStdDevs.SINGLE_TAG[0],
 						VisionConstants.CameraStdDevs.SINGLE_TAG[1],
