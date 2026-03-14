@@ -112,8 +112,8 @@ public final class Constants {
 
 		public static final Angle HOOD_TOLERANCE = Degrees.of(3);
 
-		public static final double SHOOTER_KP = 0.05;
-		public static final double SHOOTER_KI = 0.0;
+		public static final double SHOOTER_KP = 0.17;
+		public static final double SHOOTER_KI = 0.001;
 		public static final double SHOOTER_KD = 0.0;
 		public static final double SHOOTER_KV = 0.115;
 		public static final double SHOOTER_KG = 0.0;
