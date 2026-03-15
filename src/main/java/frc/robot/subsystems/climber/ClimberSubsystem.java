@@ -200,7 +200,6 @@ public class ClimberSubsystem extends SubsystemBase {
 				new PositionVoltage(currentState.position * ROTATIONS_PER_METER).withFeedForward(ff));
 
 		telemetry.log();
-		visualization.update();
 	}
 
 	public boolean isClimberStalled() {
