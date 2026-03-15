@@ -28,6 +28,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Constants.ShooterConstants;
 
+import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
 import static edu.wpi.first.units.Units.*;
@@ -155,17 +156,17 @@ public class ShooterSubsystem extends SubsystemBase {
 
 	private void populateLookupTable() {
 		// Distance (m) -> Flywheel RPM
-		distanceToRPM.put(1.63, 2555.0);
-		distanceToRPM.put(1.93, 2555.0);
-		distanceToRPM.put(2.23, 2070.0);
-		distanceToRPM.put(2.56, 2750.0);
-		distanceToRPM.put(2.86, 2750.0);
+		distanceToRPM.put(1.6, 2600.0);
+//		distanceToRPM.put(1.93, 2555.0);
+		distanceToRPM.put(2.30, 2700.0);
+		distanceToRPM.put(2.5, 2750.0);
+		distanceToRPM.put(2.8, 2750.0);
 		distanceToRPM.put(3.11, 2850.0);
-		distanceToRPM.put(3.52, 2850.0);
-		distanceToRPM.put(4.00, 2950.0);
-		distanceToRPM.put(4.16, 3100.0);
-		distanceToRPM.put(4.53, 3100.0);
-		distanceToRPM.put(4.70, 3250.0);
+		distanceToRPM.put(3.52, 2950.0);
+		distanceToRPM.put(4.00, 3100.0);
+//		distanceToRPM.put(4.16, 3100.0);
+		distanceToRPM.put(4.6, 3250.0);
+//		distanceToRPM.put(4.70, 3250.0);
 
 		// Flywheel RPM -> Ball exit speed (m/s)
 		rpmToBallSpeed.put(2555.0, BALL_SPEED_LOW_M_S);
@@ -178,11 +179,11 @@ public class ShooterSubsystem extends SubsystemBase {
 		hoodPercentToLaunchAngle.put(0.51, 38.0);
 
 		// Distance (m) -> Hood position (0.0 = min stop, 1.0 = max stop)
-		distanceToHoodPercent.put(2.56, 0.00);
-		distanceToHoodPercent.put(2.86, 0.17);
-		distanceToHoodPercent.put(3.52, 0.17);
+		distanceToHoodPercent.put(2.5, 0.00);
+		distanceToHoodPercent.put(2.8, 0.17);
+		distanceToHoodPercent.put(3.5, 0.17);
 		distanceToHoodPercent.put(4.00, 0.36);
-		distanceToHoodPercent.put(4.53, 0.36);
+		distanceToHoodPercent.put(4.6, 0.53);
 		distanceToHoodPercent.put(4.70, 0.51);
 	}
 
@@ -193,6 +194,14 @@ public class ShooterSubsystem extends SubsystemBase {
 		updateFeederPIDIfChanged();
 		updateHoodPIDIfChanged();
 	}
+
+  public Command tune(DoubleSupplier shooter, DoubleSupplier feeder, DoubleSupplier hood){
+    return Commands.run(()-> {
+      this.setVelocity(RPM.of(shooter.getAsDouble()));
+      this.setFeederVelocity(RPM.of(feeder.getAsDouble()));
+      this.setHoodPercent(hood.getAsDouble());
+    });
+  }
 
 	private void updateShooterPIDIfChanged() {
 		double kP = tuneShooterKP.getAsDouble(), kI = tuneShooterKI.getAsDouble(),

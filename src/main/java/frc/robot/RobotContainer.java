@@ -3,6 +3,7 @@ package frc.robot;
 import dev.doglog.DogLog;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.networktables.BooleanSubscriber;
+import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -32,6 +33,9 @@ import static edu.wpi.first.units.Units.RPM;
 
 public class RobotContainer {
 
+  private final DoubleSubscriber HoodPrecent = DogLog.tunable("hoodprcent",0.0);
+  private final DoubleSubscriber shooterRPM = DogLog.tunable("shooterRPM",3000.0);
+
 	// HID
 	private final CommandXboxController driverXbox = new CommandXboxController(0);
 	private final OperatorPanel panel = new OperatorPanel(1);
@@ -53,50 +57,50 @@ public class RobotContainer {
 	public boolean robotRelative = false;
 
 	public RobotContainer() {
-		if (Constants.ENABLE_SWERVE) {
-			// Initialize Repulsor path planner
-			repulsor = new Repulsor(drivebase,
-					DrivebaseConstants.ROBOT_HALF_LENGTH, DrivebaseConstants.ROBOT_HALF_WIDTH);
+    if (Constants.ENABLE_SWERVE) {
+      // Initialize Repulsor path planner
+      repulsor = new Repulsor(drivebase,
+        DrivebaseConstants.ROBOT_HALF_LENGTH, DrivebaseConstants.ROBOT_HALF_WIDTH);
 
-			// Setup teleop automation
-			teleopAutomation = new TeleopZoneAutomation(
-					repulsor, intake, shooter, hopper,
-					drivebase::getPose, drivebase::getFieldVelocity);
-			drivebase.setTargetDistanceSupplier(teleopAutomation::getTargetDistance);
-			drivebase.setAimTargetSupplier(teleopAutomation::getVirtualAimTarget);
+      // Setup teleop automation
+      teleopAutomation = new TeleopZoneAutomation(
+        repulsor, intake, shooter, hopper,
+        drivebase::getPose, drivebase::getFieldVelocity);
+      drivebase.setTargetDistanceSupplier(teleopAutomation::getTargetDistance);
+      drivebase.setAimTargetSupplier(teleopAutomation::getVirtualAimTarget);
 
-			driveAngularVelocity = SwerveInputStream
-					.of(drivebase.getSwerveDrive(), () -> driverXbox.getLeftY() * -1,
-							() -> driverXbox.getLeftX() * -1)
-					.withControllerRotationAxis(() -> driverXbox.getRightX() * -1)
-					.aimWhile(driverXbox.y())
-					.deadband(OperatorConstants.DEADBAND)
-					.scaleTranslation(DrivebaseConstants.TRANSLATION_SCALE).allianceRelativeControl(true);
+      driveAngularVelocity = SwerveInputStream
+        .of(drivebase.getSwerveDrive(), () -> driverXbox.getLeftY() * -1,
+          () -> driverXbox.getLeftX() * -1)
+        .withControllerRotationAxis(() -> driverXbox.getRightX() * -1)
+        .aimWhile(driverXbox.y())
+        .deadband(OperatorConstants.DEADBAND)
+        .scaleTranslation(DrivebaseConstants.TRANSLATION_SCALE).allianceRelativeControl(true);
 
-			// Build auto chooser
-			autoChooser = new SendableChooser<>();
-			autoChooser.setDefaultOption("Score Front + Cycle",
-					buildScoreCycleAuto(_Rebuilt2026.HUB_SCORE_FRONT));
-			autoChooser.addOption("Score Front-Left + Cycle",
-					buildScoreCycleAuto(_Rebuilt2026.HUB_SCORE_FRONT_LEFT));
-			autoChooser.addOption("Score Front-Right + Cycle",
-					buildScoreCycleAuto(_Rebuilt2026.HUB_SCORE_FRONT_RIGHT));
-			autoChooser.addOption("Score Rear-Left + Cycle",
-					buildScoreCycleAuto(_Rebuilt2026.HUB_SCORE_REAR_LEFT));
-			autoChooser.addOption("Score Rear-Right + Cycle",
-					buildScoreCycleAuto(_Rebuilt2026.HUB_SCORE_REAR_RIGHT));
-			autoChooser.addOption("Score + Climb Left",
-					buildScoreAndClimbAuto(_Rebuilt2026.CLIMB_LEFT));
-			autoChooser.addOption("Score + Climb Right",
-					buildScoreAndClimbAuto(_Rebuilt2026.CLIMB_RIGHT));
-			autoChooser.addOption("Defence Only", buildDefenceOnlyAuto());
-			autoChooser.addOption("Do Nothing", Commands.none());
-			SmartDashboard.putData("misc/Auto Chooser", autoChooser);
-		}
+      // Build auto chooser
+      autoChooser = new SendableChooser<>();
+      autoChooser.setDefaultOption("Score Front + Cycle",
+        buildScoreCycleAuto(_Rebuilt2026.HUB_SCORE_FRONT));
+      autoChooser.addOption("Score Front-Left + Cycle",
+        buildScoreCycleAuto(_Rebuilt2026.HUB_SCORE_FRONT_LEFT));
+      autoChooser.addOption("Score Front-Right + Cycle",
+        buildScoreCycleAuto(_Rebuilt2026.HUB_SCORE_FRONT_RIGHT));
+      autoChooser.addOption("Score Rear-Left + Cycle",
+        buildScoreCycleAuto(_Rebuilt2026.HUB_SCORE_REAR_LEFT));
+      autoChooser.addOption("Score Rear-Right + Cycle",
+        buildScoreCycleAuto(_Rebuilt2026.HUB_SCORE_REAR_RIGHT));
+      autoChooser.addOption("Score + Climb Left",
+        buildScoreAndClimbAuto(_Rebuilt2026.CLIMB_LEFT));
+      autoChooser.addOption("Score + Climb Right",
+        buildScoreAndClimbAuto(_Rebuilt2026.CLIMB_RIGHT));
+      autoChooser.addOption("Defence Only", buildDefenceOnlyAuto());
+      autoChooser.addOption("Do Nothing", Commands.none());
+      SmartDashboard.putData("misc/Auto Chooser", autoChooser);
+    }
 
-		configureBindings();
-		DriverStation.silenceJoystickConnectionWarning(true);
-	}
+    configureBindings();
+    DriverStation.silenceJoystickConnectionWarning(true);
+  }
 
 	private void configureBindings() {
 		var inTeleop = new edu.wpi.first.wpilibj2.command.button.Trigger(DriverStation::isTeleop);
@@ -117,9 +121,9 @@ public class RobotContainer {
 			driverXbox.rightBumper().and(inTeleop).onTrue(Commands.runOnce(() -> robotRelative = !robotRelative));
 		}
 		if (Constants.ENABLE_SHOOTER) {
-			driverXbox.rightTrigger().and(inTeleop).whileTrue(Constants.ENABLE_SWERVE && drivebase != null
+			driverXbox.rightTrigger().whileTrue(Constants.ENABLE_SWERVE && drivebase != null
 					? Commands.parallel(
-							teleopAutomation.shootCommand(),
+							teleopAutomation.shootCommand(drivebase::isAimed),
 							drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY,
 									teleopAutomation::getShootingPose))
 					: teleopAutomation.shootCommand());
@@ -128,6 +132,10 @@ public class RobotContainer {
 			driverXbox.x().and(inTeleop).toggleOnTrue(intake.stowToggleCommand());
 			driverXbox.leftTrigger().and(inTeleop).whileTrue(intake.intakeCommand());
 		}
+
+    panel.key(1,3).whileTrue(shooter.tune(shooterRPM::get,shooterRPM::get,HoodPrecent::get).finallyDo(()->{
+        shooter.stop();
+    }));
 
 		// ===== Teleop Panel Controls (Maypad — see docs for layout) =====
 		// Row 2 — Feed / Intake
@@ -154,8 +162,8 @@ public class RobotContainer {
 		}
 		// Row 1 — Hood + Aim
 		if (Constants.ENABLE_SHOOTER && shooter != null) {
-			panel.key(1, 1).and(inTest).onTrue(shooter.homeHoodCommand());
-			panel.key(1, 2).and(inTest).whileTrue(shooter.testHoodCommand());
+			panel.key(1, 1).onTrue(shooter.homeHoodCommand());
+//			panel.key(1, 2).and(inTest).whileTrue(shooter.testHoodCommand());
 		}
 		if (Constants.ENABLE_SWERVE && drivebase != null) {
 			Supplier<Pose2d> hubPose = () -> FieldZones.getHubPose(

@@ -160,40 +160,44 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 		DogLog.log("Field/DistanceToZoneBoundary",
 				FieldZones.getDistanceToNearestZoneBoundary(getPose()));
 	}
+  private boolean isAimed = false;
+  /** Aim at a target pose while allowing translation control (bang-bang). */
+  public Command aimAt(DoubleSupplier translateX, DoubleSupplier translateY, Supplier<Pose2d> target) {
+    return runEnd(() -> {
+      Pose2d currentPose = getPose();
+      Pose2d targetPose = target.get();
 
-	/** Aim at a target pose while allowing translation control (bang-bang). */
-	public Command aimAt(DoubleSupplier translateX, DoubleSupplier translateY, Supplier<Pose2d> target) {
-		return run(() -> {
-			ChassisSpeeds speeds = SwerveInputStream.of(getSwerveDrive(),
-					() -> -translateY.getAsDouble(), () -> -translateX.getAsDouble()).get();
+      double desiredAngle = Math.atan2(
+        targetPose.getY() - currentPose.getY(),
+        targetPose.getX() - currentPose.getX()) + Math.PI;
 
-			if (vision != null && vision.hasVision()) {
-				Pose2d currentPose = getPose();
-				Pose2d targetPose = target.get();
+      double error = currentPose.getRotation().getRadians() - desiredAngle;
+      error = Math.atan2(Math.sin(error), Math.cos(error));
 
-				double desiredAngle = Math.atan2(
-						targetPose.getY() - currentPose.getY(),
-						targetPose.getX() - currentPose.getX());
+      double omega = 0.0;
+      if (Math.abs(error) > AIM_TOLERANCE) {
+        double speed = getAimSpeed(Math.abs(error));
+        omega = error > 0 ? -speed : speed;
+        isAimed = false;
+      } else{
+        isAimed = true;
+      }
 
-				double error = currentPose.getRotation().getRadians() - desiredAngle;
-				error = Math.atan2(Math.sin(error), Math.cos(error));
+      ChassisSpeeds speeds = SwerveInputStream.of(getSwerveDrive(),
+        () -> -translateY.getAsDouble(), () -> -translateX.getAsDouble()).get();
+      speeds.omegaRadiansPerSecond = omega;
+      swerveDrive.driveFieldOrientedAndRobotOriented(speeds, new ChassisSpeeds());
 
-				double omega = 0.0;
-				if (Math.abs(error) > AIM_TOLERANCE) {
-					double speed = getAimSpeed(Math.abs(error));
-					omega = error > 0 ? -speed : speed;
-				}
+      DogLog.log("Aim/Error", error, Radians);
+      DogLog.log("Aim/DesiredAngle", desiredAngle, Radians);
+      DogLog.log("Aim/CurrentAngle", currentPose.getRotation().getRadians(), Radians);
+      DogLog.log("Aim/Omega", omega);
+    }, ()-> isAimed = false);
+  }
 
-				speeds.omegaRadiansPerSecond = omega;
-				DogLog.log("Aim/Error", error, Radians);
-				DogLog.log("Aim/DesiredAngle", desiredAngle, Radians);
-				DogLog.log("Aim/CurrentAngle", currentPose.getRotation().getRadians(), Radians);
-				DogLog.log("Aim/Omega", omega);
-			}
-
-			swerveDrive.driveFieldOrientedAndRobotOriented(speeds, new ChassisSpeeds());
-		});
-	}
+  public boolean isAimed(){
+    return isAimed;
+  }
 
 	public Command aimAtPID(DoubleSupplier translateX, DoubleSupplier translateY, Supplier<Pose2d> target) {
 		return startRun(
