@@ -170,7 +170,10 @@ public class RobotContainer {
 		}
 
 		// ===== Test Mode Controls (Maypad — see docs for layout) =====
-		// Row 0 — Climber
+		// Row 0 — Climber / Intake
+		if (Constants.ENABLE_INTAKE && intake != null) {
+			panel.key(0, 0).and(inTest).onTrue(intake.zeroCommand()); // intakeZero
+		}
 		if (Constants.ENABLE_CLIMBER && climber != null) {
 			panel.key(0, 1).and(inTest).onTrue(climber.zeroCommand());
 			panel.key(0, 2).and(inTest).whileTrue(climber.jogVoltageCommand(() -> 1.0)); // climberUp

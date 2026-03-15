@@ -86,8 +86,9 @@ public class IntakeSubsystem extends SubsystemBase {
 		visualization = new IntakeVisualization(this);
 		telemetry = new IntakeTelemetry(this);
 
-		pivotProfiler.reset(PIVOT_RETRACTED_ANGLE.in(Degrees));
-		setPivotAngle(PIVOT_RETRACTED_ANGLE);
+		double initialAngle = pivotEncoder.getPosition();
+		pivotProfiler.reset(initialAngle);
+		setPivotAngle(Degrees.of(initialAngle));
 	}
 
 	private void configurePivotMotor() {
@@ -204,9 +205,15 @@ public class IntakeSubsystem extends SubsystemBase {
 	// ==================== Command Factory Methods ====================
 
 	public Command extendCommand() {
-		return runOnce(() -> setPivotAngle(PIVOT_EXTENDED_ANGLE))
+		return runOnce(() -> {
+			pivotProfiler.setConstraints(new TrapezoidProfile.Constraints(
+					PIVOT_EXTEND_MAX_VELOCITY_DEG_PER_S, PIVOT_EXTEND_MAX_ACCEL_DEG_PER_S2));
+			setPivotAngle(PIVOT_EXTENDED_ANGLE);
+		})
 				.andThen(idle().until(() -> isPivotStalled() || isPivotAtPosition()))
 				.andThen(runOnce(() -> setPivotAngle(Degrees.of(pivotEncoder.getPosition()))))
+				.finallyDo(() -> pivotProfiler.setConstraints(new TrapezoidProfile.Constraints(
+						PIVOT_MAX_VELOCITY_DEG_PER_S, PIVOT_MAX_ACCEL_DEG_PER_S2)))
 				.withName("Intake Extend");
 	}
 
@@ -256,6 +263,14 @@ public class IntakeSubsystem extends SubsystemBase {
 	}
 
 	// ==================== Test Mode ====================
+
+	public Command zeroCommand() {
+		return runOnce(() -> {
+			pivotEncoder.setPosition(0);
+			pivotProfiler.reset(0);
+			setPivotAngle(Degrees.of(0));
+		}).withName("Intake Zero");
+	}
 
 	public Command testPivotCommand() {
 		return Commands.run(() -> {
