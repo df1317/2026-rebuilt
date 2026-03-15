@@ -117,8 +117,8 @@ public class RobotContainer {
 								return speeds;
 							}));
 
-			driverXbox.a().and(inTeleop).onTrue(Commands.runOnce(drivebase::zeroGyro));
-			driverXbox.rightBumper().and(inTeleop).onTrue(Commands.runOnce(() -> robotRelative = !robotRelative));
+			driverXbox.a().onTrue(Commands.runOnce(drivebase::zeroGyro));
+			driverXbox.rightBumper().onTrue(Commands.runOnce(() -> robotRelative = !robotRelative));
 		}
 		if (Constants.ENABLE_SHOOTER) {
 			driverXbox.rightTrigger().whileTrue(Constants.ENABLE_SWERVE && drivebase != null
@@ -129,8 +129,8 @@ public class RobotContainer {
 					: teleopAutomation.shootCommand());
 		}
 		if (Constants.ENABLE_INTAKE && intake != null) {
-			driverXbox.x().and(inTeleop).onTrue(intake.stowToggleCommand());
-			driverXbox.leftTrigger().and(inTeleop).whileTrue(intake.intakeCommand());
+			driverXbox.x().onTrue(intake.stowToggleCommand());
+			driverXbox.leftTrigger().whileTrue(intake.intakeCommand());
 		}
 
     panel.key(1,3).whileTrue(shooter.tune(shooterRPM::get,shooterRPM::get,HoodPrecent::get).finallyDo(()->{
@@ -140,8 +140,8 @@ public class RobotContainer {
 		// ===== Teleop Panel Controls (Maypad — see docs for layout) =====
 		// Row 2 — Feed / Intake
 		if (Constants.ENABLE_INTAKE && intake != null) {
-			panel.key(2, 1).and(inTeleop).whileTrue(intake.runRollerCommand());   // intakeForward
-			panel.key(3, 1).and(inTeleop).whileTrue(intake.ejectCommand());       // intakeReverse
+			panel.key(2, 1).whileTrue(intake.runRollerCommand());   // intakeForward
+			panel.key(3, 1).whileTrue(intake.ejectCommand());       // intakeReverse
 		}
 		if (Constants.ENABLE_HOPPER && hopper != null) {
 			panel.key(2, 2).and(inTeleop).whileTrue(hopper.feedCommand());         // hopperForward

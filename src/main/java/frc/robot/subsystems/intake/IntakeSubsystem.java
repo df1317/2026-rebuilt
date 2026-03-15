@@ -216,11 +216,12 @@ public class IntakeSubsystem extends SubsystemBase {
 	}
 
 	public Command runRollerCommand() {
-		return runOnce(() -> setRollerVelocity(ROLLER_INTAKE_VELOCITY)).withName("Intake Run Roller");
+		return run(() -> setRollerVelocity(ROLLER_INTAKE_VELOCITY))
+      .finallyDo(() -> setRollerVelocity(RPM.of(0))).withName("Intake Run Roller");
 	}
 
 	public Command ejectCommand() {
-		return runOnce(() -> setRollerVelocity(ROLLER_EJECT_VELOCITY)).withName("Intake Eject");
+		return run(() -> setRollerVelocity(ROLLER_EJECT_VELOCITY)).finallyDo(() -> setRollerVelocity(RPM.of(0))).withName("Intake Eject");
 	}
 
 	public Command stopRollerCommand() {

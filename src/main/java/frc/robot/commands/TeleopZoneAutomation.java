@@ -63,9 +63,10 @@ public class TeleopZoneAutomation {
   public Command shootCommand(BooleanSupplier aimed) {
     if (shooter == null || hopper == null)
       return Commands.none();
-    return Commands.parallel(
+    return
+      Commands.parallel(
       shooter.shootForDistanceCommand(this::getTargetDistance),
-      Commands.waitUntil(()-> shooter.isAtSpeed() && aimed.getAsBoolean()).andThen(hopper.feedCommand()));
+        hopper.reverseCommand().until(()-> shooter.isAtSpeed() && aimed.getAsBoolean()).andThen(hopper.feedCommand()));
   }
 
 	public Pose2d getShootingPose() {
