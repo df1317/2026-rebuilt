@@ -87,6 +87,7 @@ public class IntakeSubsystem extends SubsystemBase {
 		telemetry = new IntakeTelemetry(this);
 
 		pivotProfiler.reset(PIVOT_RETRACTED_ANGLE.in(Degrees));
+		setPivotAngle(PIVOT_RETRACTED_ANGLE);
 	}
 
 	private void configurePivotMotor() {
