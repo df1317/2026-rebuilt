@@ -4,6 +4,7 @@ import dev.doglog.DogLog;
 import dev.doglog.DogLogOptions;
 import edu.wpi.first.net.WebServer;
 import edu.wpi.first.wpilibj.*;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.util.DevMode;
@@ -24,6 +25,8 @@ public class Robot extends TimedRobot {
 		DogLog.setOptions(new DogLogOptions().withCaptureDs(true).withLogExtras(true));
 		m_robotContainer = new RobotContainer();
 		WebServer.start(5800, Filesystem.getDeployDirectory().getPath());
+		SmartDashboard.putData("Robot/PDH", new PowerDistribution());
+		SmartDashboard.putData("Robot/Scheduler", CommandScheduler.getInstance());
 		disabledTimer = new Timer();
 
 		if (isSimulation()) {
