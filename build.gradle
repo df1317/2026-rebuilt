@@ -151,7 +151,7 @@ task generateClassList {
 task deployCDS {
     group = 'FRC'
     description = 'Deploy robot code and generate AppCDS archive for fast startup'
-    dependsOn deploy, generateClassList
+    dependsOn 'deploy', generateClassList
 
     doLast {
         def team = project.frc.getTeamNumber()

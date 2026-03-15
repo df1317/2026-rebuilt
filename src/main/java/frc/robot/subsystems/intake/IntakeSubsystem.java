@@ -169,12 +169,14 @@ public class IntakeSubsystem extends SubsystemBase {
 
 	public boolean isExtended() {
 		return isPivotAtPosition()
-				&& Math.abs(targetPivotAngle.in(Degrees) - PIVOT_EXTENDED_ANGLE.in(Degrees)) < PIVOT_ANGLE_TOLERANCE.in(Degrees);
+				&& Math.abs(targetPivotAngle.in(Degrees) - PIVOT_EXTENDED_ANGLE.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
+						.in(Degrees);
 	}
 
 	public boolean isRetracted() {
 		return isPivotAtPosition()
-				&& Math.abs(targetPivotAngle.in(Degrees) - PIVOT_RETRACTED_ANGLE.in(Degrees)) < PIVOT_ANGLE_TOLERANCE.in(Degrees);
+				&& Math.abs(targetPivotAngle.in(Degrees) - PIVOT_RETRACTED_ANGLE.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
+						.in(Degrees);
 	}
 
 	// ==================== Control Methods ====================
