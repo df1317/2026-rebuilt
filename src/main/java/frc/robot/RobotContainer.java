@@ -64,6 +64,9 @@ public class RobotContainer {
 					drivebase::getPose, drivebase::getFieldVelocity);
 			drivebase.setTargetDistanceSupplier(teleopAutomation::getTargetDistance);
 			drivebase.setAimTargetSupplier(teleopAutomation::getVirtualAimTarget);
+			if (Constants.ENABLE_SHOOTER && shooter != null) {
+				shooter.setAutoDistanceSupplier(teleopAutomation::getTargetDistance);
+			}
 
 			driveAngularVelocity = SwerveInputStream
 					.of(drivebase.getSwerveDrive(), () -> driverXbox.getLeftY() * -1,
@@ -116,13 +119,17 @@ public class RobotContainer {
 			driverXbox.a().onTrue(Commands.runOnce(drivebase::zeroGyro));
 			driverXbox.rightBumper().onTrue(Commands.runOnce(() -> robotRelative = !robotRelative));
 		}
-		if (Constants.ENABLE_SHOOTER) {
-			driverXbox.rightTrigger().whileTrue(Constants.ENABLE_SWERVE && drivebase != null
-					? Commands.parallel(
-							teleopAutomation.shootCommand(),
-							drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY,
-									teleopAutomation::getShootingPose))
-					: teleopAutomation.shootCommand());
+		if (Constants.ENABLE_SHOOTER && shooter != null) {
+			driverXbox.rightTrigger().whileTrue(Commands.runOnce(() -> {
+						if (Constants.ENABLE_SWERVE && drivebase != null && drivebase.hasVision()) {
+							shooter.clearManualDistanceOverride();
+						}
+					}).andThen(Constants.ENABLE_SWERVE && drivebase != null
+							? Commands.parallel(
+									teleopAutomation.shootCommand(),
+									drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY,
+											teleopAutomation::getShootingPose))
+							: teleopAutomation.shootCommand()));
 		}
 		if (Constants.ENABLE_INTAKE && intake != null) {
 			driverXbox.x().toggleOnTrue(intake.stowToggleCommand());
@@ -142,6 +149,8 @@ public class RobotContainer {
 		if (Constants.ENABLE_SHOOTER && shooter != null) {
 			panel.key(2, 3).and(inTeleop).whileTrue(teleopAutomation.shootCommand()); // shoot+feed (no aim)
 			panel.key(3, 3).and(inTeleop).whileTrue(shooter.reverseFeederCommand()); // feederReverse
+			panel.key(1, 0).and(inTeleop).onTrue(shooter.reduceDistanceCommand()); // distanceDown
+			panel.key(1, 1).and(inTeleop).onTrue(shooter.advanceDistanceCommand()); // distanceUp
 		}
 
 		// ===== Test Mode Controls (Maypad — see docs for layout) =====

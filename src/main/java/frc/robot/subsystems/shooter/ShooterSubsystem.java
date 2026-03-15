@@ -382,13 +382,44 @@ public class ShooterSubsystem extends SubsystemBase {
 	}
 
 	public Command shootForDistanceCommand(Supplier<Distance> distance) {
-		return Commands.run(() -> {
-			Distance d = distance.get();
-			setForDistance(distance);
-			DogLog.log("Shooter/DistanceM", d.in(Meters));
-			DogLog.log("Shooter/ComputedRPM", getRPMForDistance(d).in(RPM));
-			DogLog.log("Shooter/ComputedHoodPercent", getHoodPercentForDistance(d));
-		}, this).finallyDo(this::stop);
+		return Commands.run(() -> setForDistance(distance), this).finallyDo(this::stop);
+	}
+
+	// ==================== Manual Distance Override ====================
+
+	private double manualDistanceM = 1.0;
+	boolean manualDistanceEnabled = false;
+	private Supplier<Distance> autoDistanceSupplier = () -> Meters.of(0);
+	private static final double DISTANCE_STEP_M = 0.5;
+	private static final double DISTANCE_MIN_M = 1.0;
+	private static final double DISTANCE_MAX_M = 5.0;
+
+	public void setAutoDistanceSupplier(Supplier<Distance> supplier) {
+		autoDistanceSupplier = supplier;
+	}
+
+	public void clearManualDistanceOverride() {
+		manualDistanceEnabled = false;
+	}
+
+	public double getActiveDistanceM() {
+		return manualDistanceEnabled ? manualDistanceM : autoDistanceSupplier.get().in(Meters);
+	}
+
+	/** Steps distance up 0.5 m and activates manual override. */
+	public Command advanceDistanceCommand() {
+		return Commands.runOnce(() -> {
+			manualDistanceM = Math.min(manualDistanceM + DISTANCE_STEP_M, DISTANCE_MAX_M);
+			manualDistanceEnabled = true;
+		}).withName("Advance Distance");
+	}
+
+	/** Steps distance down 0.5 m and activates manual override. */
+	public Command reduceDistanceCommand() {
+		return Commands.runOnce(() -> {
+			manualDistanceM = Math.max(manualDistanceM - DISTANCE_STEP_M, DISTANCE_MIN_M);
+			manualDistanceEnabled = true;
+		}).withName("Reduce Distance");
 	}
 
 	// ==================== Test Mode ====================

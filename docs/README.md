@@ -79,7 +79,7 @@ Firmware: [df1317/maypad-frc](https://github.com/df1317/maypad-frc) — grab the
 ### Test Mode
 
 In test mode, buttons on the Maypad run individual subsystem commands. Tunable values are adjustable live in Elastic or
-Glass under the `Tunable/` table.
+Glass under the `Tunable/` table. The xbox controls are inherited in this mode.
 
 #### Maypad (Operator Panel) [`Port 1`]
 

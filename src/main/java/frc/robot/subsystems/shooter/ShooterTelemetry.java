@@ -45,6 +45,10 @@ public class ShooterTelemetry {
 		DogLog.log("Shooter/Feeder/VelocityErrorRPM", feederTargetRPM - feederCurrentRPM);
 		DogLog.log("Shooter/Feeder/CurrentAmps", shooter.feeder.getOutputCurrent());
 
+		// Active distance
+		DogLog.log("Shooter/DistanceM", shooter.getActiveDistanceM());
+		DogLog.log("Shooter/ManualDistanceEnabled", shooter.manualDistanceEnabled);
+
 		// Hood
 		DogLog.log("Shooter/Hood/CurrentPercent",
 				shooter.isHoodHomed() ? shooter.hoodEncoder.getPosition() / shooter.hoodMaxDeg : 0.0);

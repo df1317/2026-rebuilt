@@ -133,6 +133,10 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 		vision = new Vision(swerveDrive::getPose, swerveDrive.field);
 	}
 
+	public boolean hasVision() {
+		return vision != null && vision.hasVision();
+	}
+
 	@Override
 	public void periodic() {
 		swerveDrive.updateOdometry();
