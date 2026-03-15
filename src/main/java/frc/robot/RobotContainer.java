@@ -88,7 +88,7 @@ public class RobotContainer {
       autoChooser.addOption("Score Rear-Left + Cycle",
         buildScoreCycleAuto(_Rebuilt2026.HUB_SCORE_REAR_LEFT));
       autoChooser.addOption("Score Rear-Right + Cycle",
-        buildScoreCycleAuto(_Rebuilt2026.HUB_SCORE_REAR_RIGHT));
+      buildScoreCycleAuto(_Rebuilt2026.HUB_SCORE_REAR_RIGHT));
       autoChooser.addOption("Score + Climb Left",
         buildScoreAndClimbAuto(_Rebuilt2026.CLIMB_LEFT));
       autoChooser.addOption("Score + Climb Right",
