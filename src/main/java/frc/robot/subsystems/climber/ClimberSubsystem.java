@@ -86,7 +86,6 @@ public class ClimberSubsystem extends SubsystemBase {
 	private final DoubleSubscriber SUB_HOMING_CURRENT_LIMIT = DogLog.tunable("Climber/HomingCurrentLimit",
 			HOMING_CURRENT_LIMIT);
 
-	private final ClimberVisualization visualization;
 	private final ClimberTelemetry telemetry;
 
 	public ClimberSubsystem() {
@@ -125,7 +124,6 @@ public class ClimberSubsystem extends SubsystemBase {
 										velocity.mut_replace(getVelocityMetersPerSecond(), MetersPerSecond)),
 						this));
 
-		visualization = new ClimberVisualization(this);
 		telemetry = new ClimberTelemetry(this);
 
 		goalState.position = getHeightMeters();
@@ -182,6 +180,7 @@ public class ClimberSubsystem extends SubsystemBase {
 
 		if (isHoming) {
 			telemetry.log();
+
 			return;
 		}
 
@@ -201,6 +200,7 @@ public class ClimberSubsystem extends SubsystemBase {
 				new PositionVoltage(currentState.position * ROTATIONS_PER_METER).withFeedForward(ff));
 
 		telemetry.log();
+		visualization.update();
 	}
 
 	public boolean isClimberStalled() {
