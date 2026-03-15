@@ -167,6 +167,16 @@ public class IntakeSubsystem extends SubsystemBase {
 				- targetRollerVelocity.in(RPM)) < ROLLER_VELOCITY_TOLERANCE.in(RPM);
 	}
 
+	public boolean isExtended() {
+		return isPivotAtPosition()
+				&& Math.abs(targetPivotAngle.in(Degrees) - PIVOT_EXTENDED_ANGLE.in(Degrees)) < PIVOT_ANGLE_TOLERANCE.in(Degrees);
+	}
+
+	public boolean isRetracted() {
+		return isPivotAtPosition()
+				&& Math.abs(targetPivotAngle.in(Degrees) - PIVOT_RETRACTED_ANGLE.in(Degrees)) < PIVOT_ANGLE_TOLERANCE.in(Degrees);
+	}
+
 	// ==================== Control Methods ====================
 
 	public void setPivotAngle(Angle angle) {
@@ -205,11 +215,13 @@ public class IntakeSubsystem extends SubsystemBase {
 	}
 
 	public Command runRollerCommand() {
-		return runOnce(() -> setRollerVelocity(ROLLER_INTAKE_VELOCITY)).withName("Intake Run Roller");
+		return run(() -> setRollerVelocity(ROLLER_INTAKE_VELOCITY))
+				.finallyDo(() -> setRollerVelocity(RPM.of(0))).withName("Intake Run Roller");
 	}
 
 	public Command ejectCommand() {
-		return runOnce(() -> setRollerVelocity(ROLLER_EJECT_VELOCITY)).withName("Intake Eject");
+		return run(() -> setRollerVelocity(ROLLER_EJECT_VELOCITY))
+				.finallyDo(() -> setRollerVelocity(RPM.of(0))).withName("Intake Eject");
 	}
 
 	public Command stopRollerCommand() {
@@ -227,10 +239,9 @@ public class IntakeSubsystem extends SubsystemBase {
 		return sequence(stopRollerCommand(), retractCommand()).withName("Intake Stow");
 	}
 
-	/** Extends (no roller) until toggled off, then stows. */
+	/** Extends or stows depending on current position. */
 	public Command stowToggleCommand() {
-		return Commands.sequence(extendCommand(), Commands.idle(this))
-				.finallyDo(interrupted -> CommandScheduler.getInstance().schedule(stowCommand()))
+		return Commands.either(stowCommand(), extendCommand(), this::isExtended)
 				.withName("Intake Stow Toggle");
 	}
 

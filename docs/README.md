@@ -102,7 +102,7 @@ Glass under the `Tunable/` table. The xbox controls are inherited in this mode.
 | `key(1, 0)` | -                            |                                                      |
 | `key(1, 1)` | Home the Hood                |                                                      |
 | `key(1, 2)` | Test hood position           | Tunable: `Shooter/Hood/Percent`                      |
-| `key(1, 3)` | -                            |                                                      |
+| `key(1, 3)` | Shooter tune (hold)          | Runs shooter at tunables `Shooter/TuneRPM` and `Shooter/TuneHoodPercent` |
 | **row 2**   |                              |                                                      |
 | `key(2, 0)` | -                            |                                                      |
 | `key(2, 1)` | -                            |                                                      |

@@ -36,8 +36,8 @@ public class IntakeTelemetry {
 		DogLog.log("Intake/PivotTargetAngleDeg", pivotTargetAngleDeg);
 		DogLog.log("Intake/PivotErrorDeg", pivotTargetAngleDeg - pivotAngleDeg);
 		DogLog.log("Intake/PivotAtPosition", intake.isPivotAtPosition());
-		DogLog.log("Intake/IsExtended", isExtended());
-		DogLog.log("Intake/IsRetracted", isRetracted());
+		DogLog.log("Intake/IsExtended", intake.isExtended());
+		DogLog.log("Intake/IsRetracted", intake.isRetracted());
 		DogLog.log("Intake/IsStalled", isPivotStalled());
 
 		// Roller tracking
@@ -54,16 +54,6 @@ public class IntakeTelemetry {
 		DogLog.log("Intake/RollerVoltage", intake.rollerMotor.getBusVoltage() * intake.rollerMotor.getAppliedOutput());
 	}
 
-	private boolean isExtended() {
-		return intake.isPivotAtPosition()
-				&& Math.abs(intake.targetPivotAngle.in(Degrees) - PIVOT_EXTENDED_ANGLE.in(Degrees)) < 1.0;
-	}
-
-	private boolean isRetracted() {
-		return intake.isPivotAtPosition()
-				&& Math.abs(intake.targetPivotAngle.in(Degrees) - PIVOT_RETRACTED_ANGLE.in(Degrees)) < 1.0;
-	}
-
 	private boolean isPivotStalled() {
 		return intake.isPivotStalled();
 	}
@@ -74,11 +64,11 @@ public class IntakeTelemetry {
 
 	private Color getStatusColor() {
 		double targetRPM = intake.targetRollerVelocity.in(RPM);
-		if (targetRPM > 0 && isExtended()) {
+		if (targetRPM > 0 && intake.isExtended()) {
 			return intake.isRollerAtSpeed() ? RobotLog.GREEN : RobotLog.YELLOW;
 		} else if (targetRPM < 0) {
 			return RobotLog.BLUE;
-		} else if (!isRetracted()) {
+		} else if (!intake.isRetracted()) {
 			return RobotLog.YELLOW;
 		}
 		return RobotLog.RED;

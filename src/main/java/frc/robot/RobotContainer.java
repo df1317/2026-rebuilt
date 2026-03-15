@@ -3,6 +3,7 @@ package frc.robot;
 import dev.doglog.DogLog;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.networktables.BooleanSubscriber;
+import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -31,6 +32,9 @@ import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.RPM;
 
 public class RobotContainer {
+
+	private final DoubleSubscriber tuneHoodPercent = DogLog.tunable("Shooter/TuneHoodPercent", 0.0);
+	private final DoubleSubscriber tuneShooterRPM = DogLog.tunable("Shooter/TuneRPM", 3000.0);
 
 	// HID
 	private final CommandXboxController driverXbox = new CommandXboxController(0);
@@ -126,13 +130,13 @@ public class RobotContainer {
 				}
 			}).andThen(Constants.ENABLE_SWERVE && drivebase != null
 					? Commands.parallel(
-							teleopAutomation.shootCommand(),
+							teleopAutomation.shootCommand(drivebase::isAimed),
 							drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY,
 									teleopAutomation::getShootingPose))
 					: teleopAutomation.shootCommand()));
 		}
 		if (Constants.ENABLE_INTAKE && intake != null) {
-			driverXbox.x().toggleOnTrue(intake.stowToggleCommand());
+			driverXbox.x().onTrue(intake.stowToggleCommand());
 			driverXbox.leftTrigger().whileTrue(intake.intakeCommand());
 		}
 
@@ -175,14 +179,16 @@ public class RobotContainer {
 		}
 		// Row 1 — Hood + Aim
 		if (Constants.ENABLE_SHOOTER && shooter != null) {
-			panel.key(1, 1).and(inTest).onTrue(shooter.homeHoodCommand());
+			panel.key(1, 1).onTrue(shooter.homeHoodCommand());
 			panel.key(1, 2).and(inTest).whileTrue(shooter.testHoodCommand());
+			panel.key(1, 3).and(inTest).whileTrue(
+					shooter.tune(tuneShooterRPM::get, tuneShooterRPM::get, tuneHoodPercent::get)
+							.finallyDo(shooter::stop));
 		}
 		if (Constants.ENABLE_SWERVE && drivebase != null) {
 			Supplier<Pose2d> hubPose = () -> FieldZones.getHubPose(
 					DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue));
 			panel.key(1, 0).and(inTest).whileTrue(drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY, hubPose));
-			panel.key(1, 3).and(inTest).whileTrue(drivebase.aimAtPID(driverXbox::getLeftX, driverXbox::getLeftY, hubPose));
 		}
 		// Row 2 — Shoot all
 		if (Constants.ENABLE_SHOOTER && shooter != null && Constants.ENABLE_HOPPER && hopper != null) {

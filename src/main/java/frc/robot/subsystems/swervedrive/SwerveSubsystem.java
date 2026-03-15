@@ -128,7 +128,7 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 	}
 
 	public boolean hasVision() {
-		return vision != null && vision.hasVision();
+		return visionEnabled.get() && vision != null && vision.hasVision();
 	}
 
 	@Override
@@ -159,38 +159,44 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 				FieldZones.getDistanceToNearestZoneBoundary(getPose()));
 	}
 
+	private boolean isAimed = false;
+
 	/** Aim at a target pose while allowing translation control (bang-bang). */
 	public Command aimAt(DoubleSupplier translateX, DoubleSupplier translateY, Supplier<Pose2d> target) {
-		return run(() -> {
-			ChassisSpeeds speeds = SwerveInputStream.of(getSwerveDrive(),
-					() -> -translateY.getAsDouble(), () -> -translateX.getAsDouble()).get();
+		return runEnd(() -> {
+			Pose2d currentPose = getPose();
+			Pose2d targetPose = target.get();
 
-			if (vision != null && vision.hasVision()) {
-				Pose2d currentPose = getPose();
-				Pose2d targetPose = target.get();
+			double desiredAngle = Math.atan2(
+					targetPose.getY() - currentPose.getY(),
+					targetPose.getX() - currentPose.getX()) + Math.PI;
 
-				double desiredAngle = Math.atan2(
-						targetPose.getY() - currentPose.getY(),
-						targetPose.getX() - currentPose.getX()) + Math.PI;
+			double error = currentPose.getRotation().getRadians() - desiredAngle;
+			error = Math.atan2(Math.sin(error), Math.cos(error));
 
-				double error = currentPose.getRotation().getRadians() - desiredAngle;
-				error = Math.atan2(Math.sin(error), Math.cos(error));
-
-				double omega = 0.0;
-				if (Math.abs(error) > AIM_TOLERANCE) {
-					double speed = getAimSpeed(Math.abs(error));
-					omega = error > 0 ? -speed : speed;
-				}
-
-				speeds.omegaRadiansPerSecond = omega;
-				DogLog.log("Aim/Error", error, Radians);
-				DogLog.log("Aim/DesiredAngle", desiredAngle, Radians);
-				DogLog.log("Aim/CurrentAngle", currentPose.getRotation().getRadians(), Radians);
-				DogLog.log("Aim/Omega", omega);
+			double omega = 0.0;
+			if (Math.abs(error) > AIM_TOLERANCE) {
+				double speed = getAimSpeed(Math.abs(error));
+				omega = error > 0 ? -speed : speed;
 			}
 
+			// If vision is unavailable we can't trust the pose enough to gate shooting
+			isAimed = !hasVision() || Math.abs(error) <= AIM_TOLERANCE;
+
+			ChassisSpeeds speeds = SwerveInputStream.of(getSwerveDrive(),
+					() -> -translateY.getAsDouble(), () -> -translateX.getAsDouble()).get();
+			speeds.omegaRadiansPerSecond = omega;
 			swerveDrive.driveFieldOrientedAndRobotOriented(speeds, new ChassisSpeeds());
-		});
+
+			DogLog.log("Aim/Error", error, Radians);
+			DogLog.log("Aim/DesiredAngle", desiredAngle, Radians);
+			DogLog.log("Aim/CurrentAngle", currentPose.getRotation().getRadians(), Radians);
+			DogLog.log("Aim/Omega", omega);
+		}, () -> isAimed = false);
+	}
+
+	public boolean isAimed() {
+		return isAimed;
 	}
 
 	public Command aimAtPID(DoubleSupplier translateX, DoubleSupplier translateY, Supplier<Pose2d> target) {

@@ -83,7 +83,7 @@ public final class Constants {
 		public static final double PIVOT_MAX_VELOCITY_DEG_PER_S = 120.0;
 		public static final double PIVOT_MAX_ACCEL_DEG_PER_S2 = 240.0;
 
-		public static final AngularVelocity ROLLER_INTAKE_VELOCITY = RPM.of(2000);
+		public static final AngularVelocity ROLLER_INTAKE_VELOCITY = RPM.of(2500);
 		public static final AngularVelocity ROLLER_EJECT_VELOCITY = RPM.of(-1500);
 		public static final AngularVelocity ROLLER_VELOCITY_TOLERANCE = RPM.of(100);
 

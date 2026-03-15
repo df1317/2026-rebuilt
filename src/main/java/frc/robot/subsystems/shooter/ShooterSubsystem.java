@@ -28,6 +28,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Constants.ShooterConstants;
 
+import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
 import static edu.wpi.first.units.Units.*;
@@ -183,6 +184,14 @@ public class ShooterSubsystem extends SubsystemBase {
 		distanceToHoodPercent.put(3.50, 0.17);
 		distanceToHoodPercent.put(4.00, 0.36);
 		distanceToHoodPercent.put(4.60, 0.53);
+	}
+
+	public Command tune(DoubleSupplier shooterRPM, DoubleSupplier feederRPM, DoubleSupplier hoodPercent) {
+		return Commands.run(() -> {
+			setVelocity(RPM.of(shooterRPM.getAsDouble()));
+			setFeederVelocity(RPM.of(feederRPM.getAsDouble()));
+			setHoodPercent(hoodPercent.getAsDouble());
+		}, this);
 	}
 
 	@Override

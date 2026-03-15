@@ -14,6 +14,7 @@ import frc.robot.subsystems.intake.IntakeSubsystem;
 import frc.robot.subsystems.shooter.ShooterSubsystem;
 import frc.robot.util.FieldZones;
 
+import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 import static edu.wpi.first.units.Units.Meters;
@@ -57,6 +58,15 @@ public class TeleopZoneAutomation {
 		return Commands.parallel(
 				shooter.shootForDistanceCommand(() -> Meters.of(shooter.getActiveDistanceM())),
 				Commands.waitUntil(shooter::isAtSpeed).andThen(hopper.feedCommand()));
+	}
+
+	public Command shootCommand(BooleanSupplier aimed) {
+		if (shooter == null || hopper == null)
+			return Commands.none();
+		return Commands.parallel(
+				shooter.shootForDistanceCommand(() -> Meters.of(shooter.getActiveDistanceM())),
+				hopper.reverseCommand().until(() -> shooter.isAtSpeed() && aimed.getAsBoolean())
+						.andThen(hopper.feedCommand()));
 	}
 
 	public Pose2d getShootingPose() {
