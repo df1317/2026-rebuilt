@@ -151,6 +151,8 @@ public final class Constants {
 
 		public static final Distance MAX_HEIGHT = Meters.of(1.23);
 		public static final Distance MIN_HEIGHT = Meters.of(0.0);
+		public static final Distance HANG_HEIGHT = Meters.of(0.5); // TODO: measure
+		public static final Distance RELEASE_HEIGHT = Meters.of(0.2); // TODO: measure
 		public static final double ROTATIONS_PER_METER = 42.4;
 		public static final Distance POSITION_TOLERANCE = Centimeters.of(2);
 

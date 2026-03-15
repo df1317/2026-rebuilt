@@ -15,9 +15,11 @@ import static frc.robot.Constants.ClimberConstants.KP;
 import static frc.robot.Constants.ClimberConstants.KS;
 import static frc.robot.Constants.ClimberConstants.KV;
 import static frc.robot.Constants.ClimberConstants.MAX_ACCELERATION;
+import static frc.robot.Constants.ClimberConstants.HANG_HEIGHT;
 import static frc.robot.Constants.ClimberConstants.MAX_HEIGHT;
 import static frc.robot.Constants.ClimberConstants.MAX_VELOCITY;
 import static frc.robot.Constants.ClimberConstants.MIN_HEIGHT;
+import static frc.robot.Constants.ClimberConstants.RELEASE_HEIGHT;
 import static frc.robot.Constants.ClimberConstants.MOTOR_LEFT_ID;
 import static frc.robot.Constants.ClimberConstants.POSITION_TOLERANCE;
 import static frc.robot.Constants.ClimberConstants.ROTATIONS_PER_METER;
@@ -326,6 +328,22 @@ public class ClimberSubsystem extends SubsystemBase {
 				// .andThen(idle().until(() -> isClimberStalled() || isAtGoal()))
 				// .andThen(runOnce(() -> goToHeightCommand(this::getHeightMeters)))
 				.withName("Climber Retract");
+	}
+
+	public Command climbBottomCommand() {
+		return goToHeightCommand(MIN_HEIGHT.in(Meters)).withName("Climb Bottom");
+	}
+
+	public Command climbTopCommand() {
+		return goToHeightCommand(MAX_HEIGHT.in(Meters)).withName("Climb Top");
+	}
+
+	public Command climbHangCommand() {
+		return goToHeightCommand(HANG_HEIGHT.in(Meters)).withName("Climb Hang");
+	}
+
+	public Command climbReleaseCommand() {
+		return goToHeightCommand(RELEASE_HEIGHT.in(Meters)).withName("Climb Release");
 	}
 
 	public Command zeroCommand() {

@@ -149,8 +149,20 @@ public class RobotContainer {
 		if (Constants.ENABLE_SHOOTER && shooter != null) {
 			panel.key(2, 3).and(inTeleop).whileTrue(teleopAutomation.shootCommand()); // shoot+feed (no aim)
 			panel.key(3, 3).and(inTeleop).whileTrue(shooter.reverseFeederCommand()); // feederReverse
-			panel.key(1, 0).and(inTeleop).onTrue(shooter.reduceDistanceCommand()); // distanceDown
-			panel.key(1, 1).and(inTeleop).onTrue(shooter.advanceDistanceCommand()); // distanceUp
+			panel.key(1, 0).and(inTeleop).onTrue(Commands.runOnce(() -> { // autoDistance
+				if (Constants.ENABLE_SWERVE && drivebase != null && drivebase.hasVision()) {
+					shooter.clearManualDistanceOverride();
+				}
+			}));
+			panel.key(2, 0).and(inTeleop).onTrue(shooter.advanceDistanceCommand()); // distanceAdvance
+			panel.key(3, 0).and(inTeleop).onTrue(shooter.reduceDistanceCommand()); // distanceReduce
+		}
+		// Row 4 — Climber positions
+		if (Constants.ENABLE_CLIMBER && climber != null) {
+			panel.key(4, 0).and(inTeleop).onTrue(climber.climbBottomCommand()); // climbBottom
+			panel.key(4, 1).and(inTeleop).onTrue(climber.climbTopCommand()); // climbTop
+			panel.key(4, 2).and(inTeleop).onTrue(climber.climbHangCommand()); // climbHang
+			panel.key(4, 3).and(inTeleop).onTrue(climber.climbReleaseCommand()); // climbRelease
 		}
 
 		// ===== Test Mode Controls (Maypad — see docs for layout) =====
