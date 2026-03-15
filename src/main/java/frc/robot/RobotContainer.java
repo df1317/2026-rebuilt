@@ -1,39 +1,44 @@
 package frc.robot;
 
-import static edu.wpi.first.units.Units.Degrees;
-import static edu.wpi.first.units.Units.Meters;
-import java.io.File;
-import com.pathplanner.lib.auto.AutoBuilder;
-import edu.wpi.first.math.MathUtil;
+import dev.doglog.DogLog;
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.units.Units;
-import edu.wpi.first.units.measure.Distance;
+import edu.wpi.first.networktables.BooleanSubscriber;
+import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Constants.DrivebaseConstants;
 import frc.robot.Constants.OperatorConstants;
+import frc.robot.commands.TeleopZoneAutomation;
+import frc.robot.repulsor.Repulsor;
+import frc.robot.repulsor.Setpoints.SetpointContext;
+import frc.robot.repulsor.Setpoints.Specific._Rebuilt2026;
 import frc.robot.subsystems.climber.ClimberSubsystem;
+import frc.robot.subsystems.hopper.HopperSubsystem;
 import frc.robot.subsystems.intake.IntakeSubsystem;
 import frc.robot.subsystems.shooter.ShooterSubsystem;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
 import frc.robot.util.FieldZones;
 import swervelib.SwerveInputStream;
 
+import java.io.File;
+import java.util.function.Supplier;
+
+import static edu.wpi.first.units.Units.Meters;
+import static edu.wpi.first.units.Units.RPM;
+
 public class RobotContainer {
 
-	private SendableChooser<Command> autoChooser;
+	private final DoubleSubscriber tuneHoodPercent = DogLog.tunable("Shooter/TuneHoodPercent", 0.0);
+	private final DoubleSubscriber tuneShooterRPM = DogLog.tunable("Shooter/TuneRPM", 3000.0);
 
 	// HID
 	private final CommandXboxController driverXbox = new CommandXboxController(0);
-	private final CommandJoystick m_JoystickL = new CommandJoystick(1);
-	private final CommandJoystick m_JoystickR = new CommandJoystick(2);
-
+	private final OperatorPanel panel = new OperatorPanel(1);
 	// Subsystems
 	private final SwerveSubsystem drivebase = Constants.ENABLE_SWERVE
 			? new SwerveSubsystem(new File(Filesystem.getDeployDirectory(), "swerve/neo"))
@@ -41,26 +46,58 @@ public class RobotContainer {
 	private final ClimberSubsystem climber = Constants.ENABLE_CLIMBER ? new ClimberSubsystem() : null;
 	private final ShooterSubsystem shooter = Constants.ENABLE_SHOOTER ? new ShooterSubsystem() : null;
 	private final IntakeSubsystem intake = Constants.ENABLE_INTAKE ? new IntakeSubsystem() : null;
+	private final HopperSubsystem hopper = Constants.ENABLE_HOPPER ? new HopperSubsystem() : null;
+	private final BooleanSubscriber obstacleClampEnabled = DogLog.tunable("Drive/ObstacleClampEnabled", false);
+	private final SendableChooser<Command> autoChooser;
+	// Repulsor
+	private final Repulsor repulsor;
+	private final SwerveInputStream driveAngularVelocity;
+	// Teleop automation
+	private final TeleopZoneAutomation teleopAutomation;
 	public boolean robotRelative = false;
-
-	private SwerveInputStream driveAngularVelocity;
 
 	public RobotContainer() {
 		if (Constants.ENABLE_SWERVE) {
+			// Initialize Repulsor path planner
+			repulsor = new Repulsor(drivebase,
+					DrivebaseConstants.ROBOT_HALF_LENGTH, DrivebaseConstants.ROBOT_HALF_WIDTH);
+
+			// Setup teleop automation
+			teleopAutomation = new TeleopZoneAutomation(
+					repulsor, intake, shooter, hopper,
+					drivebase::getPose, drivebase::getFieldVelocity);
+			drivebase.setTargetDistanceSupplier(teleopAutomation::getTargetDistance);
+			drivebase.setAimTargetSupplier(teleopAutomation::getVirtualAimTarget);
+			if (Constants.ENABLE_SHOOTER && shooter != null) {
+				shooter.setAutoDistanceSupplier(teleopAutomation::getTargetDistance);
+			}
+
 			driveAngularVelocity = SwerveInputStream
 					.of(drivebase.getSwerveDrive(), () -> driverXbox.getLeftY() * -1,
 							() -> driverXbox.getLeftX() * -1)
-					.withControllerRotationAxis(() -> {
-						double stickRotation = driverXbox.getRightX() * -1;
-						double leftTrigger = Math.pow(driverXbox.getLeftTriggerAxis(), 3);
-						double rightTrigger = Math.pow(driverXbox.getRightTriggerAxis(), 3);
-						double triggerRotation = (leftTrigger - rightTrigger) * 0.3;
-						return MathUtil.clamp(stickRotation + triggerRotation, -1.0, 1.0);
-					}).aim(FieldZones.HUB_POSE_RED).aimWhile(driverXbox.b())
+					.withControllerRotationAxis(() -> driverXbox.getRightX() * -1)
+					.aimWhile(driverXbox.y())
 					.deadband(OperatorConstants.DEADBAND)
 					.scaleTranslation(DrivebaseConstants.TRANSLATION_SCALE).allianceRelativeControl(true);
 
-			autoChooser = AutoBuilder.buildAutoChooser();
+			// Build auto chooser
+			autoChooser = new SendableChooser<>();
+			autoChooser.setDefaultOption("Score Front + Cycle",
+					buildScoreCycleAuto(_Rebuilt2026.HUB_SCORE_FRONT));
+			autoChooser.addOption("Score Front-Left + Cycle",
+					buildScoreCycleAuto(_Rebuilt2026.HUB_SCORE_FRONT_LEFT));
+			autoChooser.addOption("Score Front-Right + Cycle",
+					buildScoreCycleAuto(_Rebuilt2026.HUB_SCORE_FRONT_RIGHT));
+			autoChooser.addOption("Score Rear-Left + Cycle",
+					buildScoreCycleAuto(_Rebuilt2026.HUB_SCORE_REAR_LEFT));
+			autoChooser.addOption("Score Rear-Right + Cycle",
+					buildScoreCycleAuto(_Rebuilt2026.HUB_SCORE_REAR_RIGHT));
+			autoChooser.addOption("Score + Climb Left",
+					buildScoreAndClimbAuto(_Rebuilt2026.CLIMB_LEFT));
+			autoChooser.addOption("Score + Climb Right",
+					buildScoreAndClimbAuto(_Rebuilt2026.CLIMB_RIGHT));
+			autoChooser.addOption("Defence Only", buildDefenceOnlyAuto());
+			autoChooser.addOption("Do Nothing", Commands.none());
 			SmartDashboard.putData("misc/Auto Chooser", autoChooser);
 		}
 
@@ -69,69 +106,145 @@ public class RobotContainer {
 	}
 
 	private void configureBindings() {
-		if (Constants.ENABLE_SWERVE) {
-			drivebase
-					.setDefaultCommand(drivebase.robotDriveCommand(driveAngularVelocity, () -> robotRelative));
+		var inTeleop = new edu.wpi.first.wpilibj2.command.button.Trigger(DriverStation::isTeleop);
+		var inTest = new edu.wpi.first.wpilibj2.command.button.Trigger(DriverStation::isTest);
 
-			driverXbox.x().whileTrue(
-					drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY, FieldZones.HUB_POSE_BLUE));
+		// ===== Driver Controls (Xbox port 0) =====
+		if (Constants.ENABLE_SWERVE) {
+			drivebase.setDefaultCommand(
+					drivebase.robotDriveCommand(driveAngularVelocity, () -> robotRelative,
+							speeds -> {
+								if (obstacleClampEnabled.get() && repulsor != null) {
+									return repulsor.clampDriveSpeed(speeds, drivebase.getPose());
+								}
+								return speeds;
+							}));
 
 			driverXbox.a().onTrue(Commands.runOnce(drivebase::zeroGyro));
-
-			driverXbox.rightBumper().onTrue(Commands.runOnce(() -> robotRelative = !robotRelative))
-					.and(DriverStation::isTeleop);
-
-			driverXbox.leftBumper().whileTrue(Commands.runOnce(drivebase::lock, drivebase).repeatedly());
-
-			driverXbox.back().whileTrue(
-					Commands.either(drivebase.centerModulesCommand(), Commands.none(), DriverStation::isTest));
+			driverXbox.rightBumper().onTrue(Commands.runOnce(() -> robotRelative = !robotRelative));
+		}
+		if (Constants.ENABLE_SHOOTER && shooter != null) {
+			driverXbox.rightTrigger().whileTrue(Commands.runOnce(() -> {
+				if (Constants.ENABLE_SWERVE && drivebase != null && drivebase.hasVision()) {
+					shooter.clearManualDistanceOverride();
+				}
+			}).andThen(Constants.ENABLE_SWERVE && drivebase != null
+					? Commands.parallel(
+							teleopAutomation.shootCommand(drivebase::isAimed),
+							drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY,
+									teleopAutomation::getShootingPose))
+					: teleopAutomation.shootCommand()));
+		}
+		if (Constants.ENABLE_INTAKE && intake != null) {
+			driverXbox.x().onTrue(intake.stowToggleCommand());
+			driverXbox.leftTrigger().whileTrue(intake.intakeCommand());
 		}
 
-		if (Constants.ENABLE_SHOOTER) {
-			m_JoystickL.povRight().onTrue(Commands.runOnce(() -> {
-				shooter.setVelocity(Units.RPM.of(1000.0));
-				shooter.setFeederVelocity(Units.RPM.of(1000.0));
-				System.out.println("shooter set to 1000RPM");
+		// ===== Teleop Panel Controls (Maypad — see docs for layout) =====
+		// Row 2 — Feed / Intake
+		if (Constants.ENABLE_INTAKE && intake != null) {
+			panel.key(2, 1).and(inTeleop).whileTrue(intake.runRollerCommand()); // intakeForward
+			panel.key(3, 1).and(inTeleop).whileTrue(intake.ejectCommand()); // intakeReverse
+		}
+		if (Constants.ENABLE_HOPPER && hopper != null) {
+			panel.key(2, 2).and(inTeleop).whileTrue(hopper.feedCommand()); // hopperForward
+			panel.key(3, 2).and(inTeleop).whileTrue(hopper.reverseCommand()); // hopperReverse
+		}
+		if (Constants.ENABLE_SHOOTER && shooter != null) {
+			panel.key(2, 3).and(inTeleop).whileTrue(teleopAutomation.shootCommand()); // shoot+feed (no aim)
+			panel.key(3, 3).and(inTeleop).whileTrue(shooter.reverseFeederCommand()); // feederReverse
+			panel.key(1, 0).and(inTeleop).onTrue(Commands.runOnce(() -> { // autoDistance
+				if (Constants.ENABLE_SWERVE && drivebase != null && drivebase.hasVision()) {
+					shooter.clearManualDistanceOverride();
+				}
 			}));
-			m_JoystickL.povLeft().onTrue(Commands.runOnce(() -> {
-				System.out.println("shooter stopped");
-				shooter.stop();
-			}));
-			m_JoystickL.povUp().onTrue(Commands.runOnce(() -> {
-				shooter.setVelocity(shooter.getTargetVelocity().plus(Units.RPM.of(100.0)));
-				shooter.setFeederVelocity(shooter.getTargetVelocity());
-				System.out.println(
-						"shooter increased by 100rpm to " + (shooter.getTargetVelocity().baseUnitMagnitude()));
-			}));
-			m_JoystickL.povDown().onTrue(Commands.runOnce(() -> {
-				shooter.setVelocity(shooter.getTargetVelocity().minus(Units.RPM.of(100.0)));
-				shooter.setFeederVelocity(shooter.getTargetVelocity());
-				System.out.println(
-						"shooter decreased by 100rpm to " + (shooter.getTargetVelocity().baseUnitMagnitude()));
-			}));
-
-			m_JoystickL.button(3).onTrue(Commands.runOnce(() -> {
-				shooter.setHoodAngle(shooter.getTargetHoodAngle().plus(Degrees.of(10)));
-			}));
-			m_JoystickL.button(4).onTrue(Commands.runOnce(() -> {
-				shooter.setHoodAngle(shooter.getTargetHoodAngle().minus(Degrees.of(10)));
-			}));
+			panel.key(2, 0).and(inTeleop).onTrue(shooter.advanceDistanceCommand()); // distanceAdvance
+			panel.key(3, 0).and(inTeleop).onTrue(shooter.reduceDistanceCommand()); // distanceReduce
+		}
+		// Row 4 — Climber positions
+		if (Constants.ENABLE_CLIMBER && climber != null) {
+			panel.key(4, 0).and(inTeleop).onTrue(climber.climbBottomCommand()); // climbBottom
+			panel.key(4, 1).and(inTeleop).onTrue(climber.climbTopCommand()); // climbTop
+			panel.key(4, 2).and(inTeleop).onTrue(climber.climbHangCommand()); // climbHang
+			panel.key(4, 3).and(inTeleop).onTrue(climber.climbReleaseCommand()); // climbRelease
 		}
 
-		if (Constants.ENABLE_CLIMBER) {
-			m_JoystickL.button(5).whileTrue(climber.extendCommand());
-			m_JoystickL.button(6).whileTrue(climber.retractCommand());
-			m_JoystickL.trigger().whileTrue(
-					climber.manualControlCommand(() -> MathUtil.applyDeadband(-m_JoystickL.getY(), 0.1)));
+		// ===== Test Mode Controls (Maypad — see docs for layout) =====
+		// Row 0 — Climber
+		if (Constants.ENABLE_CLIMBER && climber != null) {
+			panel.key(0, 0).and(inTest).onTrue(climber.homeClimberCommand());
+			panel.key(0, 1).and(inTest).onTrue(climber.zeroCommand());
+			panel.key(0, 2).and(inTest).whileTrue(climber.jogVoltageCommand(() -> 1.0)); // climberUp
+			panel.key(0, 3).and(inTest).whileTrue(climber.jogVoltageCommand(() -> -1.0)); // climberDown
 		}
-
-		if (Constants.ENABLE_INTAKE) {
-			driverXbox.y().toggleOnTrue(intake.runRollerCommand());
-			driverXbox.y().toggleOnFalse(intake.stopRollerCommand());
-
-			m_JoystickL.button(8).onTrue(intake.extendCommand());
-			m_JoystickL.button(7).onFalse(intake.retractCommand());
+		// Row 1 — Hood + Aim
+		if (Constants.ENABLE_SHOOTER && shooter != null) {
+			panel.key(1, 1).onTrue(shooter.homeHoodCommand());
+			panel.key(1, 2).and(inTest).whileTrue(shooter.testHoodCommand());
+			panel.key(1, 3).and(inTest).whileTrue(
+					shooter.tune(tuneShooterRPM::get, tuneShooterRPM::get, tuneHoodPercent::get)
+							.finallyDo(shooter::stop));
 		}
+		if (Constants.ENABLE_SWERVE && drivebase != null) {
+			Supplier<Pose2d> hubPose = () -> FieldZones.getHubPose(
+					DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue));
+			panel.key(1, 0).and(inTest).whileTrue(drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY, hubPose));
+		}
+		// Row 2 — Shoot all
+		if (Constants.ENABLE_SHOOTER && shooter != null && Constants.ENABLE_HOPPER && hopper != null) {
+			panel.key(2, 3).and(inTest).whileTrue(
+					shooter.spinUpAndWaitCommand(shooter::getShooterTestRPM, shooter::getFeederTestRPM)
+							.andThen(hopper.setHopperVelocityCommand(hopper::getHopperTestRPM))
+							.finallyDo(() -> {
+								shooter.stop();
+								hopper.setHopperVelocity(RPM.of(0));
+							}));
+		}
+		// Row 3 — Individual subsystem tests
+		if (Constants.ENABLE_SHOOTER && shooter != null) {
+			panel.key(3, 0).and(inTest).whileTrue(shooter.testShooterMotorCommand());
+			panel.key(3, 1).and(inTest).whileTrue(shooter.testFeederCommand());
+		}
+		if (Constants.ENABLE_HOPPER && hopper != null) {
+			panel.key(3, 2).and(inTest).whileTrue(hopper.testHopperCommand());
+		}
+		if (Constants.ENABLE_INTAKE && intake != null) {
+			panel.key(3, 3).and(inTest).whileTrue(intake.testPivotCommand());
+		}
+	}
+
+	// ===== Auto Routines =====
+
+	private Command buildScoreCycleAuto(frc.robot.repulsor.Setpoints.GameSetpoint scoreSetpoint) {
+		return Commands.sequence(
+				// Score preloaded piece
+				repulsor.navigateTo(() -> scoreSetpoint.poseForCurrentAlliance(SetpointContext.EMPTY))
+						.until(repulsor.within(Meters.of(0.15))),
+				Commands.waitSeconds(0.5),
+				// Collect
+				repulsor.navigateTo(
+						() -> _Rebuilt2026.CENTER_COLLECT.poseForCurrentAlliance(SetpointContext.EMPTY))
+						.until(repulsor.within(Meters.of(0.15))),
+				Commands.waitSeconds(1.0),
+				// Score again
+				repulsor.navigateTo(() -> scoreSetpoint.poseForCurrentAlliance(SetpointContext.EMPTY))
+						.until(repulsor.within(Meters.of(0.15))),
+				Commands.waitSeconds(0.5));
+	}
+
+	private Command buildScoreAndClimbAuto(frc.robot.repulsor.Setpoints.GameSetpoint climbSetpoint) {
+		return Commands.sequence(
+				repulsor.navigateTo(
+						() -> _Rebuilt2026.HUB_SCORE_FRONT.poseForCurrentAlliance(SetpointContext.EMPTY))
+						.until(repulsor.within(Meters.of(0.15))),
+				Commands.waitSeconds(1.0),
+				repulsor.navigateTo(
+						() -> climbSetpoint.poseForCurrentAlliance(SetpointContext.EMPTY)));
+	}
+
+	private Command buildDefenceOnlyAuto() {
+		return repulsor.navigateTo(
+				() -> _Rebuilt2026.CENTER_COLLECT.poseForCurrentAlliance(SetpointContext.EMPTY));
 	}
 
 	public Command getAutonomousCommand() {
@@ -141,16 +254,18 @@ public class RobotContainer {
 		return Commands.none();
 	}
 
+	public void updateRepulsor() {
+		if (repulsor != null) {
+			repulsor.update();
+		}
+	}
+
+	public void autonomousInit() {
+	}
+
 	public void setMotorBrake(boolean brake) {
 		if (Constants.ENABLE_SWERVE) {
 			drivebase.setMotorBrake(brake);
 		}
-	}
-
-	private Distance getDistanceToTarget() {
-		Pose2d hubPose = DriverStation.getAlliance()
-				.orElse(DriverStation.Alliance.Blue) == DriverStation.Alliance.Red ? FieldZones.HUB_POSE_RED
-						: FieldZones.HUB_POSE_BLUE;
-		return Meters.of(drivebase.getPose().getTranslation().getDistance(hubPose.getTranslation()));
 	}
 }

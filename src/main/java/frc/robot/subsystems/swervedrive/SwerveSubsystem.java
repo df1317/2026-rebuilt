@@ -1,17 +1,9 @@
 package frc.robot.subsystems.swervedrive;
 
-import com.pathplanner.lib.auto.AutoBuilder;
-import com.pathplanner.lib.commands.PathPlannerAuto;
-import com.pathplanner.lib.commands.PathfindingCommand;
-import com.pathplanner.lib.config.PIDConstants;
-import com.pathplanner.lib.config.RobotConfig;
-import com.pathplanner.lib.controllers.PPHolonomicDriveController;
-import com.pathplanner.lib.path.PathConstraints;
-import com.pathplanner.lib.util.DriveFeedforwards;
-import com.pathplanner.lib.util.swerve.SwerveSetpoint;
-import com.pathplanner.lib.util.swerve.SwerveSetpointGenerator;
 import dev.doglog.DogLog;
 import edu.wpi.first.epilogue.NotLogged;
+import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -20,23 +12,22 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.trajectory.Trajectory;
-import edu.wpi.first.math.util.Units;
+import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.networktables.BooleanSubscriber;
+import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Config;
 import frc.robot.Constants;
 import frc.robot.Constants.DrivebaseConstants;
+import frc.robot.repulsor.DriveRepulsor;
 import frc.robot.subsystems.swervedrive.Vision.Cameras;
 import frc.robot.util.FieldZones;
 import frc.robot.util.RobotLog;
-import org.json.simple.parser.ParseException;
 import org.photonvision.targeting.PhotonPipelineResult;
 import swervelib.SwerveController;
 import swervelib.SwerveDrive;
@@ -49,30 +40,41 @@ import swervelib.parser.SwerveParser;
 import swervelib.telemetry.SwerveDriveTelemetry;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 
 import static edu.wpi.first.units.Units.*;
+import static frc.robot.util.FieldZones.HUB_POSE_RED;
 
-public class SwerveSubsystem extends SubsystemBase {
+public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 
 	private static final double AIM_TOLERANCE = Math.toRadians(1);
 
 	private final SwerveDrive swerveDrive;
+	private final PIDController repulsorOmegaPID = new PIDController(5.0, 0.0, 0.0);
 	private final BooleanSubscriber visionEnabled = DogLog.tunable("Swerve/VisionEnabled", true);
 	private final double AIM_SPEED_FAST = 5.0;
 	private final double AIM_SPEED_MID = 1.0;
 	private final double AIM_SPEED_SLOW = 2.0;
 	private final double AIM_SPEED_LOWEST = 0.3;
 
+	private final ProfiledPIDController aimPIDController = new ProfiledPIDController(
+			3.0, 0.1, 0.05,
+			new TrapezoidProfile.Constraints(Constants.MAX_ANGULAR_SPEED / 2, Constants.MAX_ANGULAR_ACCELERATION / 2));
 	Optional<Alliance> prevAlliance = Optional.empty();
 	private Vision vision;
 	private AutopilotController autopilotController;
+	private Supplier<Distance> targetDistanceSupplier = null;
+	private Supplier<Pose2d> aimTargetSupplier = null;
+
+	{
+		aimPIDController.enableContinuousInput(-Math.PI, Math.PI);
+		aimPIDController.setTolerance(AIM_TOLERANCE);
+	}
 
 	public SwerveSubsystem(File directory) {
 		SwerveDriveTelemetry.verbosity = Constants.SwerveTelemetryVerbosity;
@@ -103,7 +105,7 @@ public class SwerveSubsystem extends SubsystemBase {
 			setupPhotonVision();
 			swerveDrive.stopOdometryThread();
 		}
-		setupPathPlanner();
+		repulsorOmegaPID.enableContinuousInput(-Math.PI, Math.PI);
 		setupAutopilot();
 	}
 
@@ -113,8 +115,20 @@ public class SwerveSubsystem extends SubsystemBase {
 				new Pose2d(new Translation2d(Meter.of(2), Meter.of(0)), Rotation2d.fromDegrees(0)));
 	}
 
+	public void setTargetDistanceSupplier(Supplier<Distance> supplier) {
+		this.targetDistanceSupplier = supplier;
+	}
+
+	public void setAimTargetSupplier(Supplier<Pose2d> supplier) {
+		this.aimTargetSupplier = supplier;
+	}
+
 	public void setupPhotonVision() {
 		vision = new Vision(swerveDrive::getPose, swerveDrive.field);
+	}
+
+	public boolean hasVision() {
+		return visionEnabled.get() && vision != null && vision.hasVision();
 	}
 
 	@Override
@@ -135,20 +149,27 @@ public class SwerveSubsystem extends SubsystemBase {
 
 		DogLog.log("currentPose", swerveDrive.getPose());
 
+		if (targetDistanceSupplier != null) {
+			DogLog.log("DistanceToTarget", targetDistanceSupplier.get().in(Meters));
+		}
+
 		FieldZones.Zone currentZone = FieldZones.getZone(getPose());
-		DogLog.log("Field/Zone", currentZone.name());
+		DogLog.forceNt.log("Field/Zone", currentZone.name());
 		DogLog.log("Field/DistanceToZoneBoundary",
 				FieldZones.getDistanceToNearestZoneBoundary(getPose()));
 	}
 
+	private boolean isAimed = false;
+
 	/** Aim at a target pose while allowing translation control (bang-bang). */
-	public Command aimAt(DoubleSupplier translateX, DoubleSupplier translateY, Pose2d target) {
-		return run(() -> {
+	public Command aimAt(DoubleSupplier translateX, DoubleSupplier translateY, Supplier<Pose2d> target) {
+		return runEnd(() -> {
 			Pose2d currentPose = getPose();
+			Pose2d targetPose = target.get();
 
 			double desiredAngle = Math.atan2(
-					target.getY() - currentPose.getY(),
-					target.getX() - currentPose.getX());
+					targetPose.getY() - currentPose.getY(),
+					targetPose.getX() - currentPose.getX()) + Math.PI;
 
 			double error = currentPose.getRotation().getRadians() - desiredAngle;
 			error = Math.atan2(Math.sin(error), Math.cos(error));
@@ -159,6 +180,9 @@ public class SwerveSubsystem extends SubsystemBase {
 				omega = error > 0 ? -speed : speed;
 			}
 
+			// If vision is unavailable we can't trust the pose enough to gate shooting
+			isAimed = !hasVision() || Math.abs(error) <= AIM_TOLERANCE;
+
 			ChassisSpeeds speeds = SwerveInputStream.of(getSwerveDrive(),
 					() -> -translateY.getAsDouble(), () -> -translateX.getAsDouble()).get();
 			speeds.omegaRadiansPerSecond = omega;
@@ -168,7 +192,39 @@ public class SwerveSubsystem extends SubsystemBase {
 			DogLog.log("Aim/DesiredAngle", desiredAngle, Radians);
 			DogLog.log("Aim/CurrentAngle", currentPose.getRotation().getRadians(), Radians);
 			DogLog.log("Aim/Omega", omega);
-		});
+		}, () -> isAimed = false);
+	}
+
+	public boolean isAimed() {
+		return isAimed;
+	}
+
+	public Command aimAtPID(DoubleSupplier translateX, DoubleSupplier translateY, Supplier<Pose2d> target) {
+		return startRun(
+				() -> aimPIDController.reset(getPose().getRotation().getRadians(),
+						getSwerveDrive().getRobotVelocity().omegaRadiansPerSecond),
+				() -> {
+					ChassisSpeeds speeds = SwerveInputStream.of(getSwerveDrive(),
+							() -> -translateY.getAsDouble(), () -> -translateX.getAsDouble()).get();
+
+					if (vision != null && vision.hasVision()) {
+						Pose2d currentPose = getPose();
+						Pose2d targetPose = target.get();
+
+						double desiredAngle = Math.atan2(
+								targetPose.getY() - currentPose.getY(),
+								targetPose.getX() - currentPose.getX()) + Math.PI;
+
+						double omega = aimPIDController.calculate(currentPose.getRotation().getRadians(), desiredAngle);
+						speeds.omegaRadiansPerSecond = omega;
+
+						DogLog.log("AimPID/Error", currentPose.getRotation().getRadians() - desiredAngle, Radians);
+						DogLog.log("AimPID/DesiredAngle", desiredAngle, Radians);
+						DogLog.log("AimPID/Omega", omega);
+					}
+
+					swerveDrive.driveFieldOrientedAndRobotOriented(speeds, new ChassisSpeeds());
+				});
 	}
 
 	private double getAimSpeed(double absError) {
@@ -185,43 +241,6 @@ public class SwerveSubsystem extends SubsystemBase {
 	public void simulationPeriodic() {
 	}
 
-	public void setupPathPlanner() {
-		RobotConfig config;
-		try {
-			config = RobotConfig.fromGUISettings();
-
-			final boolean enableFeedforward = true;
-			AutoBuilder.configure(
-					this::getPose,
-					this::resetOdometry,
-					this::getRobotVelocity,
-					(speedsRobotRelative, moduleFeedForwards) -> {
-						if (enableFeedforward) {
-							swerveDrive.drive(speedsRobotRelative,
-									swerveDrive.kinematics.toSwerveModuleStates(speedsRobotRelative),
-									moduleFeedForwards.linearForces());
-						} else {
-							swerveDrive.setChassisSpeeds(speedsRobotRelative);
-						}
-					},
-					new PPHolonomicDriveController(
-							new PIDConstants(5.0, 0.0, 0.0),
-							new PIDConstants(5.0, 0.0, 0.0)),
-					config,
-					() -> {
-						var alliance = DriverStation.getAlliance();
-						return alliance.filter(value -> value == Alliance.Red).isPresent();
-					}, this);
-		} catch (Exception e) {
-			RobotLog.error("Auto/PathPlannerConfig", "PathPlanner config failed",
-					"AutoBuilder/RobotConfig setup failed; autos may be unavailable", e);
-			RobotLog.setErrorAlert("Auto/Unavailable", "Autos unavailable (PathPlanner config failed)",
-					true);
-		}
-
-		CommandScheduler.getInstance().schedule(PathfindingCommand.warmupCommand());
-	}
-
 	public void setupAutopilot() {
 		autopilotController = new AutopilotController();
 	}
@@ -236,60 +255,6 @@ public class SwerveSubsystem extends SubsystemBase {
 				}
 			}
 		});
-	}
-
-	public Command getAutonomousCommand(String pathName) {
-		return new PathPlannerAuto(pathName);
-	}
-
-	public Command driveToPose(Supplier<Pose2d> pose) {
-		return defer(() -> {
-			PathConstraints constraints = new PathConstraints(1, 1,
-					swerveDrive.getMaximumChassisAngularVelocity(), Units.degreesToRadians(720));
-			return AutoBuilder.pathfindToPose(pose.get(), constraints,
-					edu.wpi.first.units.Units.MetersPerSecond.of(0));
-		});
-	}
-
-	public Command driveToPose(Supplier<Pose2d> pose, double velocity, double acceleration) {
-		return defer(() -> {
-			PathConstraints constraints = new PathConstraints(velocity, acceleration,
-					swerveDrive.getMaximumChassisAngularVelocity(), Units.degreesToRadians(720));
-			return AutoBuilder.pathfindToPose(pose.get(), constraints,
-					edu.wpi.first.units.Units.MetersPerSecond.of(0));
-		});
-	}
-
-	private Command driveWithSetpointGenerator(Supplier<ChassisSpeeds> robotRelativeChassisSpeed)
-			throws IOException, ParseException {
-		SwerveSetpointGenerator setpointGenerator = new SwerveSetpointGenerator(
-				RobotConfig.fromGUISettings(), swerveDrive.getMaximumChassisAngularVelocity());
-		AtomicReference<SwerveSetpoint> prevSetpoint = new AtomicReference<>(
-				new SwerveSetpoint(swerveDrive.getRobotVelocity(),
-						swerveDrive.getStates(), DriveFeedforwards.zeros(swerveDrive.getModules().length)));
-		AtomicReference<Double> previousTime = new AtomicReference<>();
-
-		return startRun(() -> previousTime.set(Timer.getFPGATimestamp()), () -> {
-			double newTime = Timer.getFPGATimestamp();
-			SwerveSetpoint newSetpoint = setpointGenerator.generateSetpoint(prevSetpoint.get(),
-					robotRelativeChassisSpeed.get(), newTime - previousTime.get());
-			swerveDrive.drive(newSetpoint.robotRelativeSpeeds(), newSetpoint.moduleStates(),
-					newSetpoint.feedforwards().linearForces());
-			prevSetpoint.set(newSetpoint);
-			previousTime.set(newTime);
-		});
-	}
-
-	public Command driveWithSetpointGeneratorFieldRelative(
-			Supplier<ChassisSpeeds> fieldRelativeSpeeds) {
-		try {
-			return driveWithSetpointGenerator(
-					() -> ChassisSpeeds.fromFieldRelativeSpeeds(fieldRelativeSpeeds.get(), getHeading()));
-		} catch (Exception e) {
-			RobotLog.error("Swerve/SetpointGenerator", "Setpoint generator failed",
-					"Failed to create setpoint generator command", e);
-		}
-		return Commands.none();
 	}
 
 	public Command sysIdDriveMotorCommand() {
@@ -370,13 +335,20 @@ public class SwerveSubsystem extends SubsystemBase {
 	}
 
 	public Command robotDriveCommand(SwerveInputStream velocity, BooleanSupplier robotRelative) {
+		return robotDriveCommand(velocity, robotRelative, UnaryOperator.identity());
+	}
+
+	public Command robotDriveCommand(SwerveInputStream velocity, BooleanSupplier robotRelative,
+			UnaryOperator<ChassisSpeeds> speedModifier) {
 		return run(() -> {
 			Optional<Alliance> ally = DriverStation.getAlliance();
 
-			if (ally.isPresent() && !ally.equals(prevAlliance)) {
+			if (aimTargetSupplier != null) {
+				velocity.aim(aimTargetSupplier.get());
+			} else if (ally.isPresent() && !ally.equals(prevAlliance)) {
 				prevAlliance = ally;
 				if (ally.get() == Alliance.Red) {
-					velocity.aim(FieldZones.HUB_POSE_RED);
+					velocity.aim(HUB_POSE_RED);
 					DogLog.log("misc/team", "RED");
 				}
 				if (ally.get() == Alliance.Blue) {
@@ -384,7 +356,7 @@ public class SwerveSubsystem extends SubsystemBase {
 					DogLog.log("misc/team", "BLUE");
 				}
 			}
-			ChassisSpeeds speeds = velocity.get();
+			ChassisSpeeds speeds = speedModifier.apply(velocity.get());
 			DogLog.log("Swerve/Input/AngularVelocity", speeds.omegaRadiansPerSecond);
 			DogLog.log("Swerve/Input/XVelocity", speeds.vxMetersPerSecond);
 			DogLog.log("Swerve/Input/YVelocity", speeds.vyMetersPerSecond);
@@ -529,4 +501,22 @@ public class SwerveSubsystem extends SubsystemBase {
 	public AutopilotController getAutopilotController() {
 		return autopilotController;
 	}
+
+	// ========== DriveRepulsor interface ==========
+
+	@Override
+	public void runVelocity(ChassisSpeeds speeds) {
+		setChassisSpeeds(speeds);
+	}
+
+	@Override
+	public PIDController getOmegaPID() {
+		return repulsorOmegaPID;
+	}
+
+	@Override
+	public SubsystemBase asSubsystem() {
+		return this;
+	}
+
 }

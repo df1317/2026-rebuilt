@@ -5,6 +5,7 @@ import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.util.Color;
 import frc.robot.util.Elastic.Notification;
 import frc.robot.util.Elastic.NotificationLevel;
 
@@ -16,9 +17,10 @@ import java.util.Map;
 /** Centralized logging: Elastic notifications, DogLog, DriverStation console, WPILib Alerts. */
 public final class RobotLog {
 
-	public enum Severity {
-		INFO, WARNING, ERROR, FATAL
-	}
+	public static final Color GREEN = new Color("#4CAF50");
+	public static final Color YELLOW = new Color("#E5B844");
+	public static final Color RED = new Color("#F44336");
+	public static final Color BLUE = new Color("#1064FF");
 
 	private static final Map<String, Alert> alerts = new HashMap<>();
 	private static final Map<String, Double> lastEmitSec = new HashMap<>();
@@ -129,5 +131,9 @@ public final class RobotLog {
 		StringWriter sw = new StringWriter();
 		t.printStackTrace(new PrintWriter(sw));
 		return sw.toString();
+	}
+
+	public enum Severity {
+		INFO, WARNING, ERROR, FATAL
 	}
 }

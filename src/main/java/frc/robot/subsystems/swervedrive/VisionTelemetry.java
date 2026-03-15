@@ -52,7 +52,7 @@ public class VisionTelemetry {
 		List<PhotonTrackedTarget> targets = collectTrackedTargets();
 
 		// Log target count - DogLog auto-disables NT at competition
-		DogLog.log("Vision/TrackedTargetCount", targets.size());
+		DogLog.forceNt.log("Vision/TrackedTargetCount", targets.size());
 
 		// Read toggle value from the dashboard
 		boolean showTrackedTargets = showTrackedTargetsToggle.get();
@@ -74,7 +74,7 @@ public class VisionTelemetry {
 			tagPose.ifPresent(poses3d::add);
 		}
 
-		// Log as Pose3d array for AdvantageScope - can be styled as vision targets
+		// Log as a Pose3d array for AdvantageScope - can be styled as vision targets
 		DogLog.log("Vision/TrackedTagPoses", poses3d.toArray(new Pose3d[0]));
 
 		// Log tracked tag IDs for AdvantageScope analysis

@@ -2,7 +2,6 @@ package frc.robot.subsystems.swervedrive;
 
 import dev.doglog.DogLog;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
-import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.*;
@@ -11,6 +10,7 @@ import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.networktables.NetworkTablesJNI;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import frc.robot.Constants;
 import frc.robot.Constants.VisionConstants;
 import frc.robot.Robot;
 import frc.robot.util.RobotLog;
@@ -36,13 +36,13 @@ import static edu.wpi.first.units.Units.Microseconds;
 import static edu.wpi.first.units.Units.Seconds;
 
 /**
- * PhotonVision-based vision system for AprilTag pose estimation.
- * Multi-camera support with outlier rejection and dynamic std devs.
+ * PhotonVision-based vision system for AprilTag pose estimation. Multi-camera support with outlier rejection and
+ * dynamic std devs.
  */
 public class Vision {
 
 	public static final AprilTagFieldLayout fieldLayout = AprilTagFieldLayout.loadField(
-			AprilTagFields.k2025ReefscapeWelded);
+			Constants.FIELD_LAYOUT);
 
 	private final Supplier<Pose2d> currentPose;
 	private final VisionTelemetry telemetry;
@@ -111,6 +111,16 @@ public class Vision {
 		}
 
 		DogLog.log("Vision/AcceptedMeasurements", measurements.size());
+		DogLog.log("Vision/HasVision", hasVision());
+	}
+
+	public boolean hasVision() {
+		for (Cameras camera : Cameras.values()) {
+			if (camera.camera.isConnected() && camera.estimatedRobotPose != null) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private Optional<EstimatedRobotPose> getEstimatedGlobalPose(Cameras camera) {
@@ -137,11 +147,13 @@ public class Vision {
 		return telemetry;
 	}
 
+	// named according to closest part of the robot
+	// positive x is towards front of robot and positive y is perpendicularly left
 	public enum Cameras {
-		CENTER_CAM(
-				"PEBBLE",
+		SHOOTER(
+				"BOULDER",
 				new Rotation3d(0, Units.degreesToRadians(15.0), 0),
-				new Translation3d(0.32, 0.32, 0.30),
+				new Translation3d(Units.inchesToMeters(13), Units.inchesToMeters(-8.5), Units.inchesToMeters(10.5)),
 				VecBuilder.fill(
 						VisionConstants.CameraStdDevs.SINGLE_TAG[0],
 						VisionConstants.CameraStdDevs.SINGLE_TAG[1],
@@ -151,10 +163,23 @@ public class Vision {
 						VisionConstants.CameraStdDevs.MULTI_TAG[1],
 						VisionConstants.CameraStdDevs.MULTI_TAG[2])),
 
-		BACK_CAM(
+		BATTERY(
 				"STONE",
 				new Rotation3d(0, Units.degreesToRadians(15.0), Units.degreesToRadians(180)),
-				new Translation3d(-0.32, -0.32, 0.30),
+				new Translation3d(Units.inchesToMeters(-13), Units.inchesToMeters(-8.5), Units.inchesToMeters(10.5)),
+				VecBuilder.fill(
+						VisionConstants.CameraStdDevs.SINGLE_TAG[0],
+						VisionConstants.CameraStdDevs.SINGLE_TAG[1],
+						VisionConstants.CameraStdDevs.SINGLE_TAG[2]),
+				VecBuilder.fill(
+						VisionConstants.CameraStdDevs.MULTI_TAG[0],
+						VisionConstants.CameraStdDevs.MULTI_TAG[1],
+						VisionConstants.CameraStdDevs.MULTI_TAG[2])),
+
+		INTAKE(
+				"PEBBLE",
+				new Rotation3d(0, Units.degreesToRadians(0), Units.degreesToRadians(90)),
+				new Translation3d(Units.inchesToMeters(8), Units.inchesToMeters(3.5), Units.inchesToMeters(16.0)),
 				VecBuilder.fill(
 						VisionConstants.CameraStdDevs.SINGLE_TAG[0],
 						VisionConstants.CameraStdDevs.SINGLE_TAG[1],
@@ -164,9 +189,9 @@ public class Vision {
 						VisionConstants.CameraStdDevs.MULTI_TAG[1],
 						VisionConstants.CameraStdDevs.MULTI_TAG[2]));
 
-		private final String cameraName;
 		public final PhotonCamera camera;
 		public final PhotonPoseEstimator poseEstimator;
+		private final String cameraName;
 		private final Matrix<N3, N1> singleTagStdDevs;
 		private final Matrix<N3, N1> multiTagStdDevs;
 		private final Transform3d robotToCamTransform;
@@ -241,28 +266,26 @@ public class Vision {
 					? camera.getAllUnreadResults()
 					: cameraSim.getCamera().getAllUnreadResults();
 
-			if (!newResults.isEmpty()) {
-				resultsList.addAll(newResults);
-				resultsList.sort(Comparator.comparingDouble(PhotonPipelineResult::getTimestampSeconds).reversed());
-				if (resultsList.size() > 5) {
-					resultsList = new ArrayList<>(resultsList.subList(0, 5));
-				}
-
-				PhotonPipelineResult latest = resultsList.get(0);
-				double latencyMs = latest.metadata.getLatencyMillis();
-				boolean highLatency = latencyMs > VisionConstants.HIGH_LATENCY_THRESHOLD_MS;
-				RobotLog.setWarningAlert(
-						"Vision/Latency/" + cameraName,
-						"'" + cameraName + "' camera high latency (" + (int) latencyMs + "ms)",
-						highLatency);
-			}
-
-			if (resultsList.isEmpty()) {
+			if (newResults.isEmpty()) {
 				estimatedRobotPose = null;
-				curStdDevs = singleTagStdDevs;
-			} else {
-				updateEstimatedGlobalPose(referencePose);
+				return;
 			}
+
+			resultsList.addAll(newResults);
+			resultsList.sort(Comparator.comparingDouble(PhotonPipelineResult::getTimestampSeconds).reversed());
+			if (resultsList.size() > 5) {
+				resultsList = new ArrayList<>(resultsList.subList(0, 5));
+			}
+
+			PhotonPipelineResult latest = resultsList.get(0);
+			double latencyMs = latest.metadata.getLatencyMillis();
+			boolean highLatency = latencyMs > VisionConstants.HIGH_LATENCY_THRESHOLD_MS;
+			RobotLog.setWarningAlert(
+					"Vision/Latency/" + cameraName,
+					"'" + cameraName + "' camera high latency (" + (int) latencyMs + "ms)",
+					highLatency);
+
+			updateEstimatedGlobalPose(referencePose);
 		}
 
 		private void updateEstimatedGlobalPose(Pose2d referencePose) {

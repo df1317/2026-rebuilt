@@ -3,9 +3,11 @@ package frc.robot.subsystems.climber;
 import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.MetersPerSecond;
 import static edu.wpi.first.units.Units.MetersPerSecondPerSecond;
-import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.Volts;
 import static frc.robot.Constants.ClimberConstants.CURRENT_LIMIT;
+import static frc.robot.Constants.ClimberConstants.HOMING_CURRENT_LIMIT;
+import static frc.robot.Constants.ClimberConstants.HOMING_VOLTAGE;
+import static frc.robot.Constants.ClimberConstants.INVERTED;
 import static frc.robot.Constants.ClimberConstants.KD;
 import static frc.robot.Constants.ClimberConstants.KG;
 import static frc.robot.Constants.ClimberConstants.KI;
@@ -13,9 +15,11 @@ import static frc.robot.Constants.ClimberConstants.KP;
 import static frc.robot.Constants.ClimberConstants.KS;
 import static frc.robot.Constants.ClimberConstants.KV;
 import static frc.robot.Constants.ClimberConstants.MAX_ACCELERATION;
+import static frc.robot.Constants.ClimberConstants.HANG_HEIGHT;
 import static frc.robot.Constants.ClimberConstants.MAX_HEIGHT;
 import static frc.robot.Constants.ClimberConstants.MAX_VELOCITY;
 import static frc.robot.Constants.ClimberConstants.MIN_HEIGHT;
+import static frc.robot.Constants.ClimberConstants.RELEASE_HEIGHT;
 import static frc.robot.Constants.ClimberConstants.MOTOR_LEFT_ID;
 import static frc.robot.Constants.ClimberConstants.POSITION_TOLERANCE;
 import static frc.robot.Constants.ClimberConstants.ROTATIONS_PER_METER;
@@ -23,17 +27,16 @@ import static frc.robot.Constants.ClimberConstants.ROTATIONS_PER_METER;
 import java.util.function.DoubleSupplier;
 
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.PositionVoltage;
-import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
-import com.ctre.phoenix6.signals.MotorAlignmentValue;
+import com.ctre.phoenix6.signals.InvertedValue;
 
+import dev.doglog.DogLog;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ElevatorFeedforward;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
-import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.units.measure.MutDistance;
 import edu.wpi.first.units.measure.MutLinearVelocity;
 import edu.wpi.first.units.measure.MutVoltage;
@@ -49,10 +52,9 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 public class ClimberSubsystem extends SubsystemBase {
 
 	final TalonFX motorLeft;
-
-
-	private boolean velocityMode = false;
-	private AngularVelocity targetVelocity = RPM.of(0);
+	boolean isStalled = false;
+	boolean isHomed = false;
+	boolean isHoming = false;
 
 	private final TrapezoidProfile profile;
 	private final ElevatorFeedforward feedforward;
@@ -65,7 +67,25 @@ public class ClimberSubsystem extends SubsystemBase {
 	private final MutLinearVelocity velocity = MetersPerSecond.mutable(0);
 	private final SysIdRoutine sysIdRoutine;
 
-	private final ClimberVisualization visualization;
+	private final DoubleSubscriber SUB_KP = DogLog.tunable("Climber/kP", KP);
+	private final DoubleSubscriber SUB_KI = DogLog.tunable("Climber/kI", KI);
+	private final DoubleSubscriber SUB_KD = DogLog.tunable("Climber/kD", KD);
+	private final DoubleSubscriber SUB_KV = DogLog.tunable("Climber/kV", KV);
+	private final DoubleSubscriber SUB_KS = DogLog.tunable("Climber/kS", KS);
+	private final DoubleSubscriber SUB_KG = DogLog.tunable("Climber/kG", KG);
+
+	double prevKP = SUB_KP.getAsDouble();
+	double prevKI = SUB_KI.getAsDouble();
+	double prevKD = SUB_KD.getAsDouble();
+	double prevKV = SUB_KV.getAsDouble();
+	double prevKS = SUB_KS.getAsDouble();
+	double prevKG = SUB_KG.getAsDouble();
+
+	private final DoubleSubscriber testClimberHeight = DogLog.tunable("Climber/Height",
+			MAX_HEIGHT.in(Meters), Meters);
+	private final DoubleSubscriber SUB_HOMING_CURRENT_LIMIT = DogLog.tunable("Climber/HomingCurrentLimit",
+			HOMING_CURRENT_LIMIT);
+
 	private final ClimberTelemetry telemetry;
 
 	public ClimberSubsystem() {
@@ -82,8 +102,10 @@ public class ClimberSubsystem extends SubsystemBase {
 		configs.CurrentLimits.SupplyCurrentLimit = CURRENT_LIMIT;
 		configs.CurrentLimits.SupplyCurrentLimitEnable = true;
 
-		motorLeft.getConfigurator().apply(configs);
+		configs.MotorOutput.Inverted = INVERTED ? InvertedValue.Clockwise_Positive
+				: InvertedValue.CounterClockwise_Positive;
 
+		motorLeft.getConfigurator().apply(configs);
 
 		profile = new TrapezoidProfile(new TrapezoidProfile.Constraints(MAX_VELOCITY.in(MetersPerSecond),
 				MAX_ACCELERATION.in(MetersPerSecondPerSecond)));
@@ -102,7 +124,6 @@ public class ClimberSubsystem extends SubsystemBase {
 										velocity.mut_replace(getVelocityMetersPerSecond(), MetersPerSecond)),
 						this));
 
-		visualization = new ClimberVisualization(this);
 		telemetry = new ClimberTelemetry(this);
 
 		goalState.position = getHeightMeters();
@@ -112,12 +133,10 @@ public class ClimberSubsystem extends SubsystemBase {
 	}
 
 	public void onEnabled() {
-		System.out.println("just ENABLED!");
 		goalState.position = getHeightMeters();
 		currentState.position = getHeightMeters();
 		currentState.velocity = 0.0;
 		goalState.velocity = 0.0;
-		targetVelocity = RPM.of(0);
 	}
 
 	boolean prevEnabled = false;
@@ -129,32 +148,62 @@ public class ClimberSubsystem extends SubsystemBase {
 		}
 		prevEnabled = DriverStation.isEnabled();
 
+		if (prevKP != SUB_KP.getAsDouble() || prevKI != SUB_KI.getAsDouble() || prevKD != SUB_KD.getAsDouble()
+				|| prevKS != SUB_KS.getAsDouble() || prevKG != SUB_KG.getAsDouble() || prevKV != SUB_KV.getAsDouble()) {
+			prevKP = SUB_KP.getAsDouble();
+			prevKI = SUB_KI.getAsDouble();
+			prevKD = SUB_KD.getAsDouble();
+			prevKV = SUB_KV.getAsDouble();
+			prevKS = SUB_KS.getAsDouble();
+			prevKG = SUB_KG.getAsDouble();
+
+			TalonFXConfiguration configs = new TalonFXConfiguration();
+			configs.Slot0.kP = SUB_KP.getAsDouble();
+			configs.Slot0.kI = SUB_KI.getAsDouble();
+			configs.Slot0.kD = SUB_KD.getAsDouble();
+			configs.Slot0.kV = SUB_KV.getAsDouble();
+			configs.Slot0.kA = SUB_KG.getAsDouble();
+			configs.Slot0.kS = SUB_KS.getAsDouble();
+
+			configs.CurrentLimits.SupplyCurrentLimit = CURRENT_LIMIT;
+			configs.CurrentLimits.SupplyCurrentLimitEnable = true;
+
+			configs.MotorOutput.Inverted = INVERTED ? InvertedValue.Clockwise_Positive
+					: InvertedValue.CounterClockwise_Positive;
+
+			motorLeft.getConfigurator().apply(configs);
+		}
+
 		double now = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
 		double dt = now - lastUpdateTimestamp;
 		lastUpdateTimestamp = now;
 
-		double measuredHeight = getHeightMeters();
+		if (isHoming) {
+			telemetry.log();
 
-		currentState = profile.calculate(dt, currentState, goalState);
-		if (!velocityMode) {
-			if (canMove(currentState.velocity)) {
-				double ff = feedforward.calculate(currentState.velocity);
-				motorLeft.setControl(
-						new PositionVoltage(currentState.position * ROTATIONS_PER_METER).withFeedForward(ff));
-			} else {
-				currentState.position = measuredHeight;
-				currentState.velocity = 0.0;
-				motorLeft.stopMotor();
-			}
-		} else {
-			motorLeft.setControl(new VelocityVoltage(targetVelocity));
+			return;
 		}
+
+		double measuredHeight = getHeightMeters();
+		currentState.position = measuredHeight;
+		currentState = profile.calculate(dt, currentState, goalState);
+		if (isClimberStalled()) {
+			isStalled = true;
+			stop();
+			motorLeft.stopMotor();
+			return;
+		} else {
+			isStalled = false;
+		}
+		double ff = feedforward.calculate(currentState.velocity);
+		motorLeft.setControl(
+				new PositionVoltage(currentState.position * ROTATIONS_PER_METER).withFeedForward(ff));
 
 		telemetry.log();
 	}
 
 	public boolean isClimberStalled() {
-		double climberMotorCurrent = motorLeft.getMotorVoltage().getValueAsDouble();
+		double climberMotorCurrent = motorLeft.getStatorCurrent().getValueAsDouble();
 		double climberMotorRPM = motorLeft.getVelocity().getValueAsDouble(); // RPM
 		boolean isPivotStalled = Math.abs(climberMotorRPM) < 2.0 && climberMotorCurrent > CURRENT_LIMIT * 0.5;
 		return stallDebouncer.calculate(isPivotStalled);
@@ -191,26 +240,31 @@ public class ClimberSubsystem extends SubsystemBase {
 		return Color.kYellow;
 	}
 
-	private boolean canMove(double requestedVelocity) {
-		return true;
+	private void applyHomingCurrentLimit() {
+		TalonFXConfiguration config = new TalonFXConfiguration();
+		config.CurrentLimits.SupplyCurrentLimit = SUB_HOMING_CURRENT_LIMIT.getAsDouble();
+		config.CurrentLimits.SupplyCurrentLimitEnable = true;
+		motorLeft.getConfigurator().apply(config);
+	}
+
+	private void restoreNormalCurrentLimit() {
+		TalonFXConfiguration config = new TalonFXConfiguration();
+		config.CurrentLimits.SupplyCurrentLimit = CURRENT_LIMIT;
+		config.CurrentLimits.SupplyCurrentLimitEnable = true;
+		motorLeft.getConfigurator().apply(config);
 	}
 
 	private void setGoalHeight(double heightMeters) {
-		System.out.println("go to height " + heightMeters);
+		// System.out.println("go to height " + heightMeters);
 		goalState.position = heightMeters;
 		goalState.velocity = 0.0;
-		velocityMode = false;
 	}
 
-	private void setGoalVelocity(AngularVelocity velo) {
-		velocityMode = true;
-		targetVelocity = velo;
-	}
-
-	private void stop() {
-		goalState.position = currentState.position;
+	public void stop() {
+		goalState.position = getHeightMeters();
+		currentState.position = getHeightMeters();
+		currentState.velocity = 0.0;
 		goalState.velocity = 0.0;
-		targetVelocity = RPM.of(0);
 		motorLeft.stopMotor();
 	}
 
@@ -223,19 +277,13 @@ public class ClimberSubsystem extends SubsystemBase {
 	private static final double GO_TO_HEIGHT_TIMEOUT_SECONDS = 5.0;
 
 	public Command goToHeightCommand(double heightMeters) {
-		return Commands.runOnce(() -> {
-			System.out.println("called set goal");
-			setGoalHeight(heightMeters);
-		}).andThen(Commands.waitUntil(this::isAtGoal)).withTimeout(GO_TO_HEIGHT_TIMEOUT_SECONDS);
+		return Commands.runOnce(() -> setGoalHeight(heightMeters), this)
+				.andThen(Commands.waitUntil(this::isAtGoal)).withTimeout(GO_TO_HEIGHT_TIMEOUT_SECONDS);
 	}
 
 	public Command goToHeightCommand(DoubleSupplier heightMeters) {
 		return Commands.runOnce(() -> setGoalHeight(heightMeters.getAsDouble()), this)
 				.andThen(Commands.waitUntil(this::isAtGoal)).withTimeout(GO_TO_HEIGHT_TIMEOUT_SECONDS);
-	}
-
-	public Command goToVelocityCommand(AngularVelocity velo) {
-		return Commands.runOnce(() -> this.setGoalVelocity(velo));
 	}
 
 	/** Manual control; holds position when released. */
@@ -244,6 +292,25 @@ public class ClimberSubsystem extends SubsystemBase {
 			double input = speedInput.getAsDouble();
 			goalState.position += input;
 		}, this).finallyDo(this::stop);
+	}
+
+	/** Raw voltage jog using a joystick axis [-1, 1]. Bypasses position control loop, uses homing current limit. */
+	public Command jogVoltageCommand(DoubleSupplier axis) {
+		return Commands.runOnce(() -> {
+			isHoming = true;
+			applyHomingCurrentLimit();
+		}, this)
+				.andThen(Commands.run(() -> {
+					double voltage = axis.getAsDouble() * HOMING_VOLTAGE;
+					DogLog.log("Climber/JogVoltage", voltage);
+					motorLeft.setVoltage(voltage);
+				}, this))
+				.finallyDo(() -> {
+					isHoming = false;
+					restoreNormalCurrentLimit();
+					stop();
+				})
+				.withName("Jog Climber");
 	}
 
 	public Command extendCommand() {
@@ -262,8 +329,55 @@ public class ClimberSubsystem extends SubsystemBase {
 				.withName("Climber Retract");
 	}
 
+	public Command climbBottomCommand() {
+		return goToHeightCommand(MIN_HEIGHT.in(Meters)).withName("Climb Bottom");
+	}
+
+	public Command climbTopCommand() {
+		return goToHeightCommand(MAX_HEIGHT.in(Meters)).withName("Climb Top");
+	}
+
+	public Command climbHangCommand() {
+		return goToHeightCommand(HANG_HEIGHT.in(Meters)).withName("Climb Hang");
+	}
+
+	public Command climbReleaseCommand() {
+		return goToHeightCommand(RELEASE_HEIGHT.in(Meters)).withName("Climb Release");
+	}
+
 	public Command zeroCommand() {
 		return Commands.runOnce(this::resetEncoders, this).withName("Climber Zero");
+	}
+
+	public Command homeClimberCommand() {
+		return Commands.sequence(
+				// Drive toward the bottom hard stop
+				Commands.runOnce(() -> {
+					isHoming = true;
+					isHomed = false;
+					applyHomingCurrentLimit();
+					stallDebouncer.calculate(false); // reset stale debouncer state
+					motorLeft.setVoltage(-HOMING_VOLTAGE);
+				}, this),
+				Commands.waitUntil(this::isClimberStalled).withTimeout(10.0),
+				// Zero encoder at the bottom
+				Commands.runOnce(() -> {
+					motorLeft.stopMotor();
+					resetEncoders();
+					isHomed = true;
+					DogLog.log("Climber/IsHomed", true);
+				}, this))
+				.finallyDo(() -> {
+					isHoming = false;
+					restoreNormalCurrentLimit();
+					motorLeft.stopMotor();
+					stop();
+				})
+				.withName("Home Climber");
+	}
+
+	public Command testClimberCommand() {
+		return goToHeightCommand(() -> testClimberHeight.get()).withName("Test Climber");
 	}
 
 	public Command sysIdQuasistatic(Direction direction) {

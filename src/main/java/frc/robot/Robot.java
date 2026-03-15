@@ -1,15 +1,10 @@
 package frc.robot;
 
-import com.studica.frc.AHRS;
-import com.studica.frc.jni.AHRSJNI;
 import dev.doglog.DogLog;
 import dev.doglog.DogLogOptions;
 import edu.wpi.first.net.WebServer;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.Filesystem;
-import edu.wpi.first.wpilibj.RobotController;
-import edu.wpi.first.wpilibj.TimedRobot;
-import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.*;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.util.DevMode;
@@ -17,13 +12,12 @@ import frc.robot.util.HubTracker;
 
 public class Robot extends TimedRobot {
 
+	private final double[] loopTimesMs = new double[50];
 	private Command m_autonomousCommand;
 	private RobotContainer m_robotContainer;
 	private Timer disabledTimer;
-
 	// Loop timing (dev mode only)
 	private long lastLoopTimeMicros = 0;
-	private double[] loopTimesMs = new double[50];
 	private int loopIndex = 0;
 
 	@Override
@@ -31,13 +25,13 @@ public class Robot extends TimedRobot {
 		DogLog.setOptions(new DogLogOptions().withCaptureDs(true).withLogExtras(true));
 		m_robotContainer = new RobotContainer();
 		WebServer.start(5800, Filesystem.getDeployDirectory().getPath());
+		SmartDashboard.putData("Robot/PDH", new PowerDistribution());
+		SmartDashboard.putData("Robot/Scheduler", CommandScheduler.getInstance());
 		disabledTimer = new Timer();
 
 		if (isSimulation()) {
 			DriverStation.silenceJoystickConnectionWarning(true);
 		}
-
-		AHRSJNI.c_AHRS_create(AHRS.NavXComType.kUSB1);
 	}
 
 	@Override
@@ -64,6 +58,9 @@ public class Robot extends TimedRobot {
 
 		HubTracker.periodic();
 
+		// Update Repulsor path planner state before CommandScheduler
+		m_robotContainer.updateRepulsor();
+
 		long schedulerStartMicros = RobotController.getFPGATime();
 		CommandScheduler.getInstance().run();
 		long schedulerEndMicros = RobotController.getFPGATime();
@@ -76,10 +73,6 @@ public class Robot extends TimedRobot {
 		DogLog.forceNt.log("Dash/MatchTime", DriverStation.getMatchTime());
 		DogLog.forceNt.log("Dash/RobotRelative", m_robotContainer.robotRelative);
 		DogLog.forceNt.log("Dash/HubStatusColor", HubTracker.getHubStatusColor().toHexString());
-
-		DogLog.log("gyro yaw", AHRSJNI.c_AHRS_GetYaw());
-		DogLog.log("gyro roll", AHRSJNI.c_AHRS_GetRoll());
-		DogLog.log("gyro pitch", AHRSJNI.c_AHRS_GetPitch());
 	}
 
 	@Override
@@ -102,6 +95,7 @@ public class Robot extends TimedRobot {
 	@Override
 	public void autonomousInit() {
 		m_robotContainer.setMotorBrake(true);
+		m_robotContainer.autonomousInit();
 		m_autonomousCommand = m_robotContainer.getAutonomousCommand();
 		HubTracker.start();
 

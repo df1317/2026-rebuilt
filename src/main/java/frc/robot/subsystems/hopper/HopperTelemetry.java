@@ -2,9 +2,10 @@ package frc.robot.subsystems.hopper;
 
 import dev.doglog.DogLog;
 import edu.wpi.first.wpilibj.util.Color;
+import frc.robot.util.RobotLog;
 
 import static edu.wpi.first.units.Units.RPM;
-import static frc.robot.Constants.HopperConstants.*;
+import static frc.robot.Constants.HopperConstants.HOPPER_VELOCITY_TOLERANCE;
 
 /**
  * Handles telemetry logging for the hopper subsystem.
@@ -46,10 +47,10 @@ public class HopperTelemetry {
 	private Color getStatusColor() {
 		double targetRPM = hopper.targetHopperVelocity.in(RPM);
 		if (targetRPM > 0) {
-			return hopper.isHopperAtSpeed() ? Color.kGreen : Color.kYellow;
+			return hopper.isHopperAtSpeed() ? RobotLog.GREEN : RobotLog.YELLOW;
 		} else if (targetRPM < 0) {
-			return Color.kOrange;
+			return RobotLog.BLUE;
 		}
-		return Color.kRed;
+		return RobotLog.RED;
 	}
 }

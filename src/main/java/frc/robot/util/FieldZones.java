@@ -7,8 +7,7 @@ import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 
 /**
- * Field zone detection for 2026 REBUILT.
- * Field: 650.12" x 316.64" (16.52m x 8.04m).
+ * Field zone detection for 2026 REBUILT. Field: 650.12" x 316.64" (16.52m x 8.04m).
  */
 public final class FieldZones {
 
@@ -28,6 +27,14 @@ public final class FieldZones {
 
 	public static final Pose2d HUB_POSE_RED = new Pose2d(
 			new Translation2d(FIELD_LENGTH - HUB_POSE_BLUE.getX(), HUB_POSE_BLUE.getY()),
+			Rotation2d.kZero);
+
+	public static final Pose2d CENTER_OF_ALLIANCE_BLUE = new Pose2d(
+			new Translation2d(ALLIANCE_ZONE_DEPTH / 2, FIELD_WIDTH / 2),
+			Rotation2d.kZero);
+
+	public static final Pose2d CENTER_OF_ALLIANCE_RED = new Pose2d(
+			new Translation2d(FIELD_LENGTH - CENTER_OF_ALLIANCE_BLUE.getX(), CENTER_OF_ALLIANCE_BLUE.getY()),
 			Rotation2d.kZero);
 
 	// Bump: 6.5" tall, 73.0" wide (Y), 44.4" deep (X)
@@ -150,6 +157,16 @@ public final class FieldZones {
 
 	public static Pose2d getHubPose(Alliance alliance) {
 		return alliance == Alliance.Red ? HUB_POSE_RED : HUB_POSE_BLUE;
+	}
+
+	public static Pose2d getShuttlePose(Alliance alliance, Translation2d robotPose) {
+		// return the closest shuttle position right behind bump.
+		Pose2d pose = alliance == Alliance.Red ? CENTER_OF_ALLIANCE_RED : CENTER_OF_ALLIANCE_BLUE;
+		double fieldSideY = robotPose.getY() / FIELD_WIDTH < 0.5 ? -1 : 1;
+		return new Pose2d(
+				new Translation2d(pose.getX(),
+						pose.getY() + (robotPose.getY() / FIELD_WIDTH) * fieldSideY),
+				Rotation2d.kZero);
 	}
 
 	public enum Zone {

@@ -29,13 +29,21 @@ deploy {
                 // getTargetTypeClass is a shortcut to get the class type using a string
 
                 frcJava(getArtifactTypeClass('FRCJavaArtifact')) {
+                    // Use SerialGC — lower overhead than G1GC for constrained embedded hardware
+                    jvmArgs.add("-XX:+UseSerialGC")
+
+                    // Use AppCDS archive if present; fall back silently if stale/missing
+                    // Run ./gradlew deployCDS to generate the archive after each deploy
+                    jvmArgs.add("-Xshare:auto")
+                    jvmArgs.add("-XX:SharedArchiveFile=/home/lvuser/robot.jsa")
+
                     // Enable VisualVM connection
                     jvmArgs.add("-Dcom.sun.management.jmxremote=true")
                     jvmArgs.add("-Dcom.sun.management.jmxremote.port=1198")
                     jvmArgs.add("-Dcom.sun.management.jmxremote.local.only=false")
                     jvmArgs.add("-Dcom.sun.management.jmxremote.ssl=false")
                     jvmArgs.add("-Dcom.sun.management.jmxremote.authenticate=false")
-                    jvmArgs.add("-Djava.rmi.server.hostname=10.13.17.2") // Replace TE.AM with team number
+                    jvmArgs.add("-Djava.rmi.server.hostname=10.13.17.2")
                 }
 
                 // Static files artifact
@@ -61,6 +69,7 @@ def includeDesktopSupport = true
 // Defining my dependencies. In this case, WPILib (+ friends), and vendor libraries.
 // Also defines JUnit 5.
 dependencies {
+    implementation "org.yaml:snakeyaml:2.2"
     annotationProcessor wpi.java.deps.wpilibAnnotations()
     implementation wpi.java.deps.wpilib()
     implementation wpi.java.vendor.java()
@@ -110,6 +119,72 @@ wpi.java.configureTestTasks(test)
 // Configure string concat to always inline compile
 tasks.withType(JavaCompile) {
     options.compilerArgs.add '-XDstringConcat=inline'
+}
+
+// Build a class list from the fat jar so the RoboRIO JVM can pre-process it into
+// an AppCDS archive without running any robot code. Runs as part of deployCDS.
+task generateClassList {
+    dependsOn jar
+    def classListFile = file("$buildDir/robot.classlist")
+    outputs.file classListFile
+    inputs.file { jar.archiveFile }
+
+    doLast {
+        def entries = new TreeSet<String>()
+        new java.util.zip.ZipFile(jar.archiveFile.get().asFile).withCloseable { zf ->
+            zf.entries().each { entry ->
+                if (entry.name.endsWith('.class') && !entry.name.contains('module-info')) {
+                    entries.add(entry.name.replace('.class', ''))
+                }
+            }
+        }
+        classListFile.text = entries.join('\n')
+        println "> Generated class list: ${entries.size()} classes"
+    }
+}
+
+// Deploy robot code AND generate an AppCDS archive on the RoboRIO so subsequent
+// startups load from a pre-processed memory-mapped archive instead of re-parsing
+// the entire fat jar. Use this instead of plain `deploy` during development.
+//
+// Usage: ./gradlew deployCDS
+task deployCDS {
+    group = 'FRC'
+    description = 'Deploy robot code and generate AppCDS archive for fast startup'
+    dependsOn 'deploy', generateClassList
+
+    doLast {
+        def team = project.frc.getTeamNumber()
+        def classListSrc = file("$buildDir/robot.classlist").absolutePath
+        def sshBase = ['-o', 'StrictHostKeyChecking=no', '-o', 'BatchMode=yes']
+
+        def tryHost = { String host ->
+            def scp = exec {
+                ignoreExitValue = true
+                commandLine(['scp', *sshBase, '-o', 'ConnectTimeout=3',
+                    classListSrc, "lvuser@${host}:/home/lvuser/robot.classlist"])
+            }
+            if (scp.exitValue != 0) return false
+
+            exec {
+                ignoreExitValue = true
+                commandLine(['ssh', *sshBase, '-o', 'ConnectTimeout=60',
+                    "lvuser@${host}",
+                    '/usr/local/frc/JRE/bin/java -Xshare:dump' +
+                    ' -XX:SharedClassListFile=/home/lvuser/robot.classlist' +
+                    ' -XX:SharedArchiveFile=/home/lvuser/robot.jsa' +
+                    ' -cp /home/lvuser/FRCUserProgram.jar 2>&1'])
+            }
+            return true
+        }
+
+        def hosts = ["roborio-${team}-frc.local", "172.22.11.2"]
+        if (hosts.any { tryHost(it as String) }) {
+            println "> AppCDS archive generated — activation will be faster"
+        } else {
+            println "Warning: Could not reach RoboRIO to generate AppCDS archive. Next startup will be normal speed."
+        }
+    }
 }
 
 // Spotless formatting configuration

@@ -1,29 +1,5 @@
 package frc.robot.subsystems.intake;
 
-import static edu.wpi.first.units.Units.*;
-import static edu.wpi.first.wpilibj2.command.Commands.sequence;
-import static frc.robot.Constants.IntakeConstants.AT_POSITION_DEBOUNCE_TIME;
-import static frc.robot.Constants.IntakeConstants.PIVOT_ANGLE_TOLERANCE;
-import static frc.robot.Constants.IntakeConstants.PIVOT_CURRENT_LIMIT;
-import static frc.robot.Constants.IntakeConstants.PIVOT_EXTENDED_ANGLE;
-import static frc.robot.Constants.IntakeConstants.PIVOT_GEAR_RATIO;
-import static frc.robot.Constants.IntakeConstants.PIVOT_INVERTED;
-import static frc.robot.Constants.IntakeConstants.PIVOT_KD;
-import static frc.robot.Constants.IntakeConstants.PIVOT_KI;
-import static frc.robot.Constants.IntakeConstants.PIVOT_KP;
-import static frc.robot.Constants.IntakeConstants.PIVOT_MOTOR_ID;
-import static frc.robot.Constants.IntakeConstants.PIVOT_RETRACTED_ANGLE;
-import static frc.robot.Constants.IntakeConstants.ROLLER_CURRENT_LIMIT;
-import static frc.robot.Constants.IntakeConstants.ROLLER_EJECT_VELOCITY;
-import static frc.robot.Constants.IntakeConstants.ROLLER_INTAKE_VELOCITY;
-import static frc.robot.Constants.IntakeConstants.ROLLER_INVERTED;
-import static frc.robot.Constants.IntakeConstants.ROLLER_I_ZONE;
-import static frc.robot.Constants.IntakeConstants.ROLLER_KD;
-import static frc.robot.Constants.IntakeConstants.ROLLER_KI;
-import static frc.robot.Constants.IntakeConstants.ROLLER_KP;
-import static frc.robot.Constants.IntakeConstants.ROLLER_KV;
-import static frc.robot.Constants.IntakeConstants.ROLLER_MOTOR_ID;
-import static frc.robot.Constants.IntakeConstants.ROLLER_VELOCITY_TOLERANCE;
 import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.ResetMode;
@@ -35,13 +11,23 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
+import dev.doglog.DogLog;
+import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
+import edu.wpi.first.math.trajectory.TrapezoidProfile;
+import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+
+import static edu.wpi.first.units.Units.Degrees;
+import static edu.wpi.first.units.Units.RPM;
+import static edu.wpi.first.wpilibj2.command.Commands.sequence;
+import static frc.robot.Constants.IntakeConstants.*;
 
 /**
  * Intake subsystem with a pivoting arm and roller mechanism.
@@ -52,21 +38,37 @@ public class IntakeSubsystem extends SubsystemBase {
 	// ====================
 	final SparkMax pivotMotor;
 	final SparkFlex rollerMotor;
-	private final SparkClosedLoopController pivotController;
-	private final SparkClosedLoopController rollerController;
 	final RelativeEncoder pivotEncoder;
 	final RelativeEncoder rollerEncoder;
-
+	private final SparkClosedLoopController pivotController;
+	private final SparkClosedLoopController rollerController;
+	private final Debouncer atPositionDebouncer;
+	private final Debouncer stallDebouncer = new Debouncer(0.1, DebounceType.kBoth);
+	private final DoubleSubscriber testPivotDeg = DogLog.tunable("Intake/Pivot/Degrees",
+			PIVOT_EXTENDED_ANGLE.in(Degrees), Degrees);
+	private final DoubleSubscriber testRollerRPM = DogLog.tunable("Intake/Roller/RPM",
+			ROLLER_INTAKE_VELOCITY.in(RPM), RPM);
+	// ==================== Visualization & Telemetry ====================
+	private final IntakeVisualization visualization;
+	private final IntakeTelemetry telemetry;
+	// Pivot PID tunables
+	private final DoubleSubscriber tunePivotKP = DogLog.tunable("Intake/Pivot/kP", PIVOT_KP);
+	private final DoubleSubscriber tunePivotKI = DogLog.tunable("Intake/Pivot/kI", PIVOT_KI);
+	private final DoubleSubscriber tunePivotKD = DogLog.tunable("Intake/Pivot/kD", PIVOT_KD);
+	private final DoubleSubscriber tunePivotKV = DogLog.tunable("Intake/Pivot/kV", 0.0);
+	// Roller PID tunables
+	private final DoubleSubscriber tuneRollerKP = DogLog.tunable("Intake/Roller/kP", ROLLER_KP);
+	private final DoubleSubscriber tuneRollerKI = DogLog.tunable("Intake/Roller/kI", ROLLER_KI);
+	private final DoubleSubscriber tuneRollerKD = DogLog.tunable("Intake/Roller/kD", ROLLER_KD);
+	private final DoubleSubscriber tuneRollerKV = DogLog.tunable("Intake/Roller/kV", ROLLER_KV);
 	// ==================== Control State (package-private for telemetry/visualization)
 	// ====================
 	Angle targetPivotAngle = PIVOT_RETRACTED_ANGLE;
 	AngularVelocity targetRollerVelocity = RPM.of(0);
-	private final Debouncer atPositionDebouncer;
-	private final Debouncer stallDebouncer = new Debouncer(0.1, DebounceType.kBoth);
-
-	// ==================== Visualization & Telemetry ====================
-	private final IntakeVisualization visualization;
-	private final IntakeTelemetry telemetry;
+	private double prevPivotKP = PIVOT_KP, prevPivotKI = PIVOT_KI, prevPivotKD = PIVOT_KD, prevPivotKV = 0.0;
+	private double prevRollerKP = ROLLER_KP, prevRollerKI = ROLLER_KI, prevRollerKD = ROLLER_KD, prevRollerKV = ROLLER_KV;
+	private final ProfiledPIDController pivotProfiler = new ProfiledPIDController(0, 0, 0,
+			new TrapezoidProfile.Constraints(PIVOT_MAX_VELOCITY_DEG_PER_S, PIVOT_MAX_ACCEL_DEG_PER_S2));
 
 	public IntakeSubsystem() {
 		pivotMotor = new SparkMax(PIVOT_MOTOR_ID, MotorType.kBrushless);
@@ -83,6 +85,9 @@ public class IntakeSubsystem extends SubsystemBase {
 
 		visualization = new IntakeVisualization(this);
 		telemetry = new IntakeTelemetry(this);
+
+		pivotProfiler.reset(PIVOT_RETRACTED_ANGLE.in(Degrees));
+		setPivotAngle(PIVOT_RETRACTED_ANGLE);
 	}
 
 	private void configurePivotMotor() {
@@ -110,8 +115,44 @@ public class IntakeSubsystem extends SubsystemBase {
 
 	@Override
 	public void periodic() {
-		visualization.update();
 		telemetry.log();
+		updatePivotPIDIfChanged();
+		updateRollerPIDIfChanged();
+		// Step the profiler and feed the intermediate position to the SparkMax
+		double profiledSetpoint = pivotProfiler.calculate(pivotEncoder.getPosition());
+		pivotController.setSetpoint(pivotProfiler.getSetpoint().position, ControlType.kPosition);
+		DogLog.log("Intake/Pivot/ProfiledSetpoint", profiledSetpoint);
+		DogLog.log("Intake/Pivot/ProfiledVelocity", pivotProfiler.getSetpoint().velocity);
+	}
+
+	private void updatePivotPIDIfChanged() {
+		double kP = tunePivotKP.getAsDouble(), kI = tunePivotKI.getAsDouble(),
+				kD = tunePivotKD.getAsDouble(), kV = tunePivotKV.getAsDouble();
+		if (kP == prevPivotKP && kI == prevPivotKI && kD == prevPivotKD && kV == prevPivotKV)
+			return;
+		prevPivotKP = kP;
+		prevPivotKI = kI;
+		prevPivotKD = kD;
+		prevPivotKV = kV;
+		SparkMaxConfig config = new SparkMaxConfig();
+		config.closedLoop.pid(kP, kI, kD);
+		config.closedLoop.feedForward.kV(kV);
+		pivotMotor.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
+	}
+
+	private void updateRollerPIDIfChanged() {
+		double kP = tuneRollerKP.getAsDouble(), kI = tuneRollerKI.getAsDouble(),
+				kD = tuneRollerKD.getAsDouble(), kV = tuneRollerKV.getAsDouble();
+		if (kP == prevRollerKP && kI == prevRollerKI && kD == prevRollerKD && kV == prevRollerKV)
+			return;
+		prevRollerKP = kP;
+		prevRollerKI = kI;
+		prevRollerKD = kD;
+		prevRollerKV = kV;
+		SparkMaxConfig config = new SparkMaxConfig();
+		config.closedLoop.pid(kP, kI, kD);
+		config.closedLoop.feedForward.kV(kV);
+		rollerMotor.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
 	}
 
 	// ==================== State Query Methods ====================
@@ -127,11 +168,23 @@ public class IntakeSubsystem extends SubsystemBase {
 				- targetRollerVelocity.in(RPM)) < ROLLER_VELOCITY_TOLERANCE.in(RPM);
 	}
 
+	public boolean isExtended() {
+		return isPivotAtPosition()
+				&& Math.abs(targetPivotAngle.in(Degrees) - PIVOT_EXTENDED_ANGLE.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
+						.in(Degrees);
+	}
+
+	public boolean isRetracted() {
+		return isPivotAtPosition()
+				&& Math.abs(targetPivotAngle.in(Degrees) - PIVOT_RETRACTED_ANGLE.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
+						.in(Degrees);
+	}
+
 	// ==================== Control Methods ====================
 
 	public void setPivotAngle(Angle angle) {
 		targetPivotAngle = angle;
-		pivotController.setSetpoint(angle.in(Degrees), ControlType.kPosition);
+		pivotProfiler.setGoal(angle.in(Degrees));
 	}
 
 	public void setRollerVelocity(AngularVelocity velocity) {
@@ -165,11 +218,13 @@ public class IntakeSubsystem extends SubsystemBase {
 	}
 
 	public Command runRollerCommand() {
-		return runOnce(() -> setRollerVelocity(ROLLER_INTAKE_VELOCITY)).withName("Intake Run Roller");
+		return run(() -> setRollerVelocity(ROLLER_INTAKE_VELOCITY))
+				.finallyDo(() -> setRollerVelocity(RPM.of(0))).withName("Intake Run Roller");
 	}
 
 	public Command ejectCommand() {
-		return runOnce(() -> setRollerVelocity(ROLLER_EJECT_VELOCITY)).withName("Intake Eject");
+		return run(() -> setRollerVelocity(ROLLER_EJECT_VELOCITY))
+				.finallyDo(() -> setRollerVelocity(RPM.of(0))).withName("Intake Eject");
 	}
 
 	public Command stopRollerCommand() {
@@ -177,14 +232,46 @@ public class IntakeSubsystem extends SubsystemBase {
 	}
 
 	public Command intakeCommand() {
-		return Commands
-				.sequence(extendCommand(), Commands.waitUntil(this::isPivotAtPosition), runRollerCommand())
+		return runOnce(() -> setRollerVelocity(ROLLER_INTAKE_VELOCITY))
+				.andThen(Commands.idle(this))
+				.finallyDo(this::stopRoller)
 				.withName("Intake Full Sequence");
 	}
 
 	public Command stowCommand() {
 		return sequence(stopRollerCommand(), retractCommand()).withName("Intake Stow");
 	}
+
+	/** Extends or stows depending on current position. */
+	public Command stowToggleCommand() {
+		return Commands.either(stowCommand(), extendCommand(), this::isExtended)
+				.withName("Intake Stow Toggle");
+	}
+
+	/** Extends and runs roller until toggled off, then stows. */
+	public Command intakeToggleCommand() {
+		return Commands.sequence(extendCommand(), runRollerCommand(), Commands.idle(this))
+				.finallyDo(interrupted -> CommandScheduler.getInstance().schedule(stowCommand()))
+				.withName("Intake Toggle");
+	}
+
+	// ==================== Test Mode ====================
+
+	public Command testPivotCommand() {
+		return Commands.run(() -> {
+			setPivotAngle(Degrees.of(testPivotDeg.get()));
+		}, this)
+				.finallyDo(pivotMotor::stopMotor)
+				.withName("Test Intake Pivot");
+	}
+
+	public Command testRollerCommand() {
+		return Commands.run(() -> setRollerVelocity(RPM.of(testRollerRPM.get())), this)
+				.finallyDo(this::stopRoller)
+				.withName("Test Intake Roller");
+	}
+
+	// ==================== Stall Detection ====================
 
 	public boolean isPivotStalled() {
 		double pivotMotorCurrent = pivotMotor.getOutputCurrent();
