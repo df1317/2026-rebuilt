@@ -46,16 +46,16 @@ public class ShooterTelemetry {
 		DogLog.log("Shooter/Feeder/CurrentAmps", shooter.feeder.getOutputCurrent());
 
 		// Active distance
-		DogLog.log("Shooter/DistanceM", shooter.getActiveDistanceM());
-		DogLog.log("Shooter/ManualDistanceEnabled", shooter.manualDistanceEnabled);
+		DogLog.forceNt.log("Shooter/DistanceM", shooter.getActiveDistanceM());
+		DogLog.forceNt.log("Shooter/ManualDistanceEnabled", shooter.manualDistanceEnabled);
 
 		// Hood
 		DogLog.log("Shooter/Hood/CurrentPercent",
 				shooter.isHoodHomed() ? shooter.hoodEncoder.getPosition() / shooter.hoodMaxDeg : 0.0);
 		DogLog.log("Shooter/Hood/TargetPercent", shooter.getTargetHoodPercent());
 		DogLog.log("Shooter/Hood/CurrentAmps", shooter.hood.getOutputCurrent());
-		DogLog.log("Shooter/Hood/Homed", shooter.isHoodHomed());
-		DogLog.forceNt.log("Shooter/Hood/MaxDeg", shooter.hoodMaxDeg);
+		DogLog.forceNt.log("Shooter/Hood/Homed", shooter.isHoodHomed());
+		DogLog.log("Shooter/Hood/MaxDeg", shooter.hoodMaxDeg);
 	}
 
 	private Color getStatusColor() {

@@ -1,29 +1,10 @@
 package frc.robot.subsystems.swervedrive;
 
-import static edu.wpi.first.units.Units.Meter;
-import static edu.wpi.first.units.Units.Meters;
-import static edu.wpi.first.units.Units.Radians;
-import static edu.wpi.first.units.Units.Volts;
-import static frc.robot.util.FieldZones.HUB_POSE_RED;
-
-import java.io.File;
-import java.util.Arrays;
-import java.util.Optional;
-import java.util.function.BooleanSupplier;
-import java.util.function.DoubleSupplier;
-import java.util.function.Supplier;
-import java.util.function.UnaryOperator;
-
-import edu.wpi.first.units.measure.Distance;
-
-import org.photonvision.targeting.PhotonPipelineResult;
-
 import dev.doglog.DogLog;
 import edu.wpi.first.epilogue.NotLogged;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
-import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -31,7 +12,9 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.trajectory.Trajectory;
+import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.networktables.BooleanSubscriber;
+import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
@@ -45,6 +28,7 @@ import frc.robot.repulsor.DriveRepulsor;
 import frc.robot.subsystems.swervedrive.Vision.Cameras;
 import frc.robot.util.FieldZones;
 import frc.robot.util.RobotLog;
+import org.photonvision.targeting.PhotonPipelineResult;
 import swervelib.SwerveController;
 import swervelib.SwerveDrive;
 import swervelib.SwerveDriveTest;
@@ -54,6 +38,17 @@ import swervelib.parser.SwerveControllerConfiguration;
 import swervelib.parser.SwerveDriveConfiguration;
 import swervelib.parser.SwerveParser;
 import swervelib.telemetry.SwerveDriveTelemetry;
+
+import java.io.File;
+import java.util.Arrays;
+import java.util.Optional;
+import java.util.function.BooleanSupplier;
+import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
+
+import static edu.wpi.first.units.Units.*;
+import static frc.robot.util.FieldZones.HUB_POSE_RED;
 
 public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 
@@ -70,24 +65,15 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 	private final ProfiledPIDController aimPIDController = new ProfiledPIDController(
 			3.0, 0.1, 0.05,
 			new TrapezoidProfile.Constraints(Constants.MAX_ANGULAR_SPEED / 2, Constants.MAX_ANGULAR_ACCELERATION / 2));
-
-	{
-		aimPIDController.enableContinuousInput(-Math.PI, Math.PI);
-		aimPIDController.setTolerance(AIM_TOLERANCE);
-	}
-
 	Optional<Alliance> prevAlliance = Optional.empty();
 	private Vision vision;
 	private AutopilotController autopilotController;
 	private Supplier<Distance> targetDistanceSupplier = null;
 	private Supplier<Pose2d> aimTargetSupplier = null;
 
-	public void setTargetDistanceSupplier(Supplier<Distance> supplier) {
-		this.targetDistanceSupplier = supplier;
-	}
-
-	public void setAimTargetSupplier(Supplier<Pose2d> supplier) {
-		this.aimTargetSupplier = supplier;
+	{
+		aimPIDController.enableContinuousInput(-Math.PI, Math.PI);
+		aimPIDController.setTolerance(AIM_TOLERANCE);
 	}
 
 	public SwerveSubsystem(File directory) {
@@ -129,6 +115,14 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 				new Pose2d(new Translation2d(Meter.of(2), Meter.of(0)), Rotation2d.fromDegrees(0)));
 	}
 
+	public void setTargetDistanceSupplier(Supplier<Distance> supplier) {
+		this.targetDistanceSupplier = supplier;
+	}
+
+	public void setAimTargetSupplier(Supplier<Pose2d> supplier) {
+		this.aimTargetSupplier = supplier;
+	}
+
 	public void setupPhotonVision() {
 		vision = new Vision(swerveDrive::getPose, swerveDrive.field);
 	}
@@ -160,7 +154,7 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 		}
 
 		FieldZones.Zone currentZone = FieldZones.getZone(getPose());
-		DogLog.log("Field/Zone", currentZone.name());
+		DogLog.forceNt.log("Field/Zone", currentZone.name());
 		DogLog.log("Field/DistanceToZoneBoundary",
 				FieldZones.getDistanceToNearestZoneBoundary(getPose()));
 	}
@@ -259,7 +253,7 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 
 	public Command sysIdDriveMotorCommand() {
 		return SwerveDriveTest.generateSysIdCommand(SwerveDriveTest.setDriveSysIdRoutine(
-				new Config(null, Voltage.ofBaseUnits(9, Volts), null, null), this, swerveDrive, 9, false),
+						new Config(null, Voltage.ofBaseUnits(9, Volts), null, null), this, swerveDrive, 9, false),
 				3.0, 5.0, 2.0);
 	}
 
