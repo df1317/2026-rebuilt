@@ -129,7 +129,7 @@ public class RobotContainer {
 					: teleopAutomation.shootCommand());
 		}
 		if (Constants.ENABLE_INTAKE && intake != null) {
-			driverXbox.x().and(inTeleop).toggleOnTrue(intake.stowToggleCommand());
+			driverXbox.x().and(inTeleop).onTrue(intake.stowToggleCommand());
 			driverXbox.leftTrigger().and(inTeleop).whileTrue(intake.intakeCommand());
 		}
 

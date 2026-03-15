@@ -27,6 +27,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.wpilibj2.command.Commands.sequence;
+import static edu.wpi.first.wpilibj2.command.Commands.waitUntil;
 import static frc.robot.Constants.IntakeConstants.*;
 
 /**
@@ -167,6 +168,16 @@ public class IntakeSubsystem extends SubsystemBase {
 				- targetRollerVelocity.in(RPM)) < ROLLER_VELOCITY_TOLERANCE.in(RPM);
 	}
 
+  public boolean isExtended() {
+    return isPivotAtPosition()
+      && Math.abs(targetPivotAngle.in(Degrees) - PIVOT_EXTENDED_ANGLE.in(Degrees)) < PIVOT_ANGLE_TOLERANCE.in(Degrees);
+  }
+
+  public boolean isRetracted() {
+    return isPivotAtPosition()
+      && Math.abs(targetPivotAngle.in(Degrees) - PIVOT_RETRACTED_ANGLE.in(Degrees)) < PIVOT_ANGLE_TOLERANCE.in(Degrees);
+  }
+
 	// ==================== Control Methods ====================
 
 	public void setPivotAngle(Angle angle) {
@@ -227,9 +238,9 @@ public class IntakeSubsystem extends SubsystemBase {
 
 	/** Extends (no roller) until toggled off, then stows. */
 	public Command stowToggleCommand() {
-		return Commands.sequence(extendCommand(), Commands.idle(this))
-				.finallyDo(interrupted -> CommandScheduler.getInstance().schedule(stowCommand()))
-				.withName("Intake Stow Toggle");
+		return Commands
+      .either(stowCommand(),extendCommand(),this::isExtended)
+      .withName("Stowed Toggle");
 	}
 
 	/** Extends and runs roller until toggled off, then stows. */
