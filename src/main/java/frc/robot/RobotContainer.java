@@ -121,15 +121,15 @@ public class RobotContainer {
 		}
 		if (Constants.ENABLE_SHOOTER && shooter != null) {
 			driverXbox.rightTrigger().whileTrue(Commands.runOnce(() -> {
-						if (Constants.ENABLE_SWERVE && drivebase != null && drivebase.hasVision()) {
-							shooter.clearManualDistanceOverride();
-						}
-					}).andThen(Constants.ENABLE_SWERVE && drivebase != null
-							? Commands.parallel(
-									teleopAutomation.shootCommand(),
-									drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY,
-											teleopAutomation::getShootingPose))
-							: teleopAutomation.shootCommand()));
+				if (Constants.ENABLE_SWERVE && drivebase != null && drivebase.hasVision()) {
+					shooter.clearManualDistanceOverride();
+				}
+			}).andThen(Constants.ENABLE_SWERVE && drivebase != null
+					? Commands.parallel(
+							teleopAutomation.shootCommand(),
+							drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY,
+									teleopAutomation::getShootingPose))
+					: teleopAutomation.shootCommand()));
 		}
 		if (Constants.ENABLE_INTAKE && intake != null) {
 			driverXbox.x().toggleOnTrue(intake.stowToggleCommand());

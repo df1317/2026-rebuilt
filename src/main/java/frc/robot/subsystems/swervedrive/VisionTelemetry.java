@@ -36,7 +36,7 @@ public class VisionTelemetry {
 	 * Constructs a new VisionTelemetry instance for debug visualization.
 	 *
 	 * @param field
-	 * 		the Field2d object to display vision targets on
+	 *          the Field2d object to display vision targets on
 	 */
 	public VisionTelemetry(Field2d field) {
 		this.field2d = field;

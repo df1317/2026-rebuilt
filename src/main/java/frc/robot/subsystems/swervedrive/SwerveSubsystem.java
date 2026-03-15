@@ -253,7 +253,7 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 
 	public Command sysIdDriveMotorCommand() {
 		return SwerveDriveTest.generateSysIdCommand(SwerveDriveTest.setDriveSysIdRoutine(
-						new Config(null, Voltage.ofBaseUnits(9, Volts), null, null), this, swerveDrive, 9, false),
+				new Config(null, Voltage.ofBaseUnits(9, Volts), null, null), this, swerveDrive, 9, false),
 				3.0, 5.0, 2.0);
 	}
 
