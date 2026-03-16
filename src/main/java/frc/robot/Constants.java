@@ -171,8 +171,8 @@ public final class Constants {
 		public static final double KG = 0.0; // 0.49
 		public static final double KV = 4.7; // 4.7
 
-		public static final double JOG_SPEED_METERS_PER_SECOND = 0.25;
-		public static final double JOG_CURRENT_LIMIT = 10.0;
+		public static final double JOG_SPEED_METERS_PER_SECOND = 0.1;
+		public static final double JOG_CURRENT_LIMIT = 1;
 		public static final double JOG_SOFT_LIMIT_ROTATIONS = 9999.0;
 	}
 
