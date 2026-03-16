@@ -183,35 +183,35 @@ public class RobotContainer {
 		if (Constants.ENABLE_SHOOTER && shooter != null) {
 			panel.key(1, 1).onTrue(shooter.homeHoodCommand());
 			panel.key(1, 2).and(inTest).whileTrue(shooter.testHoodCommand());
-			panel.key(1, 3).and(inTest).whileTrue(
-					shooter.tune(tuneShooterRPM::get, tuneShooterRPM::get, tuneHoodPercent::get)
-							.finallyDo(shooter::stop));
+			panel.key(1, 3).and(inTest).whileTrue(shooter.testShooterMotorCommand());
 		}
 		if (Constants.ENABLE_SWERVE && drivebase != null) {
 			Supplier<Pose2d> hubPose = () -> FieldZones.getHubPose(
 					DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue));
 			panel.key(1, 0).and(inTest).whileTrue(drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY, hubPose));
 		}
-		// Row 2 — Shoot all
-		if (Constants.ENABLE_SHOOTER && shooter != null && Constants.ENABLE_HOPPER && hopper != null) {
-			panel.key(2, 3).and(inTest).whileTrue(
-					shooter.spinUpAndWaitCommand(shooter::getShooterTestRPM, shooter::getFeederTestRPM)
-							.andThen(hopper.setHopperVelocityCommand(hopper::getHopperTestRPM))
-							.finallyDo(() -> {
-								shooter.stop();
-								hopper.setHopperVelocity(RPM.of(0));
-							}));
-		}
 		// Row 3 — Individual subsystem tests
 		if (Constants.ENABLE_SHOOTER && shooter != null) {
-			panel.key(3, 0).and(inTest).whileTrue(shooter.testShooterMotorCommand());
-			panel.key(3, 1).and(inTest).whileTrue(shooter.testFeederCommand());
+			panel.key(2, 3).and(inTest).whileTrue(
+					Commands.parallel(
+							Commands.runOnce(() -> shooter.setHoodPercent(tuneHoodPercent.get())),
+							shooter.spinUpAndWaitCommand(shooter::getShooterTestRPM, shooter::getFeederTestRPM))
+							.andThen(Constants.ENABLE_HOPPER && hopper != null
+									? hopper.setHopperVelocityCommand(hopper::getHopperTestRPM)
+									: Commands.none())
+							.finallyDo(() -> {
+								shooter.stop();
+								if (Constants.ENABLE_HOPPER && hopper != null) {
+									hopper.setHopperVelocity(RPM.of(0));
+								}
+							}));
+			panel.key(3, 3).and(inTest).whileTrue(shooter.testFeederCommand());
 		}
 		if (Constants.ENABLE_HOPPER && hopper != null) {
 			panel.key(3, 2).and(inTest).whileTrue(hopper.testHopperCommand());
 		}
 		if (Constants.ENABLE_INTAKE && intake != null) {
-			panel.key(3, 3).and(inTest).whileTrue(intake.testPivotCommand());
+			panel.key(3, 1).and(inTest).whileTrue(intake.testPivotCommand());
 		}
 	}
 
