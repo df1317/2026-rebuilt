@@ -264,6 +264,24 @@ public class IntakeSubsystem extends SubsystemBase {
 
 	// ==================== Test Mode ====================
 
+	public Command homeCommand() {
+		return runOnce(() -> {
+			pivotProfiler.setConstraints(new TrapezoidProfile.Constraints(
+					PIVOT_EXTEND_MAX_VELOCITY_DEG_PER_S, PIVOT_EXTEND_MAX_ACCEL_DEG_PER_S2));
+			setPivotAngle(Degrees.of(pivotEncoder.getPosition() + PIVOT_HOMING_OFFSET_DEG));
+		})
+				.andThen(idle().until(this::isPivotStalled).withTimeout(5.0))
+				.finallyDo(() -> {
+					pivotMotor.stopMotor();
+					pivotProfiler.setConstraints(new TrapezoidProfile.Constraints(
+							PIVOT_MAX_VELOCITY_DEG_PER_S, PIVOT_MAX_ACCEL_DEG_PER_S2));
+					pivotEncoder.setPosition(0);
+					pivotProfiler.reset(0);
+					setPivotAngle(Degrees.of(0));
+				})
+				.withName("Home Intake");
+	}
+
 	public Command zeroCommand() {
 		return runOnce(() -> {
 			pivotEncoder.setPosition(0);
