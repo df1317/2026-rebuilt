@@ -4,6 +4,7 @@ Quick reference documentation for robot controls and configuration.
 
 ## Documentation
 
+- [Autonomous](autos.md) - Auto routines, AutoBuilder API, positions, and telemetry
 - [Logging & Error Handling](logging.md) - Centralized logging system with Elastic notifications
 - [Shooter](shooter.md) - Flywheel, feeder, hood homing, and distance lookup table
 

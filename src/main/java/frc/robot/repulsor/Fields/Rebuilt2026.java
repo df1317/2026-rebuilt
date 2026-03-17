@@ -58,14 +58,14 @@ public final class Rebuilt2026 implements FieldDefinition {
 		Pose2d blueOutpost = Setpoints.Rebuilt2026.OUTPOST_COLLECT.approximateBluePose();
 		Pose2d redOutpost = Setpoints.Rebuilt2026.OUTPOST_COLLECT.approximateRedPose();
 
-		Pose2d blueHub = Setpoints.Rebuilt2026.HUB_SHOOT.approximateBluePose();
-		Pose2d redHub = Setpoints.Rebuilt2026.HUB_SHOOT.approximateRedPose();
+		Pose2d blueHub = Setpoints.Rebuilt2026.HUB_SCORE_FRONT.approximateBluePose();
+		Pose2d redHub = Setpoints.Rebuilt2026.HUB_SCORE_FRONT.approximateRedPose();
 
 		b.begin()
 				.alliance(Alliance.kBlue)
 				.capacity(999)
 				.pose(new Pose3d(blueHub.getX(), blueHub.getY(), 0, null))
-				.related(new RepulsorSetpoint(Setpoints.Rebuilt2026.HUB_SHOOT, HeightSetpoint.NET))
+				.related(new RepulsorSetpoint(Setpoints.Rebuilt2026.HUB_SCORE_FRONT, HeightSetpoint.NET))
 				.category(CategorySpec.kScore)
 				.add();
 
@@ -73,7 +73,7 @@ public final class Rebuilt2026 implements FieldDefinition {
 				.alliance(Alliance.kRed)
 				.capacity(999)
 				.pose(new Pose3d(redHub.getX(), redHub.getY(), 0, null))
-				.related(new RepulsorSetpoint(Setpoints.Rebuilt2026.HUB_SHOOT, HeightSetpoint.NET))
+				.related(new RepulsorSetpoint(Setpoints.Rebuilt2026.HUB_SCORE_FRONT, HeightSetpoint.NET))
 				.category(CategorySpec.kScore)
 				.add();
 

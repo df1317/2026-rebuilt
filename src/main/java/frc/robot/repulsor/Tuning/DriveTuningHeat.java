@@ -28,6 +28,7 @@ import frc.robot.repulsor.Heatmap;
 
 public class DriveTuningHeat extends DriveTuning {
 	private double baseMaxSpeed = 5.14;
+	private double speedScale = 1.0;
 	private double sqrtScale = 6.0;
 	private double minStep = 0.02;
 	private double nearStart = 0.40;
@@ -45,6 +46,14 @@ public class DriveTuningHeat extends DriveTuning {
 	public DriveTuningHeat withBaseMaxSpeed(double mps) {
 		this.baseMaxSpeed = mps;
 		return this;
+	}
+
+	public void setSpeedScale(double scale) {
+		this.speedScale = MathUtil.clamp(scale, 0.0, 1.0);
+	}
+
+	public void resetSpeedScale() {
+		this.speedScale = 1.0;
 	}
 
 	public DriveTuningHeat withSqrtScale(double s) {
@@ -73,16 +82,17 @@ public class DriveTuningHeat extends DriveTuning {
 	}
 
 	public double maxLinearSpeedMps(Pose2d robotPose) {
+		double effectiveMax = baseMaxSpeed * speedScale;
 		if (robotPose == null)
-			return baseMaxSpeed;
+			return effectiveMax;
 		double heat = heatmap.heatAt(robotPose.getTranslation());
-		double scale = MathUtil.clamp(heat, 0.0, 1.0);
-		return baseMaxSpeed * scale;
+		double heatScale = MathUtil.clamp(heat, 0.0, 1.0);
+		return effectiveMax * heatScale;
 	}
 
 	@Override
 	public double maxLinearSpeedMps() {
-		return baseMaxSpeed;
+		return baseMaxSpeed * speedScale;
 	}
 
 	@Override
@@ -97,8 +107,10 @@ public class DriveTuningHeat extends DriveTuning {
 			return 0.0;
 		}
 
+		double effectiveMax = baseMaxSpeed * speedScale;
+
 		if (!slowDown) {
-			return Math.min(baseMaxSpeed * dtSeconds(), d);
+			return Math.min(effectiveMax * dtSeconds(), d);
 		}
 
 		double dt = dtSeconds();
@@ -107,12 +119,12 @@ public class DriveTuningHeat extends DriveTuning {
 		}
 
 		Pose2d pose = getRobotPoseOrNull();
-		double vMaxHeat = baseMaxSpeed;
+		double vMaxHeat = effectiveMax;
 		double heat = 1.0;
 		if (pose != null) {
 			Translation2d p = pose.getTranslation();
 			heat = heatmap.heatAt(p);
-			vMaxHeat = baseMaxSpeed * MathUtil.clamp(heat, 0.0, 1.0);
+			vMaxHeat = effectiveMax * MathUtil.clamp(heat, 0.0, 1.0);
 		}
 
 		double vMax = vMaxHeat;

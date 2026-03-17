@@ -15,8 +15,6 @@ import frc.robot.Constants.DrivebaseConstants;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.commands.TeleopZoneAutomation;
 import frc.robot.repulsor.Repulsor;
-import frc.robot.repulsor.Setpoints.SetpointContext;
-import frc.robot.repulsor.Setpoints.Specific._Rebuilt2026;
 import frc.robot.subsystems.climber.ClimberSubsystem;
 import frc.robot.subsystems.hopper.HopperSubsystem;
 import frc.robot.subsystems.intake.IntakeSubsystem;
@@ -28,14 +26,12 @@ import swervelib.SwerveInputStream;
 import java.io.File;
 import java.util.function.Supplier;
 
-import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.RPM;
 
 public class RobotContainer {
 
 	private final DoubleSubscriber tuneHoodPercent = DogLog.tunable("Shooter/TuneHoodPercent", 0.0);
 	private final DoubleSubscriber tuneShooterRPM = DogLog.tunable("Shooter/TuneRPM", 3000.0);
-
 	// HID
 	private final CommandXboxController driverXbox = new CommandXboxController(0);
 	private final OperatorPanel panel = new OperatorPanel(1);
@@ -82,21 +78,14 @@ public class RobotContainer {
 
 			// Build auto chooser
 			autoChooser = new SendableChooser<>();
-			autoChooser.setDefaultOption("Score Front + Cycle",
-					buildScoreCycleAuto(_Rebuilt2026.HUB_SCORE_FRONT));
-			autoChooser.addOption("Score Front-Left + Cycle",
-					buildScoreCycleAuto(_Rebuilt2026.HUB_SCORE_FRONT_LEFT));
-			autoChooser.addOption("Score Front-Right + Cycle",
-					buildScoreCycleAuto(_Rebuilt2026.HUB_SCORE_FRONT_RIGHT));
-			autoChooser.addOption("Score Rear-Left + Cycle",
-					buildScoreCycleAuto(_Rebuilt2026.HUB_SCORE_REAR_LEFT));
-			autoChooser.addOption("Score Rear-Right + Cycle",
-					buildScoreCycleAuto(_Rebuilt2026.HUB_SCORE_REAR_RIGHT));
+			autoChooser.setDefaultOption("Score Front",
+					AutoPositions.scoreAuto(repulsor));
 			autoChooser.addOption("Score + Climb Left",
-					buildScoreAndClimbAuto(_Rebuilt2026.CLIMB_LEFT));
+					AutoPositions.scoreAndClimbAuto(repulsor, AutoPositions.CLIMB_LEFT));
 			autoChooser.addOption("Score + Climb Right",
-					buildScoreAndClimbAuto(_Rebuilt2026.CLIMB_RIGHT));
-			autoChooser.addOption("Defence Only", buildDefenceOnlyAuto());
+					AutoPositions.scoreAndClimbAuto(repulsor, AutoPositions.CLIMB_RIGHT));
+			autoChooser.addOption("Defence Only",
+					AutoPositions.defenceOnlyAuto(repulsor));
 			autoChooser.addOption("Do Nothing", Commands.none());
 			SmartDashboard.putData("misc/Auto Chooser", autoChooser);
 		}
@@ -104,6 +93,8 @@ public class RobotContainer {
 		configureBindings();
 		DriverStation.silenceJoystickConnectionWarning(true);
 	}
+
+	// ===== Auto Routines =====
 
 	private void configureBindings() {
 		var inTeleop = new edu.wpi.first.wpilibj2.command.button.Trigger(DriverStation::isTeleop);
@@ -213,40 +204,6 @@ public class RobotContainer {
 		if (Constants.ENABLE_INTAKE && intake != null) {
 			panel.key(3, 1).and(inTest).whileTrue(intake.testPivotCommand());
 		}
-	}
-
-	// ===== Auto Routines =====
-
-	private Command buildScoreCycleAuto(frc.robot.repulsor.Setpoints.GameSetpoint scoreSetpoint) {
-		return Commands.sequence(
-				// Score preloaded piece
-				repulsor.navigateTo(() -> scoreSetpoint.poseForCurrentAlliance(SetpointContext.EMPTY))
-						.until(repulsor.within(Meters.of(0.15))),
-				Commands.waitSeconds(0.5),
-				// Collect
-				repulsor.navigateTo(
-						() -> _Rebuilt2026.CENTER_COLLECT.poseForCurrentAlliance(SetpointContext.EMPTY))
-						.until(repulsor.within(Meters.of(0.15))),
-				Commands.waitSeconds(1.0),
-				// Score again
-				repulsor.navigateTo(() -> scoreSetpoint.poseForCurrentAlliance(SetpointContext.EMPTY))
-						.until(repulsor.within(Meters.of(0.15))),
-				Commands.waitSeconds(0.5));
-	}
-
-	private Command buildScoreAndClimbAuto(frc.robot.repulsor.Setpoints.GameSetpoint climbSetpoint) {
-		return Commands.sequence(
-				repulsor.navigateTo(
-						() -> _Rebuilt2026.HUB_SCORE_FRONT.poseForCurrentAlliance(SetpointContext.EMPTY))
-						.until(repulsor.within(Meters.of(0.15))),
-				Commands.waitSeconds(1.0),
-				repulsor.navigateTo(
-						() -> climbSetpoint.poseForCurrentAlliance(SetpointContext.EMPTY)));
-	}
-
-	private Command buildDefenceOnlyAuto() {
-		return repulsor.navigateTo(
-				() -> _Rebuilt2026.CENTER_COLLECT.poseForCurrentAlliance(SetpointContext.EMPTY));
 	}
 
 	public Command getAutonomousCommand() {

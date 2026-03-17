@@ -56,6 +56,7 @@ public class Repulsor {
 
 	private FieldPlanner m_planner;
 	private DriveRepulsor m_drive;
+	private final DriveTuningHeat m_driveTuning;
 
 	private RepulsorSetpoint m_currentGoal;
 
@@ -74,7 +75,24 @@ public class Repulsor {
 		this.robot_x = robot_x;
 		this.robot_y = robot_y;
 
-		m_planner = new FieldPlanner(new Rebuilt2026(), new DriveTuningHeat(() -> m_drive.getPose()));
+		m_driveTuning = new DriveTuningHeat(() -> m_drive.getPose());
+		m_planner = new FieldPlanner(new Rebuilt2026(), m_driveTuning);
+	}
+
+	public void setAutoSpeedScale(double scale) {
+		m_driveTuning.setSpeedScale(scale);
+	}
+
+	public void resetSpeedScale() {
+		m_driveTuning.resetSpeedScale();
+	}
+
+	public void setHeadingBlendDist(double meters) {
+		m_planner.setHeadingBlendDist(meters);
+	}
+
+	public void resetHeadingBlendDist() {
+		m_planner.resetHeadingBlendDist();
 	}
 
 	public Repulsor withFallback(PlannerFallback fallback) {
@@ -135,8 +153,7 @@ public class Repulsor {
 							robot_x,
 							robot_y,
 							CategorySpec.kScore,
-							false,
-							0.0);
+							false);
 
 					ChassisSpeeds commanded = sample.asChassisSpeeds(m_drive.getOmegaPID(), robotPose.getRotation());
 					m_drive.runVelocity(commanded);
@@ -168,7 +185,9 @@ public class Repulsor {
 			if (pos.getDistance(goal) < 0.1)
 				break;
 
-			Force force = m_planner.getForce(pos, goal);
+			Force force = m_planner.getGoalForce(pos, goal)
+					.plus(m_planner.getObstacleForce(pos, goal))
+					.plus(m_planner.getWallForce(pos, goal));
 			if (force.getNorm() < 1e-6)
 				break;
 
