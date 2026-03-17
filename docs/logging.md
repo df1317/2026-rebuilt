@@ -117,6 +117,36 @@ All events and alerts are logged to DataLog for AdvantageScope analysis:
 
 Graph `Alerts/*/active` as booleans to see exactly when issues occurred during a match.
 
+## Status Colors
+
+All subsystem status colors use the `RobotLog` palette and follow a consistent scheme:
+
+### Color Palette (`RobotLog`)
+
+| Color | Hex | Meaning |
+|-------|-----|---------|
+| Red | `#F44336` | Idle / off / not available |
+| Yellow | `#E5B844` | Active but not ready (spinning up, moving, buffered) |
+| Green | `#4CAF50` | Ready / at target / active |
+| Blue | `#1064FF` | Reverse direction |
+
+### Per-Subsystem Status
+
+| Subsystem | Red | Yellow | Green | Blue |
+|-----------|-----|--------|-------|------|
+| **Shooter** | Target RPM ~0 (idle) | Spinning up | At speed | Reverse |
+| **Intake** | Retracted & idle | Extending or not at speed | Extended & at speed | Reverse |
+| **Hopper** | Target RPM 0 (idle) | Spinning up | At speed | Reverse |
+| **Climber** | At goal & stowed (bottom) | Moving to goal | At goal | — |
+| **Hub** | Not available | Buffered (available within 3s) | Active (can score now) | — |
+
+### Dashboard Keys
+
+Status colors are logged via `DogLog.forceNt` as hex strings:
+
+- `Shooter/Status`, `Intake/Status`, `Hopper/Status`, `Climber/Status`
+- `Hub/StatusColor` (also logs `Hub/Status` as enum name)
+
 ## Configuration
 
 Thresholds and constants are in `Constants.java`:

@@ -62,6 +62,8 @@ public class ShooterTelemetry {
 		double targetRPM = shooter.targetVelocity.in(RPM);
 		if (MathUtil.isNear(0, targetRPM, 2)) {
 			return RobotLog.RED;
+		} else if (targetRPM < 0) {
+			return RobotLog.BLUE;
 		} else if (shooter.isAtSpeed() && shooter.isFeederAtSpeed()) {
 			return RobotLog.GREEN;
 		} else {

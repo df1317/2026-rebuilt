@@ -16,9 +16,6 @@ public class HubTracker {
 	private static final double BUFFER_TIME = 3.0;
 
 	private static final Timer phaseTimer = new Timer();
-	private static final Color COLOR_RED = new Color(255, 0, 0);
-	private static final Color COLOR_YELLOW = new Color(255, 255, 0);
-	private static final Color COLOR_GREEN = new Color(0, 255, 0);
 
 	private static MatchPhase currentPhase = MatchPhase.UNKNOWN;
 	private static MatchPhase previousPhase = MatchPhase.UNKNOWN;
@@ -131,9 +128,9 @@ public class HubTracker {
 
 	public static Color getHubStatusColor() {
 		return switch (getHubStatus()) {
-			case ACTIVE -> COLOR_GREEN;
-			case BUFFERED -> COLOR_YELLOW;
-			case NOT_AVAILABLE -> COLOR_RED;
+			case ACTIVE -> RobotLog.GREEN;
+			case BUFFERED -> RobotLog.YELLOW;
+			case NOT_AVAILABLE -> RobotLog.RED;
 		};
 	}
 

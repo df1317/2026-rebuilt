@@ -21,6 +21,8 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 
+import frc.robot.util.RobotLog;
+
 import java.util.function.DoubleSupplier;
 
 import static edu.wpi.first.units.Units.*;
@@ -178,12 +180,12 @@ public class ClimberSubsystem extends SubsystemBase {
 	}
 
 	Color getStatusColor() {
-		if (isAtGoal()) {
-			return Color.kGreen;
-		} else if (isAtTop() || isAtBottom()) {
-			return Color.kOrange;
+		if (isAtGoal() && isAtBottom()) {
+			return RobotLog.RED;
+		} else if (isAtGoal()) {
+			return RobotLog.GREEN;
 		}
-		return Color.kYellow;
+		return RobotLog.YELLOW;
 	}
 
 	private void setGoalHeight(double heightMeters) {
