@@ -84,8 +84,8 @@ public class RobotContainer {
 					AutoPositions.scoreAndClimbAuto(repulsor, AutoPositions.CLIMB_LEFT));
 			autoChooser.addOption("Score + Climb Right",
 					AutoPositions.scoreAndClimbAuto(repulsor, AutoPositions.CLIMB_RIGHT));
-			autoChooser.addOption("Defence Only",
-					AutoPositions.defenceOnlyAuto(repulsor));
+			autoChooser.addOption("Go to center",
+					AutoPositions.centerFieldAuto(repulsor));
 			autoChooser.addOption("Do Nothing", Commands.none());
 			SmartDashboard.putData("misc/Auto Chooser", autoChooser);
 		}
