@@ -76,13 +76,14 @@ public class RobotContainer {
 			// Build auto chooser
 			autoChooser = new SendableChooser<>();
 			autoChooser.setDefaultOption("Score Front",
-					AutoPositions.scoreAuto(repulsor));
-			autoChooser.addOption("Score + Climb Left",
-					AutoPositions.scoreAndClimbAuto(repulsor, AutoPositions.CLIMB_LEFT));
-			autoChooser.addOption("Score + Climb Right",
-					AutoPositions.scoreAndClimbAuto(repulsor, AutoPositions.CLIMB_RIGHT));
+					AutoPositions.frontHubAuto(repulsor));
+			autoChooser.addOption("Left Hide + Shoot",
+					AutoPositions.leftCornerHideAndShoot(repulsor, teleopAutomation.shootCommand().repeatedly()));
+			autoChooser.addOption("Right Hide + Shoot",
+					AutoPositions.rightCornerHideAndShoot(repulsor, teleopAutomation.shootCommand().repeatedly()));
 			autoChooser.addOption("Go to center",
 					AutoPositions.centerFieldAuto(repulsor));
+			autoChooser.addOption("Just Shoot", teleopAutomation.shootCommand().repeatedly());
 			autoChooser.addOption("Do Nothing", Commands.none());
 			SmartDashboard.putData("misc/Auto Chooser", autoChooser);
 		}
@@ -118,9 +119,9 @@ public class RobotContainer {
 				}
 			}).andThen(Constants.ENABLE_SWERVE && drivebase != null
 					? Commands.parallel(
-							teleopAutomation.shootCommand(drivebase::isAimed),
-							drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY,
-									teleopAutomation::getShootingPose))
+					teleopAutomation.shootCommand(drivebase::isAimed),
+					drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY,
+							teleopAutomation::getShootingPose))
 					: teleopAutomation.shootCommand()));
 		}
 		if (Constants.ENABLE_INTAKE && intake != null) {
@@ -182,8 +183,8 @@ public class RobotContainer {
 		if (Constants.ENABLE_SHOOTER && shooter != null) {
 			panel.key(2, 3).and(inTest).whileTrue(
 					Commands.parallel(
-							Commands.runOnce(() -> shooter.setTestHoodPercent()),
-							shooter.spinUpAndWaitCommand(shooter::getShooterTestRPM, shooter::getFeederTestRPM))
+									Commands.runOnce(() -> shooter.setTestHoodPercent()),
+									shooter.spinUpAndWaitCommand(shooter::getShooterTestRPM, shooter::getFeederTestRPM))
 							.andThen(Constants.ENABLE_HOPPER && hopper != null
 									? hopper.setHopperVelocityCommand(hopper::getHopperTestRPM)
 									: Commands.none())

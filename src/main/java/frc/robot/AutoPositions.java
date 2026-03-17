@@ -24,21 +24,22 @@ public final class AutoPositions {
 			RepulsorConstants.FIELD_LENGTH / 2.0,
 			RepulsorConstants.FIELD_WIDTH / 2.0,
 			Rotation2d.kZero);
+
+	// ===== Climb =====
+	/** Left climb position, must move .2 m negative x to engage climber */
+	public static final Pose2d CLIMB_LEFT = new Pose2d(
+			1.062, 4.922, Rotation2d.kZero);
+	/** Right climb position, must move .2 positive x to engage climber */
+	public static final Pose2d CLIMB_RIGHT = new Pose2d(
+			1.062, 2.629, Rotation2d.k180deg);
+
 	private static final double HUB_RADIUS = 0.9;
 	/** Hub radius + robot half-length in front of hub, facing the hub. */
 	public static final Pose2d HUB_FRONT = hubPose(0);
 
-	private static final double CLIMB_OFFSET_Y = 2.5;
-	private static final double CLIMB_OFFSET_X = 2.0;
-
-	// ===== Climb =====
-	/** Left climb position, 2 m left of hub center. */
-	public static final Pose2d CLIMB_LEFT = new Pose2d(
-			HUB_CENTER.getX() + CLIMB_OFFSET_X, HUB_CENTER.getY() + CLIMB_OFFSET_Y, Rotation2d.kZero);
-
-	/** Right climb position, 2 m right of hub center. */
-	public static final Pose2d CLIMB_RIGHT = new Pose2d(
-			HUB_CENTER.getX() + CLIMB_OFFSET_X, HUB_CENTER.getY() - CLIMB_OFFSET_Y, Rotation2d.kZero);
+	private static final Pose2d CORNER_HIDE_NEAR_BALLS = new Pose2d(new Translation2d(0.749, 7.324),
+			Rotation2d.fromDegrees(0));
+	private static final Pose2d CORNER_HIDE = new Pose2d(new Translation2d(0.645, 0.645), Rotation2d.fromDegrees(0));
 
 	// empty constructor
 	private AutoPositions() {
@@ -47,18 +48,23 @@ public final class AutoPositions {
 	// ===== Pre-built Autos =====
 
 	/** Drive to hub front and stop. */
-	public static Command scoreAuto(Repulsor repulsor) {
+	public static Command frontHubAuto(Repulsor repulsor) {
 		return new AutoBuilder(repulsor)
 				.driveTo(HUB_FRONT)
 				.build();
 	}
 
-	/** Score at hub front, wait 1s, then drive to the given climb position. */
-	public static Command scoreAndClimbAuto(Repulsor repulsor, Pose2d climbPose) {
+	public static Command leftCornerHideAndShoot(Repulsor repulsor, Command shootCommand) {
 		return new AutoBuilder(repulsor)
-				.driveTo(HUB_FRONT)
-				.waitSeconds(1.0)
-				.driveToAndHold(climbPose)
+				.driveToFacing(CORNER_HIDE_NEAR_BALLS, HUB_CENTER)
+				.run(shootCommand)
+				.build();
+	}
+
+	public static Command rightCornerHideAndShoot(Repulsor repulsor, Command shootCommand) {
+		return new AutoBuilder(repulsor)
+				.driveToFacing(CORNER_HIDE, HUB_CENTER)
+				.run(shootCommand)
 				.build();
 	}
 
