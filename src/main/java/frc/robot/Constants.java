@@ -75,7 +75,8 @@ public final class Constants {
 		public static final double PIVOT_GEAR_RATIO = (48.0 * 22.0) / 14.0;
 		public static final Distance PIVOT_ARM_LENGTH = Inches.of(12);
 
-		public static final double PIVOT_HOMING_OFFSET_DEG = -20; // degrees past current reading toward extended (down) hard stop
+		public static final double PIVOT_HOMING_OFFSET_DEG = -20; // degrees past current reading toward extended (down)
+																															// hard stop
 
 		public static final double PIVOT_KP = 0.05;
 		public static final double PIVOT_KI = 0.0;

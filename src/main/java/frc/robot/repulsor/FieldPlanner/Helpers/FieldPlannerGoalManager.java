@@ -207,7 +207,6 @@ public final class FieldPlannerGoalManager {
 				stagedUsingBypass = false;
 				stagedGatePassed = false;
 				stagedLatchedPull = null;
-				lastStagedPoint = null;
 				stagedReachTicks = 0;
 				stagedModeTicks = 0;
 				stagedComplete = true;

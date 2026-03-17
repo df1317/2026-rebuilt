@@ -146,11 +146,13 @@ public class ClimberSubsystem extends SubsystemBase {
 		double dt = now - lastUpdateTimestamp;
 		lastUpdateTimestamp = now;
 
-		currentState.position = getHeightMeters();
-		currentState = profile.calculate(dt, currentState, goalState);
-		double ff = feedforward.calculate(currentState.velocity);
-		motorLeft.setControl(
-				new PositionVoltage(currentState.position * ROTATIONS_PER_METER).withFeedForward(ff));
+		if (DriverStation.isEnabled()) {
+			currentState.position = getHeightMeters();
+			currentState = profile.calculate(dt, currentState, goalState);
+			double ff = feedforward.calculate(currentState.velocity);
+			motorLeft.setControl(
+					new PositionVoltage(currentState.position * ROTATIONS_PER_METER).withFeedForward(ff));
+		}
 
 		telemetry.log();
 	}
@@ -224,11 +226,11 @@ public class ClimberSubsystem extends SubsystemBase {
 	/** Position-based jog using a joystick axis [-1, 1]. Uses wide soft limits and a low current limit. */
 	public Command jogVoltageCommand(DoubleSupplier axis) {
 		return Commands.runOnce(() -> {
-					applyJogConfig();
-					goalState.position = getHeightMeters();
-					currentState.position = getHeightMeters();
-					currentState.velocity = 0.0;
-				}, this)
+			applyJogConfig();
+			goalState.position = getHeightMeters();
+			currentState.position = getHeightMeters();
+			currentState.velocity = 0.0;
+		}, this)
 				.andThen(Commands.run(() -> {
 					double increment = axis.getAsDouble() * JOG_SPEED_METERS_PER_SECOND * 0.02;
 					goalState.position += increment;

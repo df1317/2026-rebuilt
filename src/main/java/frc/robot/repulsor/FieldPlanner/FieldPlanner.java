@@ -224,6 +224,7 @@ public class FieldPlanner {
 	public void setRequestedGoal(Pose2d requested) {
 		goalManager.setRequestedGoal(requested);
 		lastChosenSetpoint = Optional.empty();
+		stuckStepCount = 0;
 	}
 
 	void setActiveGoal(Pose2d active) {
