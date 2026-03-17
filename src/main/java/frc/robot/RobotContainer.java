@@ -3,7 +3,6 @@ package frc.robot;
 import dev.doglog.DogLog;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.networktables.BooleanSubscriber;
-import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -30,8 +29,6 @@ import static edu.wpi.first.units.Units.RPM;
 
 public class RobotContainer {
 
-	private final DoubleSubscriber tuneHoodPercent = DogLog.tunable("Shooter/TuneHoodPercent", 0.0);
-	private final DoubleSubscriber tuneShooterRPM = DogLog.tunable("Shooter/TuneRPM", 3000.0);
 	// HID
 	private final CommandXboxController driverXbox = new CommandXboxController(0);
 	private final OperatorPanel panel = new OperatorPanel(1);
@@ -185,7 +182,7 @@ public class RobotContainer {
 		if (Constants.ENABLE_SHOOTER && shooter != null) {
 			panel.key(2, 3).and(inTest).whileTrue(
 					Commands.parallel(
-							Commands.runOnce(() -> shooter.setHoodPercent(tuneHoodPercent.get())),
+							Commands.runOnce(() -> shooter.setTestHoodPercent()),
 							shooter.spinUpAndWaitCommand(shooter::getShooterTestRPM, shooter::getFeederTestRPM))
 							.andThen(Constants.ENABLE_HOPPER && hopper != null
 									? hopper.setHopperVelocityCommand(hopper::getHopperTestRPM)
