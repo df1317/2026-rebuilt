@@ -147,7 +147,8 @@ public class RobotContainer {
 		}
 		if (Constants.ENABLE_INTAKE && intake != null) {
 			driverXbox.x().onTrue(intake.stowToggleCommand());
-			driverXbox.leftTrigger().whileTrue(roller.intakeCommand());
+			driverXbox.leftTrigger().and(inTeleop).whileTrue(roller.intakeCommand());
+			driverXbox.leftTrigger().and(inTeleop).whileTrue(intake.holdExtendedCommand());
 		}
 
 		// ===== Teleop Panel Controls (Maypad — see docs for layout) =====

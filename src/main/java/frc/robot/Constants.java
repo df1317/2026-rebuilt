@@ -70,7 +70,7 @@ public final class Constants {
 
 		public static final boolean PIVOT_INVERTED = false;
 		public static final boolean ROLLER_INVERTED = true;
-		public static final int PIVOT_CURRENT_LIMIT = 25;
+		public static final int PIVOT_CURRENT_LIMIT = 35;
 		public static final int ROLLER_CURRENT_LIMIT = 40;
 
 		public static final Angle PIVOT_EXTENDED_ANGLE = Degrees.of(0);
@@ -80,7 +80,7 @@ public final class Constants {
 		public static final Distance PIVOT_ARM_LENGTH = Inches.of(12);
 
 		public static final double PIVOT_HOMING_OFFSET_DEG = -20; // degrees past current reading toward extended (down)
-																															// hard stop
+		// hard stop
 
 		public static final double PIVOT_KP = 0.05;
 		public static final double PIVOT_KI = 0.0;
@@ -92,16 +92,16 @@ public final class Constants {
 		public static final double PIVOT_EXTEND_MAX_VELOCITY_DEG_PER_S = 60.0;
 		public static final double PIVOT_EXTEND_MAX_ACCEL_DEG_PER_S2 = 60.0;
 
-		public static final AngularVelocity ROLLER_INTAKE_VELOCITY = RPM.of(2500);
+		public static final AngularVelocity ROLLER_INTAKE_VELOCITY = RPM.of(2800);
 		public static final double ROLLER_SPEED_SCALE_MAX_RPM = 4000;
 		public static final double ROLLER_SPEED_SCALE_MAX_ROBOT_MPS = 3.0;
 		public static final AngularVelocity ROLLER_EJECT_VELOCITY = RPM.of(-1500);
 		public static final AngularVelocity ROLLER_VELOCITY_TOLERANCE = RPM.of(100);
 
 		public static final double ROLLER_KP = 2E-4;
-		public static final double ROLLER_KI = 1E-5;
+		public static final double ROLLER_KI = 1.3E-4;
 		public static final double ROLLER_KD = 0.0;
-		public static final double ROLLER_KV = 1.8E-4;
+		public static final double ROLLER_KV = 1.5E-4;
 		public static final double ROLLER_I_ZONE = 1E-3;
 
 		public static final double AT_POSITION_DEBOUNCE_TIME = 0.1;

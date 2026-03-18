@@ -168,6 +168,11 @@ public class IntakeSubsystem extends SubsystemBase {
 				.withName("Intake Stow Toggle");
 	}
 
+	public Command holdExtendedCommand() {
+		return run(() -> setPivotAngle(PIVOT_EXTENDED_ANGLE))
+				.withName("Hold Extended");
+	}
+
 	// ==================== Test Mode ====================
 
 	public Command homeCommand() {
