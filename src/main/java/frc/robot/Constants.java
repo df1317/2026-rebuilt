@@ -160,7 +160,7 @@ public final class Constants {
 		public static final boolean INVERTED = true;
 		public static final int CURRENT_LIMIT = 20;
 
-		public static final Distance MAX_HEIGHT = Meters.of(1.23);
+		public static final Distance MAX_HEIGHT = Meters.of(3.6);
 		public static final Distance MIN_HEIGHT = Meters.of(0.0);
 		public static final Distance HANG_HEIGHT = Meters.of(0.5); // TODO: measure
 		public static final Distance RELEASE_HEIGHT = Meters.of(0.2); // TODO: measure
@@ -178,7 +178,7 @@ public final class Constants {
 		public static final double KG = 0.0; // 0.49
 		public static final double KV = 4.7; // 4.7
 
-		public static final double JOG_SPEED_METERS_PER_SECOND = 0.1;
+		public static final double JOG_SPEED_METERS_PER_SECOND = 0.3;
 		public static final double JOG_CURRENT_LIMIT = 1;
 		public static final double JOG_SOFT_LIMIT_ROTATIONS = 9999.0;
 	}
