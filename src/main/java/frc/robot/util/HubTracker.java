@@ -75,14 +75,14 @@ public class HubTracker {
 	public static boolean canScore() {
 		if (ourAlliance == null)
 			return false;
-		return canScoreInPhase(currentPhase, phaseTimer.get(), ourAlliance == autoWinner);
+		return canScoreInPhase(currentPhase, getPhaseElapsedTime(), ourAlliance == autoWinner);
 	}
 
 	/** True if scoring is allowed now or will be within BUFFER_TIME seconds. */
 	public static boolean canScoreBuffered() {
 		if (canScore())
 			return true;
-		return willBeAbleToScoreAt(phaseTimer.get() + BUFFER_TIME);
+		return willBeAbleToScoreAt(getPhaseElapsedTime() + BUFFER_TIME);
 	}
 
 	private static boolean willBeAbleToScoreAt(double futurePhaseTime) {
@@ -139,11 +139,25 @@ public class HubTracker {
 	}
 
 	public static double getPhaseElapsedTime() {
-		return phaseTimer.get();
+		double matchTime = DriverStation.getMatchTime();
+		if (matchTime < 0) {
+			return 0;
+		}
+		if (currentPhase == MatchPhase.AUTO) {
+			return currentPhase.getDuration() - matchTime;
+		}
+		return Math.max(0, currentPhase.getStartTime() - matchTime);
 	}
 
 	public static double getPhaseRemainingTime() {
-		return Math.max(0, currentPhase.getDuration() - phaseTimer.get());
+		double matchTime = DriverStation.getMatchTime();
+		if (matchTime < 0) {
+			return currentPhase.getDuration();
+		}
+		if (currentPhase == MatchPhase.AUTO) {
+			return Math.max(0, matchTime);
+		}
+		return Math.max(0, matchTime - currentPhase.getEndTime());
 	}
 
 	public static Alliance getAutoWinner() {
