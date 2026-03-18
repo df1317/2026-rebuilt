@@ -127,19 +127,13 @@ public class ClimberSubsystem extends SubsystemBase {
 			prevKS = SUB_KS.getAsDouble();
 			prevKG = SUB_KG.getAsDouble();
 
-			TalonFXConfiguration configs = new TalonFXConfiguration();
+			TalonFXConfiguration configs = baseConfig();
 			configs.Slot0.kP = SUB_KP.getAsDouble();
 			configs.Slot0.kI = SUB_KI.getAsDouble();
 			configs.Slot0.kD = SUB_KD.getAsDouble();
 			configs.Slot0.kV = SUB_KV.getAsDouble();
 			configs.Slot0.kG = SUB_KG.getAsDouble();
 			configs.Slot0.kS = SUB_KS.getAsDouble();
-
-			configs.CurrentLimits.SupplyCurrentLimit = CURRENT_LIMIT;
-			configs.CurrentLimits.SupplyCurrentLimitEnable = true;
-
-			configs.MotorOutput.Inverted = INVERTED ? InvertedValue.Clockwise_Positive
-					: InvertedValue.CounterClockwise_Positive;
 
 			motorLeft.getConfigurator().apply(configs);
 		}
@@ -245,10 +239,18 @@ public class ClimberSubsystem extends SubsystemBase {
 				.withName("Jog Climber");
 	}
 
-	private void applyJogConfig() {
+	private TalonFXConfiguration baseConfig() {
 		TalonFXConfiguration config = new TalonFXConfiguration();
-		config.CurrentLimits.SupplyCurrentLimit = SUB_JOG_CURRENT_LIMIT.getAsDouble();
+		config.MotorOutput.Inverted = INVERTED ? InvertedValue.Clockwise_Positive
+				: InvertedValue.CounterClockwise_Positive;
+		config.CurrentLimits.SupplyCurrentLimit = CURRENT_LIMIT;
 		config.CurrentLimits.SupplyCurrentLimitEnable = true;
+		return config;
+	}
+
+	private void applyJogConfig() {
+		TalonFXConfiguration config = baseConfig();
+		config.CurrentLimits.SupplyCurrentLimit = SUB_JOG_CURRENT_LIMIT.getAsDouble();
 		config.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
 		config.SoftwareLimitSwitch.ForwardSoftLimitThreshold = JOG_SOFT_LIMIT_ROTATIONS;
 		config.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
@@ -257,9 +259,7 @@ public class ClimberSubsystem extends SubsystemBase {
 	}
 
 	private void disableJogSoftLimits() {
-		TalonFXConfiguration config = new TalonFXConfiguration();
-		config.CurrentLimits.SupplyCurrentLimit = CURRENT_LIMIT;
-		config.CurrentLimits.SupplyCurrentLimitEnable = true;
+		TalonFXConfiguration config = baseConfig();
 		config.SoftwareLimitSwitch.ForwardSoftLimitEnable = false;
 		config.SoftwareLimitSwitch.ReverseSoftLimitEnable = false;
 		motorLeft.getConfigurator().apply(config);
