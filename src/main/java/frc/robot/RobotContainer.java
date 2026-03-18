@@ -85,7 +85,7 @@ public class RobotContainer {
 			// Build auto chooser
 			autoChooser = new SendableChooser<>();
 			autoChooser.setDefaultOption("Score Front",
-					AutoPositions.frontHubAuto(repulsor));
+					AutoPositions.frontHubAndShoot(repulsor, teleopAutomation.shootCommand().repeatedly()));
 			autoChooser.addOption("Left Hide + Shoot",
 					AutoPositions.leftCornerHideAndShoot(repulsor, teleopAutomation.shootCommand().repeatedly()));
 			autoChooser.addOption("Right Hide + Shoot",

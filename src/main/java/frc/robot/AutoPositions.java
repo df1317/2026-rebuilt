@@ -44,6 +44,10 @@ public final class AutoPositions {
 	private static final double HUB_RADIUS = 0.9;
 	/** Hub radius + robot half-length in front of hub, facing the hub. */
 	public static final Pose2d HUB_FRONT = hubPose(0);
+	/** 1m further back from HUB_FRONT, rotated 180 (intake facing hub). */
+	public static final Pose2d HUB_FRONT_SHOOT = new Pose2d(
+			HUB_FRONT.getTranslation().minus(new Translation2d(1.0, HUB_FRONT.getRotation())),
+			HUB_FRONT.getRotation().rotateBy(Rotation2d.k180deg));
 
 	static final Pose2d CORNER_HIDE_NEAR_BALLS = new Pose2d(new Translation2d(0.749, 7.324),
 			Rotation2d.fromDegrees(0));
@@ -59,6 +63,14 @@ public final class AutoPositions {
 	public static Command frontHubAuto(Repulsor repulsor) {
 		return new AutoBuilder(repulsor)
 				.driveTo(HUB_FRONT)
+				.build();
+	}
+
+	/** Drive to hub front and shoot. */
+	public static Command frontHubAndShoot(Repulsor repulsor, Command shootCommand) {
+		return new AutoBuilder(repulsor)
+				.driveTo(HUB_FRONT_SHOOT)
+				.run(shootCommand)
 				.build();
 	}
 

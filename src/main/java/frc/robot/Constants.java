@@ -157,7 +157,7 @@ public final class Constants {
 	public static class ClimberConstants {
 		public static final int MOTOR_LEFT_ID = 29;
 
-		public static final boolean INVERTED = true;
+		public static final boolean INVERTED = false;
 		public static final int CURRENT_LIMIT = 20;
 
 		public static final Distance MAX_HEIGHT = Meters.of(1.23);

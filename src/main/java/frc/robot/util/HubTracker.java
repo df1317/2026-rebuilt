@@ -68,7 +68,7 @@ public class HubTracker {
 		DogLog.forceNt.log("Hub/StatusColor", getHubStatusColor().toHexString());
 		DogLog.forceNt.log("Hub/Status", getHubStatus().name());
 		DogLog.forceNt.log("Hub/Phase", currentPhase.name());
-		DogLog.forceNt.log("Hub/PhaseTimeRemaining", getPhaseRemainingTime());
+		DogLog.forceNt.log("Hub/PhaseTimeRemaining", Math.round(getPhaseRemainingTime() * 10.0) / 10.0);
 		DogLog.forceNt.log("Hub/CanScore", canScore());
 	}
 
