@@ -17,6 +17,7 @@ import frc.robot.repulsor.Repulsor;
 import frc.robot.subsystems.climber.ClimberSubsystem;
 import frc.robot.subsystems.hopper.HopperSubsystem;
 import frc.robot.subsystems.intake.IntakeSubsystem;
+import frc.robot.subsystems.intake.RollerSubsystem;
 import frc.robot.subsystems.shooter.ShooterSubsystem;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
 import frc.robot.util.FieldZones;
@@ -38,7 +39,8 @@ public class RobotContainer {
 			: null;
 	private final ClimberSubsystem climber = Constants.ENABLE_CLIMBER ? new ClimberSubsystem() : null;
 	private final ShooterSubsystem shooter = Constants.ENABLE_SHOOTER ? new ShooterSubsystem() : null;
-	private final IntakeSubsystem intake = Constants.ENABLE_INTAKE ? new IntakeSubsystem() : null;
+	private final RollerSubsystem roller = Constants.ENABLE_INTAKE ? new RollerSubsystem() : null;
+	private final IntakeSubsystem intake = Constants.ENABLE_INTAKE ? new IntakeSubsystem(roller) : null;
 	private final HopperSubsystem hopper = Constants.ENABLE_HOPPER ? new HopperSubsystem() : null;
 	private final BooleanSubscriber obstacleClampEnabled = DogLog.tunable("Drive/ObstacleClampEnabled", false);
 	private final SendableChooser<Command> autoChooser;
@@ -65,8 +67,8 @@ public class RobotContainer {
 			if (Constants.ENABLE_SHOOTER && shooter != null) {
 				shooter.setAutoDistanceSupplier(teleopAutomation::getTargetDistance);
 			}
-			if (Constants.ENABLE_INTAKE && intake != null) {
-				intake.setRobotSpeedSupplier(() -> {
+			if (Constants.ENABLE_INTAKE && roller != null) {
+				roller.setRobotSpeedSupplier(() -> {
 					var vel = drivebase.getFieldVelocity();
 					return Math.hypot(vel.vxMetersPerSecond, vel.vyMetersPerSecond);
 				});
@@ -145,14 +147,14 @@ public class RobotContainer {
 		}
 		if (Constants.ENABLE_INTAKE && intake != null) {
 			driverXbox.x().onTrue(intake.stowToggleCommand());
-			driverXbox.leftTrigger().whileTrue(intake.intakeCommand());
+			driverXbox.leftTrigger().whileTrue(roller.intakeCommand());
 		}
 
 		// ===== Teleop Panel Controls (Maypad — see docs for layout) =====
 		// Row 2 — Feed / Intake
-		if (Constants.ENABLE_INTAKE && intake != null) {
-			panel.key(2, 1).and(inTeleop).whileTrue(intake.runRollerCommand()); // intakeForward
-			panel.key(3, 1).and(inTeleop).whileTrue(intake.ejectCommand()); // intakeReverse
+		if (Constants.ENABLE_INTAKE && roller != null) {
+			panel.key(2, 1).and(inTeleop).whileTrue(roller.runRollerCommand()); // intakeForward
+			panel.key(3, 1).and(inTeleop).whileTrue(roller.ejectCommand()); // intakeReverse
 		}
 		if (Constants.ENABLE_HOPPER && hopper != null) {
 			panel.key(2, 2).and(inTeleop).whileTrue(hopper.feedCommand()); // hopperForward
@@ -180,7 +182,7 @@ public class RobotContainer {
 		// ===== Test Mode Controls (Maypad — see docs for layout) =====
 		// Row 0 — Climber / Intake
 		if (Constants.ENABLE_INTAKE && intake != null) {
-			panel.key(0, 0).and(inTest).onTrue(intake.homeCommand()); // intakeHome
+			panel.key(0, 0).onTrue(intake.homeCommand()); // intakeHome
 		}
 		if (Constants.ENABLE_CLIMBER && climber != null) {
 			panel.key(0, 1).and(inTest).onTrue(climber.zeroCommand());

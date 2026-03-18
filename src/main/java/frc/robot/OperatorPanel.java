@@ -13,11 +13,13 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
  *
  * <pre>
  *        Col 0               Col 1               Col 2               Col 3
- * Row 0  [ testFlywheel    ] [ testFeeder      ] [ spinUpShoot     ] [ stop          ]  Shooter
- * Row 1  [ homeHood        ] [ testHood        ] [ testFullMotor   ] [ ---           ]  Hood
- * Row 2  [ intakeExtend    ] [ intakeRetract   ] [ runRoller       ] [ eject         ]  Intake
- * Row 3  [ testHopper      ] [ feed            ] [ aimBangBang     ] [ aimPID        ]  Hopper/Aim
- * Row 4  [ homeClimber     ] [ climberExtend   ] [ climberRetract  ] [ zeroEncoder   ]  Climber
+ * Row 0  [ intakeHome*     ] [ climberZero(T)  ] [ climberUp(T)   ] [ climberDn(T)  ]
+ * Row 1  [ autoDistance    ] [ hoodHome*       ] [ hoodTest(T)    ] [ shootAll(T)   ]
+ * Row 2  [ distAdvance     ] [ intakeFwd       ] [ hopperFwd      ] [ shootFeed     ]
+ * Row 3  [ distReduce      ] [ intakeRev       ] [ hopperRev      ] [ feedRev       ]
+ * Row 4  [ climbBottom     ] [ climbTop        ] [ climbHang      ] [ climbRelease  ]
+ *
+ * * = works in both teleop and test    (T) = test mode only
  * </pre>
  */
 public class OperatorPanel extends CommandGenericHID {

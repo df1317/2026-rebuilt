@@ -10,7 +10,7 @@ Quick reference documentation for robot controls and configuration.
 
 ## Controls
 
-![kle](https://cdn.hackclub.com/019cf8f7-5145-7d66-aada-a83b4ff1a857/keyboard-layout.svg)
+![kle](https://cdn.hackclub.com/019cfe64-8d7d-76df-8109-625e5cd1f564/keyboard-layout.svg)
 
 ### Teleop
 
@@ -22,8 +22,8 @@ Quick reference documentation for robot controls and configuration.
 | `Right Stick X` | Drive rotate          | Controls robot rotation                                          |
 | `Button A`      | Zero gyro             | Resets gyro heading (once)                                       |
 | `Right Bumper`  | Toggle field relative | Switches between field and robot relative driving                |
-| `Button X`      | Toggle intake stow    | Extends/retracts intake (no roller)                              |
-| `Left Trigger`  | Intake (hold)         | Extends intake and runs roller                                   |
+| `Button X`      | Toggle intake stow    | Extends/retracts intake pivot (no roller)                        |
+| `Left Trigger`  | Intake roller (hold)  | Runs intake roller (speed scales with robot velocity)            |
 | `Right Trigger` | Fire (hold)           | Shoot + feed + aim — zone-aware, only fires in own alliance zone |
 
 ### Zone Automation (`TeleopZoneAutomation`)
@@ -44,7 +44,7 @@ Firmware: [df1317/maypad-frc](https://github.com/df1317/maypad-frc) — grab the
 
 |           | Col 0                    | Col 1                  | Col 2                  | Col 3                  |
 |-----------|--------------------------|------------------------|------------------------|------------------------|
-| **Row 0** | -                        | -                      | -                      | -                      |
+| **Row 0** | `intakeHome` (once)*     | -                      | -                      | -                      |
 | **Row 1** | `autoDistance` (once)    | `hoodHome` (once)*     | -                      | -                      |
 | **Row 2** | `distanceAdvance` (once) | `intakeForward` (hold) | `hopperForward` (hold) | `Shoot+Feed` (hold)    |
 | **Row 3** | `distanceReduce` (once)  | `intakeReverse` (hold) | `hopperReverse` (hold) | `feederReverse` (hold) |
@@ -53,7 +53,7 @@ Firmware: [df1317/maypad-frc](https://github.com/df1317/maypad-frc) — grab the
 | Key         | Action           | Notes                                                                    |
 |-------------|------------------|--------------------------------------------------------------------------|
 | **row 0**   |                  |                                                                          |
-| `key(0, 0)` | -                |                                                                          |
+| `key(0, 0)` | Home Intake*     | Homes pivot and zeroes encoder (works in teleop and test)                |
 | `key(0, 1)` | -                |                                                                          |
 | `key(0, 2)` | -                |                                                                          |
 | `key(0, 3)` | -                |                                                                          |
@@ -85,18 +85,18 @@ Glass under the `Tunable/` table. The xbox controls are inherited in this mode.
 
 #### Maypad (Operator Panel) [`Port 1`]
 
-|           | Col 0               | Col 1                | Col 2               | Col 3                |
-|-----------|---------------------|----------------------|---------------------|----------------------|
-| **Row 0** | `intakeHome` (once) | `climberZero` (once) | `climberUp` (hold)  | `climberDown` (hold) |
-| **Row 1** | `aimTest` (hold)    | `hoodHome` (once)    | `hoodTest` (hold)   | `shootAll` (hold)    |
-| **Row 2** | -                   | -                    | -                   | `shooterTest` (hold) |
-| **Row 3** | -                   | `intakeTest` (hold)  | `hopperTest` (hold) | `feederTest` (hold)  |
-| **Row 4** | -                   | -                    | -                   | -                    |
+|           | Col 0                | Col 1                | Col 2               | Col 3                |
+|-----------|----------------------|----------------------|---------------------|----------------------|
+| **Row 0** | `intakeHome` (once)* | `climberZero` (once) | `climberUp` (hold)  | `climberDown` (hold) |
+| **Row 1** | `aimTest` (hold)     | `hoodHome` (once)    | `hoodTest` (hold)   | `shootAll` (hold)    |
+| **Row 2** | -                    | -                    | -                   | `shooterTest` (hold) |
+| **Row 3** | -                    | `intakeTest` (hold)  | `hopperTest` (hold) | `feederTest` (hold)  |
+| **Row 4** | -                    | -                    | -                   | -                    |
 
 | Key         | Action                | Notes                                                                                                                       |
 |-------------|-----------------------|-----------------------------------------------------------------------------------------------------------------------------|
 | **row 0**   |                       |                                                                                                                             |
-| `key(0, 0)` | Home Intake           | Drives pivot to extended hard stop and zeroes encoder                                                                       |
+| `key(0, 0)` | Home Intake*          | Drives pivot to extended hard stop and zeroes encoder (works in teleop and test)                                            |
 | `key(0, 1)` | Zero Climber          | Zeroes the climber encoders                                                                                                 |
 | `key(0, 2)` | Climber Jog Up        | Jogs climber up with position control and low current limit                                                                 |
 | `key(0, 3)` | Climber Jog Down      | Jogs climber down with position control and low current limit                                                               |
@@ -142,7 +142,7 @@ Glass under the `Tunable/` table. The xbox controls are inherited in this mode.
 | CanCoder       | Back Left   | `23` |
 |                |             |      |
 | Shooter Hood   | Motor       | `24` |
-| Intake Pivot   | Motor       | `25` |
+| Intake Pivot   | Motor       | `25` | 
 | Hopper         | Motor       | `26` |
 | Shooter Feeder | Motor       | `28` |
 | Climber        | Left Motor  | `29` |
@@ -180,22 +180,31 @@ Use [`editor.keyboard-tools.xyz`](https://editor.keyboard-tools.xyz/)
   ],
   [
     {
+      "c": "#9c27b0",
+      "t": "#ffffff",
+      "f": 3,
+      "a": 7
+    },
+    "Home Intake",
+    {
       "c": "#cccccc",
       "t": "#666666",
-      "a": 0,
-      "f": 3
+      "a": 0
     },
-    "",
     "",
     "",
     "",
     {
       "x": 0.5,
-      "c": "#ff9800",
-      "t": "#333333",
+      "c": "#9c27b0",
+      "t": "#ffffff",
       "a": 7
     },
     "Home Intake",
+    {
+      "c": "#ff9800",
+      "t": "#333333"
+    },
     "Climb Zero",
     "Climb Up",
     "Climb Down"
