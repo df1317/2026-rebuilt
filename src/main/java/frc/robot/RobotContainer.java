@@ -3,7 +3,6 @@ package frc.robot;
 import dev.doglog.DogLog;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.networktables.BooleanSubscriber;
-import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -15,26 +14,22 @@ import frc.robot.Constants.DrivebaseConstants;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.commands.TeleopZoneAutomation;
 import frc.robot.repulsor.Repulsor;
-import frc.robot.repulsor.Setpoints.SetpointContext;
-import frc.robot.repulsor.Setpoints.Specific._Rebuilt2026;
 import frc.robot.subsystems.climber.ClimberSubsystem;
 import frc.robot.subsystems.hopper.HopperSubsystem;
 import frc.robot.subsystems.intake.IntakeSubsystem;
+import frc.robot.subsystems.intake.RollerSubsystem;
 import frc.robot.subsystems.shooter.ShooterSubsystem;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
 import frc.robot.util.FieldZones;
 import swervelib.SwerveInputStream;
 
 import java.io.File;
+import java.util.Set;
 import java.util.function.Supplier;
 
-import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.RPM;
 
 public class RobotContainer {
-
-	private final DoubleSubscriber tuneHoodPercent = DogLog.tunable("Shooter/TuneHoodPercent", 0.0);
-	private final DoubleSubscriber tuneShooterRPM = DogLog.tunable("Shooter/TuneRPM", 3000.0);
 
 	// HID
 	private final CommandXboxController driverXbox = new CommandXboxController(0);
@@ -45,10 +40,12 @@ public class RobotContainer {
 			: null;
 	private final ClimberSubsystem climber = Constants.ENABLE_CLIMBER ? new ClimberSubsystem() : null;
 	private final ShooterSubsystem shooter = Constants.ENABLE_SHOOTER ? new ShooterSubsystem() : null;
-	private final IntakeSubsystem intake = Constants.ENABLE_INTAKE ? new IntakeSubsystem() : null;
+	private final RollerSubsystem roller = Constants.ENABLE_INTAKE ? new RollerSubsystem() : null;
+	private final IntakeSubsystem intake = Constants.ENABLE_INTAKE ? new IntakeSubsystem(roller) : null;
 	private final HopperSubsystem hopper = Constants.ENABLE_HOPPER ? new HopperSubsystem() : null;
 	private final BooleanSubscriber obstacleClampEnabled = DogLog.tunable("Drive/ObstacleClampEnabled", false);
 	private final SendableChooser<Command> autoChooser;
+	private final AutoChain autoChain;
 	// Repulsor
 	private final Repulsor repulsor;
 	private final SwerveInputStream driveAngularVelocity;
@@ -71,6 +68,12 @@ public class RobotContainer {
 			if (Constants.ENABLE_SHOOTER && shooter != null) {
 				shooter.setAutoDistanceSupplier(teleopAutomation::getTargetDistance);
 			}
+			if (Constants.ENABLE_INTAKE && roller != null) {
+				roller.setRobotSpeedSupplier(() -> {
+					var vel = drivebase.getFieldVelocity();
+					return Math.hypot(vel.vxMetersPerSecond, vel.vyMetersPerSecond);
+				});
+			}
 
 			driveAngularVelocity = SwerveInputStream
 					.of(drivebase.getSwerveDrive(), () -> driverXbox.getLeftY() * -1,
@@ -82,21 +85,28 @@ public class RobotContainer {
 
 			// Build auto chooser
 			autoChooser = new SendableChooser<>();
-			autoChooser.setDefaultOption("Score Front + Cycle",
-					buildScoreCycleAuto(_Rebuilt2026.HUB_SCORE_FRONT));
-			autoChooser.addOption("Score Front-Left + Cycle",
-					buildScoreCycleAuto(_Rebuilt2026.HUB_SCORE_FRONT_LEFT));
-			autoChooser.addOption("Score Front-Right + Cycle",
-					buildScoreCycleAuto(_Rebuilt2026.HUB_SCORE_FRONT_RIGHT));
-			autoChooser.addOption("Score Rear-Left + Cycle",
-					buildScoreCycleAuto(_Rebuilt2026.HUB_SCORE_REAR_LEFT));
-			autoChooser.addOption("Score Rear-Right + Cycle",
-					buildScoreCycleAuto(_Rebuilt2026.HUB_SCORE_REAR_RIGHT));
-			autoChooser.addOption("Score + Climb Left",
-					buildScoreAndClimbAuto(_Rebuilt2026.CLIMB_LEFT));
-			autoChooser.addOption("Score + Climb Right",
-					buildScoreAndClimbAuto(_Rebuilt2026.CLIMB_RIGHT));
-			autoChooser.addOption("Defence Only", buildDefenceOnlyAuto());
+			autoChooser.setDefaultOption("Score Front",
+					Commands.defer(() -> AutoPositions.frontHubAndShoot(repulsor, teleopAutomation.shootCommand().repeatedly()), Set.of(drivebase)));
+			autoChooser.addOption("Left Hide + Shoot",
+					Commands.defer(() -> AutoPositions.leftCornerHideAndShoot(repulsor, teleopAutomation.shootCommand().repeatedly()), Set.of(drivebase)));
+			autoChooser.addOption("Right Hide + Shoot",
+					Commands.defer(() -> AutoPositions.rightCornerHideAndShoot(repulsor, teleopAutomation.shootCommand().repeatedly()), Set.of(drivebase)));
+			autoChooser.addOption("Go to center",
+					Commands.defer(() -> AutoPositions.centerFieldAuto(repulsor), Set.of(drivebase)));
+			autoChooser.addOption("Just Shoot",
+					Commands.defer(() -> teleopAutomation.shootCommand().repeatedly(), Set.of(drivebase)));
+			autoChooser.addOption("Collect + Shoot x1",
+					Commands.defer(() -> AutoPositions.collectAndShoot1(repulsor, teleopAutomation.shootCommand()), Set.of(drivebase)));
+			autoChooser.addOption("Collect + Shoot x2",
+					Commands.defer(() -> AutoPositions.collectAndShoot2(repulsor, teleopAutomation.shootCommand()), Set.of(drivebase)));
+			if (Constants.ENABLE_CLIMBER && climber != null) {
+				autoChooser.addOption("Climb Left",
+						Commands.defer(() -> AutoPositions.climbAuto(repulsor, climber, AutoPositions.CLIMB_LEFT, AutoPositions.CLIMB_LEFT_ENGAGE), Set.of(drivebase)));
+				autoChooser.addOption("Climb Right",
+						Commands.defer(() -> AutoPositions.climbAuto(repulsor, climber, AutoPositions.CLIMB_RIGHT, AutoPositions.CLIMB_RIGHT_ENGAGE), Set.of(drivebase)));
+			}
+			autoChain = new AutoChain(repulsor, teleopAutomation, climber);
+			autoChooser.addOption("Custom Chain", Commands.defer(() -> autoChain.asCommand(), Set.of(drivebase)));
 			autoChooser.addOption("Do Nothing", Commands.none());
 			SmartDashboard.putData("misc/Auto Chooser", autoChooser);
 		}
@@ -104,6 +114,8 @@ public class RobotContainer {
 		configureBindings();
 		DriverStation.silenceJoystickConnectionWarning(true);
 	}
+
+	// ===== Auto Routines =====
 
 	private void configureBindings() {
 		var inTeleop = new edu.wpi.first.wpilibj2.command.button.Trigger(DriverStation::isTeleop);
@@ -137,14 +149,15 @@ public class RobotContainer {
 		}
 		if (Constants.ENABLE_INTAKE && intake != null) {
 			driverXbox.x().onTrue(intake.stowToggleCommand());
-			driverXbox.leftTrigger().whileTrue(intake.intakeCommand());
+			driverXbox.leftTrigger().and(inTeleop).whileTrue(roller.intakeCommand());
+			driverXbox.leftTrigger().and(inTeleop).whileTrue(intake.holdExtendedCommand());
 		}
 
 		// ===== Teleop Panel Controls (Maypad — see docs for layout) =====
 		// Row 2 — Feed / Intake
-		if (Constants.ENABLE_INTAKE && intake != null) {
-			panel.key(2, 1).and(inTeleop).whileTrue(intake.runRollerCommand()); // intakeForward
-			panel.key(3, 1).and(inTeleop).whileTrue(intake.ejectCommand()); // intakeReverse
+		if (Constants.ENABLE_INTAKE && roller != null) {
+			panel.key(2, 1).and(inTeleop).whileTrue(roller.runRollerCommand()); // intakeForward
+			panel.key(3, 1).and(inTeleop).whileTrue(roller.ejectCommand()); // intakeReverse
 		}
 		if (Constants.ENABLE_HOPPER && hopper != null) {
 			panel.key(2, 2).and(inTeleop).whileTrue(hopper.feedCommand()); // hopperForward
@@ -170,9 +183,11 @@ public class RobotContainer {
 		}
 
 		// ===== Test Mode Controls (Maypad — see docs for layout) =====
-		// Row 0 — Climber
+		// Row 0 — Climber / Intake
+		if (Constants.ENABLE_INTAKE && intake != null) {
+			panel.key(0, 0).onTrue(intake.homeCommand()); // intakeHome
+		}
 		if (Constants.ENABLE_CLIMBER && climber != null) {
-			panel.key(0, 0).and(inTest).onTrue(climber.homeClimberCommand());
 			panel.key(0, 1).and(inTest).onTrue(climber.zeroCommand());
 			panel.key(0, 2).and(inTest).whileTrue(climber.jogVoltageCommand(() -> 1.0)); // climberUp
 			panel.key(0, 3).and(inTest).whileTrue(climber.jogVoltageCommand(() -> -1.0)); // climberDown
@@ -181,70 +196,36 @@ public class RobotContainer {
 		if (Constants.ENABLE_SHOOTER && shooter != null) {
 			panel.key(1, 1).onTrue(shooter.homeHoodCommand());
 			panel.key(1, 2).and(inTest).whileTrue(shooter.testHoodCommand());
-			panel.key(1, 3).and(inTest).whileTrue(
-					shooter.tune(tuneShooterRPM::get, tuneShooterRPM::get, tuneHoodPercent::get)
-							.finallyDo(shooter::stop));
+			panel.key(1, 3).and(inTest).whileTrue(shooter.testShooterMotorCommand());
 		}
 		if (Constants.ENABLE_SWERVE && drivebase != null) {
 			Supplier<Pose2d> hubPose = () -> FieldZones.getHubPose(
 					DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue));
 			panel.key(1, 0).and(inTest).whileTrue(drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY, hubPose));
 		}
-		// Row 2 — Shoot all
-		if (Constants.ENABLE_SHOOTER && shooter != null && Constants.ENABLE_HOPPER && hopper != null) {
-			panel.key(2, 3).and(inTest).whileTrue(
-					shooter.spinUpAndWaitCommand(shooter::getShooterTestRPM, shooter::getFeederTestRPM)
-							.andThen(hopper.setHopperVelocityCommand(hopper::getHopperTestRPM))
-							.finallyDo(() -> {
-								shooter.stop();
-								hopper.setHopperVelocity(RPM.of(0));
-							}));
-		}
 		// Row 3 — Individual subsystem tests
 		if (Constants.ENABLE_SHOOTER && shooter != null) {
-			panel.key(3, 0).and(inTest).whileTrue(shooter.testShooterMotorCommand());
-			panel.key(3, 1).and(inTest).whileTrue(shooter.testFeederCommand());
+			panel.key(2, 3).and(inTest).whileTrue(
+					Commands.parallel(
+							Commands.runOnce(() -> shooter.setTestHoodPercent()),
+							shooter.spinUpAndWaitCommand(shooter::getShooterTestRPM, shooter::getFeederTestRPM))
+							.andThen(Constants.ENABLE_HOPPER && hopper != null
+									? hopper.setHopperVelocityCommand(hopper::getHopperTestRPM)
+									: Commands.none())
+							.finallyDo(() -> {
+								shooter.stop();
+								if (Constants.ENABLE_HOPPER && hopper != null) {
+									hopper.setHopperVelocity(RPM.of(0));
+								}
+							}));
+			panel.key(3, 3).and(inTest).whileTrue(shooter.testFeederCommand());
 		}
 		if (Constants.ENABLE_HOPPER && hopper != null) {
 			panel.key(3, 2).and(inTest).whileTrue(hopper.testHopperCommand());
 		}
 		if (Constants.ENABLE_INTAKE && intake != null) {
-			panel.key(3, 3).and(inTest).whileTrue(intake.testPivotCommand());
+			panel.key(3, 1).and(inTest).whileTrue(intake.testPivotCommand());
 		}
-	}
-
-	// ===== Auto Routines =====
-
-	private Command buildScoreCycleAuto(frc.robot.repulsor.Setpoints.GameSetpoint scoreSetpoint) {
-		return Commands.sequence(
-				// Score preloaded piece
-				repulsor.navigateTo(() -> scoreSetpoint.poseForCurrentAlliance(SetpointContext.EMPTY))
-						.until(repulsor.within(Meters.of(0.15))),
-				Commands.waitSeconds(0.5),
-				// Collect
-				repulsor.navigateTo(
-						() -> _Rebuilt2026.CENTER_COLLECT.poseForCurrentAlliance(SetpointContext.EMPTY))
-						.until(repulsor.within(Meters.of(0.15))),
-				Commands.waitSeconds(1.0),
-				// Score again
-				repulsor.navigateTo(() -> scoreSetpoint.poseForCurrentAlliance(SetpointContext.EMPTY))
-						.until(repulsor.within(Meters.of(0.15))),
-				Commands.waitSeconds(0.5));
-	}
-
-	private Command buildScoreAndClimbAuto(frc.robot.repulsor.Setpoints.GameSetpoint climbSetpoint) {
-		return Commands.sequence(
-				repulsor.navigateTo(
-						() -> _Rebuilt2026.HUB_SCORE_FRONT.poseForCurrentAlliance(SetpointContext.EMPTY))
-						.until(repulsor.within(Meters.of(0.15))),
-				Commands.waitSeconds(1.0),
-				repulsor.navigateTo(
-						() -> climbSetpoint.poseForCurrentAlliance(SetpointContext.EMPTY)));
-	}
-
-	private Command buildDefenceOnlyAuto() {
-		return repulsor.navigateTo(
-				() -> _Rebuilt2026.CENTER_COLLECT.poseForCurrentAlliance(SetpointContext.EMPTY));
 	}
 
 	public Command getAutonomousCommand() {

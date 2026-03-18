@@ -16,9 +16,6 @@ public class HubTracker {
 	private static final double BUFFER_TIME = 3.0;
 
 	private static final Timer phaseTimer = new Timer();
-	private static final Color COLOR_RED = new Color(255, 0, 0);
-	private static final Color COLOR_YELLOW = new Color(255, 255, 0);
-	private static final Color COLOR_GREEN = new Color(0, 255, 0);
 
 	private static MatchPhase currentPhase = MatchPhase.UNKNOWN;
 	private static MatchPhase previousPhase = MatchPhase.UNKNOWN;
@@ -71,21 +68,21 @@ public class HubTracker {
 		DogLog.forceNt.log("Hub/StatusColor", getHubStatusColor().toHexString());
 		DogLog.forceNt.log("Hub/Status", getHubStatus().name());
 		DogLog.forceNt.log("Hub/Phase", currentPhase.name());
-		DogLog.forceNt.log("Hub/PhaseTimeRemaining", getPhaseRemainingTime());
+		DogLog.forceNt.log("Hub/PhaseTimeRemaining", Math.round(getPhaseRemainingTime() * 10.0) / 10.0);
 		DogLog.forceNt.log("Hub/CanScore", canScore());
 	}
 
 	public static boolean canScore() {
 		if (ourAlliance == null)
 			return false;
-		return canScoreInPhase(currentPhase, phaseTimer.get(), ourAlliance == autoWinner);
+		return canScoreInPhase(currentPhase, getPhaseElapsedTime(), ourAlliance == autoWinner);
 	}
 
 	/** True if scoring is allowed now or will be within BUFFER_TIME seconds. */
 	public static boolean canScoreBuffered() {
 		if (canScore())
 			return true;
-		return willBeAbleToScoreAt(phaseTimer.get() + BUFFER_TIME);
+		return willBeAbleToScoreAt(getPhaseElapsedTime() + BUFFER_TIME);
 	}
 
 	private static boolean willBeAbleToScoreAt(double futurePhaseTime) {
@@ -131,9 +128,9 @@ public class HubTracker {
 
 	public static Color getHubStatusColor() {
 		return switch (getHubStatus()) {
-			case ACTIVE -> COLOR_GREEN;
-			case BUFFERED -> COLOR_YELLOW;
-			case NOT_AVAILABLE -> COLOR_RED;
+			case ACTIVE -> RobotLog.GREEN;
+			case BUFFERED -> RobotLog.YELLOW;
+			case NOT_AVAILABLE -> RobotLog.RED;
 		};
 	}
 
@@ -142,11 +139,25 @@ public class HubTracker {
 	}
 
 	public static double getPhaseElapsedTime() {
-		return phaseTimer.get();
+		double matchTime = DriverStation.getMatchTime();
+		if (matchTime < 0) {
+			return 0;
+		}
+		if (currentPhase == MatchPhase.AUTO) {
+			return currentPhase.getDuration() - matchTime;
+		}
+		return Math.max(0, currentPhase.getStartTime() - matchTime);
 	}
 
 	public static double getPhaseRemainingTime() {
-		return Math.max(0, currentPhase.getDuration() - phaseTimer.get());
+		double matchTime = DriverStation.getMatchTime();
+		if (matchTime < 0) {
+			return currentPhase.getDuration();
+		}
+		if (currentPhase == MatchPhase.AUTO) {
+			return Math.max(0, matchTime);
+		}
+		return Math.max(0, matchTime - currentPhase.getEndTime());
 	}
 
 	public static Alliance getAutoWinner() {

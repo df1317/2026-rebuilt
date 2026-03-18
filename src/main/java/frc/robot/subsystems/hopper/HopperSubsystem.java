@@ -102,6 +102,7 @@ public class HopperSubsystem extends SubsystemBase {
 	// ==================== Control Methods ====================
 
 	public void setHopperVelocity(AngularVelocity velocity) {
+		targetHopperVelocity = velocity;
 		hopperController.setSetpoint(velocity.in(RPM), ControlType.kVelocity);
 	}
 

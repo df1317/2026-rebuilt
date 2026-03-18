@@ -21,6 +21,7 @@ package frc.robot.repulsor;
 
 import static edu.wpi.first.units.Units.Meters;
 
+import dev.doglog.DogLog;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
@@ -28,6 +29,7 @@ import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -46,11 +48,15 @@ import frc.robot.repulsor.Tuning.DriveTuningHeat;
 
 public class Repulsor {
 
+	private static final int TRAJ_MAX_STEPS = 30;
+	private static final double TRAJ_STEP_SIZE = 0.15; // meters
+
 	private double robot_x;
 	private double robot_y;
 
 	private FieldPlanner m_planner;
 	private DriveRepulsor m_drive;
+	private final DriveTuningHeat m_driveTuning;
 
 	private RepulsorSetpoint m_currentGoal;
 
@@ -69,7 +75,24 @@ public class Repulsor {
 		this.robot_x = robot_x;
 		this.robot_y = robot_y;
 
-		m_planner = new FieldPlanner(new Rebuilt2026(), new DriveTuningHeat(() -> m_drive.getPose()));
+		m_driveTuning = new DriveTuningHeat(() -> m_drive.getPose());
+		m_planner = new FieldPlanner(new Rebuilt2026(), m_driveTuning);
+	}
+
+	public void setAutoSpeedScale(double scale) {
+		m_driveTuning.setSpeedScale(scale);
+	}
+
+	public void resetSpeedScale() {
+		m_driveTuning.resetSpeedScale();
+	}
+
+	public void setHeadingBlendDist(double meters) {
+		m_planner.setHeadingBlendDist(meters);
+	}
+
+	public void resetHeadingBlendDist() {
+		m_planner.resetHeadingBlendDist();
 	}
 
 	public Repulsor withFallback(PlannerFallback fallback) {
@@ -130,16 +153,49 @@ public class Repulsor {
 							robot_x,
 							robot_y,
 							CategorySpec.kScore,
-							false,
-							0.0);
+							false);
 
-					m_drive.runVelocity(
-							sample.asChassisSpeeds(m_drive.getOmegaPID(), robotPose.getRotation()));
+					ChassisSpeeds commanded = sample.asChassisSpeeds(m_drive.getOmegaPID(), robotPose.getRotation());
+					m_drive.runVelocity(commanded);
+
+					// Log target, error, commanded speeds, and trajectory preview
+					DogLog.forceNt.log("Repulsor/Target", goalPose);
+					DogLog.forceNt.log("Repulsor/Trajectory", simulateTrajectory(robotPose, goalPose.getTranslation()));
+					DogLog.log("Repulsor/Error", robotPose.getTranslation().getDistance(goalPose.getTranslation()));
+					DogLog.log("Repulsor/CommandedVx", commanded.vxMetersPerSecond);
+					DogLog.log("Repulsor/CommandedVy", commanded.vyMetersPerSecond);
+					DogLog.log("Repulsor/CommandedOmega", commanded.omegaRadiansPerSecond);
 				},
 				m_drive.asSubsystem())
-				.finallyDo(interrupted -> m_drive.runVelocity(new ChassisSpeeds()));
+				.finallyDo(interrupted -> {
+					m_drive.lock();
+					DogLog.forceNt.log("Repulsor/Target", new Pose2d());
+					DogLog.forceNt.log("Repulsor/Trajectory", new Pose2d[] {});
+				});
 
 		return cmd;
+	}
+
+	private Pose2d[] simulateTrajectory(Pose2d robotPose, Translation2d goal) {
+		ArrayList<Pose2d> trajectory = new ArrayList<>(TRAJ_MAX_STEPS + 1);
+		Translation2d pos = robotPose.getTranslation();
+		trajectory.add(robotPose);
+
+		for (int i = 0; i < TRAJ_MAX_STEPS; i++) {
+			if (pos.getDistance(goal) < 0.1)
+				break;
+
+			Force force = m_planner.getGoalForce(pos, goal)
+					.plus(m_planner.getObstacleForce(pos, goal))
+					.plus(m_planner.getWallForce(pos, goal));
+			if (force.getNorm() < 1e-6)
+				break;
+
+			pos = pos.plus(new Translation2d(TRAJ_STEP_SIZE, force.getAngle()));
+			trajectory.add(new Pose2d(pos, force.getAngle()));
+		}
+
+		return trajectory.toArray(Pose2d[]::new);
 	}
 
 	// ===== Clamp Drive Speed =====

@@ -28,11 +28,10 @@ public record SetpointContext(
     Optional<Pose2d> robotPose,
     double robotLengthMeters,
     double robotWidthMeters,
-    double shooterReleaseHeightMeters,
     List<? extends Obstacle> dynamicObstacles) {
 
   public static final SetpointContext EMPTY =
-      new SetpointContext(Optional.empty(), 0.0, 0.0, 0.0, List.of());
+      new SetpointContext(Optional.empty(), 0.0, 0.0, List.of());
 
   public SetpointContext {
     robotPose = robotPose == null ? Optional.empty() : robotPose;

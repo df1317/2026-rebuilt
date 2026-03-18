@@ -56,8 +56,9 @@ public class TeleopZoneAutomation {
 		if (shooter == null || hopper == null)
 			return Commands.none();
 		return Commands.parallel(
-				shooter.shootForDistanceCommand(() -> Meters.of(shooter.getActiveDistanceM())),
-				Commands.waitUntil(shooter::isAtSpeed).andThen(hopper.feedCommand()));
+				shooter.spinUpReverseFeederThenShootCommand(() -> Meters.of(shooter.getActiveDistanceM())),
+				hopper.reverseCommand().until(shooter::isAtSpeed)
+						.andThen(hopper.feedCommand()));
 	}
 
 	public Command shootCommand(BooleanSupplier aimed) {
@@ -84,6 +85,9 @@ public class TeleopZoneAutomation {
 		Translation2d pos = robotPose.get().getTranslation();
 		Translation2d target = getShootingPose().getTranslation();
 		double distance = pos.getDistance(target);
+		if (shooter == null) {
+			return Meters.of(distance);
+		}
 		double tof = distance / shooter.getHorizontalBallSpeedMPS(Meters.of(distance));
 		ChassisSpeeds vel = fieldVelocity.get();
 		Translation2d predictedPos = new Translation2d(
@@ -100,6 +104,9 @@ public class TeleopZoneAutomation {
 		Translation2d pos = robotPose.get().getTranslation();
 		Translation2d target = getShootingPose().getTranslation();
 		double distance = pos.getDistance(target);
+		if (shooter == null) {
+			return new Pose2d(target, new Rotation2d());
+		}
 		double tof = distance / shooter.getHorizontalBallSpeedMPS(Meters.of(distance));
 		ChassisSpeeds vel = fieldVelocity.get();
 		// Shift the aim target opposite to robot motion so the robot leads the shot

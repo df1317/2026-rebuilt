@@ -42,9 +42,6 @@ public class ClimberTelemetry {
 		DogLog.log("Climber/MotorCurrentAmps", climber.motorLeft.getStatorCurrent().getValueAsDouble());
 		DogLog.log("Climber/MotorVoltage", climber.motorLeft.getMotorVoltage().getValueAsDouble());
 
-		DogLog.log("Climber/isStalled", climber.isStalled);
-		DogLog.forceNt.log("Climber/IsHomed", climber.isHomed);
-		DogLog.log("Climber/IsHoming", climber.isHoming);
 	}
 
 	private String getNamedPosition(double goalMeters) {

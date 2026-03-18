@@ -39,13 +39,15 @@ import static frc.robot.Constants.ShooterConstants.*;
  */
 public class ShooterSubsystem extends SubsystemBase {
 
+	private static final double DISTANCE_STEP_M = 0.5;
+	private static final double DISTANCE_MIN_M = 1.0;
+	private static final double DISTANCE_MAX_M = 5.0;
 	// ==================== Hardware (package-private for telemetry) ====================
 	final TalonFX motor;
 	final SparkMax feeder;
 	final SparkMax hood;
 	final RelativeEncoder feederEncoder;
 	final RelativeEncoder hoodEncoder;
-
 	private final SparkClosedLoopController feedController;
 	private final SparkClosedLoopController hoodController;
 	private final Debouncer atSpeedDebouncer;
@@ -60,7 +62,6 @@ public class ShooterSubsystem extends SubsystemBase {
 	private final DoubleSubscriber testShooterRPM = DogLog.tunable("Shooter/RPM", 3000.0, RPM);
 	private final DoubleSubscriber testFeederRPM = DogLog.tunable("Shooter/Feeder/RPM", 3000.0, RPM);
 	private final DoubleSubscriber testHoodPercent = DogLog.tunable("Shooter/Hood/Percent", 0.5);
-
 	// Shooter PID tunables (TalonFX)
 	private final DoubleSubscriber tuneShooterKP = DogLog.tunable("Shooter/Shooter/kP", SHOOTER_KP);
 	private final DoubleSubscriber tuneShooterKI = DogLog.tunable("Shooter/Shooter/kI", SHOOTER_KI);
@@ -83,11 +84,14 @@ public class ShooterSubsystem extends SubsystemBase {
 	AngularVelocity targetVelocity = RPM.of(0);
 	Angle targetHoodAngle = Degrees.of(0);
 	double hoodMaxDeg = Double.NaN;
+	boolean manualDistanceEnabled = false;
 	private double prevShooterKP = SHOOTER_KP, prevShooterKI = SHOOTER_KI, prevShooterKD = SHOOTER_KD,
 			prevShooterKV = SHOOTER_KV, prevShooterKS = SHOOTER_KS;
 	private double prevFeederKP = FEEDER_KP, prevFeederKI = FEEDER_KI, prevFeederKD = FEEDER_KD,
 			prevFeederKV = FEEDER_KV;
 	private double prevHoodKP = HOOD_KP, prevHoodKI = HOOD_KI, prevHoodKD = HOOD_KD;
+	private double manualDistanceM = 1.0;
+	private Supplier<Distance> autoDistanceSupplier = () -> Meters.of(0);
 
 	public ShooterSubsystem() {
 		feeder = new SparkMax(ShooterConstants.FEEDER_ID, MotorType.kBrushless);
@@ -153,6 +157,8 @@ public class ShooterSubsystem extends SubsystemBase {
 
 		hood.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
 	}
+
+	// ==================== State Queries ====================
 
 	private void populateLookupTable() {
 		// Distance (m) -> Flywheel RPM
@@ -250,8 +256,6 @@ public class ShooterSubsystem extends SubsystemBase {
 		hood.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
 	}
 
-	// ==================== State Queries ====================
-
 	public boolean isAtSpeed() {
 		double error = Math.abs(targetVelocity.in(RPM) - (motor.getVelocity().getValueAsDouble() * 60));
 		boolean withinTolerance = error < ShooterConstants.VELOCITY_TOLERANCE.in(RPM) && targetVelocity.in(RPM) > 0;
@@ -263,6 +267,8 @@ public class ShooterSubsystem extends SubsystemBase {
 		boolean withinTolerance = error < ShooterConstants.VELOCITY_TOLERANCE.in(RPM) && targetFeederVelocity.in(RPM) > 0;
 		return atFeederSpeedDebouncer.calculate(withinTolerance);
 	}
+
+	// ==================== Control Methods ====================
 
 	public boolean isHoodAtPosition() {
 		return Math.abs(hoodEncoder.getPosition() - targetHoodAngle.in(Degrees)) < HOOD_TOLERANCE.in(Degrees);
@@ -295,8 +301,6 @@ public class ShooterSubsystem extends SubsystemBase {
 	public AngularVelocity getTargetFeederVelocity() {
 		return targetFeederVelocity;
 	}
-
-	// ==================== Control Methods ====================
 
 	public double getHoodPercentForDistance(Distance distance) {
 		double clampedDistance = Math.max(1.0, Math.min(6.0, distance.in(Meters)));
@@ -331,6 +335,8 @@ public class ShooterSubsystem extends SubsystemBase {
 		feedController.setSetpoint(velocity.in(RPM), ControlType.kVelocity);
 	}
 
+	// ==================== Commands ====================
+
 	public void setHoodAngle(Angle angle) {
 		targetHoodAngle = angle;
 		hoodController.setSetpoint(angle.in(Degrees), ControlType.kPosition);
@@ -341,6 +347,11 @@ public class ShooterSubsystem extends SubsystemBase {
 		if (Double.isNaN(hoodMaxDeg))
 			return; // not homed yet
 		setHoodAngle(Degrees.of(percent * hoodMaxDeg));
+	}
+
+	public void setTestHoodPercent() {
+		setHoodAngle(Degrees.of(testHoodPercent.get() * hoodMaxDeg));
+
 	}
 
 	/** Returns the current target hood position as a fraction of its full range (0.0–1.0). */
@@ -360,11 +371,11 @@ public class ShooterSubsystem extends SubsystemBase {
 		hoodController.setSetpoint(currentAngle, ControlType.kPosition);
 	}
 
-	// ==================== Commands ====================
-
 	public Command spinUpCommand(Supplier<AngularVelocity> velocity) {
 		return Commands.runOnce(() -> setVelocity(velocity.get()), this);
 	}
+
+	// ==================== Manual Distance Override ====================
 
 	public Command spinUpFeederCommand(Supplier<AngularVelocity> velocity) {
 		return Commands.runOnce(() -> setFeederVelocity(velocity.get()), this);
@@ -394,14 +405,15 @@ public class ShooterSubsystem extends SubsystemBase {
 		return Commands.run(() -> setForDistance(distance), this).finallyDo(this::stop);
 	}
 
-	// ==================== Manual Distance Override ====================
-
-	private double manualDistanceM = 1.0;
-	boolean manualDistanceEnabled = false;
-	private Supplier<Distance> autoDistanceSupplier = () -> Meters.of(0);
-	private static final double DISTANCE_STEP_M = 0.5;
-	private static final double DISTANCE_MIN_M = 1.0;
-	private static final double DISTANCE_MAX_M = 5.0;
+	public Command spinUpReverseFeederThenShootCommand(Supplier<Distance> distance) {
+		return Commands.run(() -> {
+			setVelocity(getRPMForDistance(distance.get()));
+			setFeederVelocity(RPM.of(-FEEDER_RPM));
+			setHoodPercent(getHoodPercentForDistance(distance.get()));
+		}, this).until(this::isAtSpeed)
+				.andThen(Commands.run(() -> setForDistance(distance), this))
+				.finallyDo(this::stop);
+	}
 
 	public void setAutoDistanceSupplier(Supplier<Distance> supplier) {
 		autoDistanceSupplier = supplier;

@@ -12,7 +12,7 @@ public final class Constants {
 
 	// Subsystem enable flags
 	public static final boolean ENABLE_SWERVE = true;
-	public static final boolean ENABLE_CLIMBER = false;
+	public static final boolean ENABLE_CLIMBER = true;
 	public static final boolean ENABLE_INTAKE = true;
 	public static final boolean ENABLE_SHOOTER = true;
 	public static final boolean ENABLE_HOPPER = true;
@@ -31,6 +31,10 @@ public final class Constants {
 			: TelemetryVerbosity.LOW;
 
 	public static final AprilTagFields FIELD_LAYOUT = AprilTagFields.k2026RebuiltWelded;
+
+	public static final class AutoConstants {
+		public static final double SPEED_SCALE = 0.05;
+	}
 
 	public static final class DrivebaseConstants {
 		public static final double WHEEL_LOCK_TIME = 10; // seconds
@@ -66,14 +70,17 @@ public final class Constants {
 
 		public static final boolean PIVOT_INVERTED = false;
 		public static final boolean ROLLER_INVERTED = true;
-		public static final int PIVOT_CURRENT_LIMIT = 25;
+		public static final int PIVOT_CURRENT_LIMIT = 35;
 		public static final int ROLLER_CURRENT_LIMIT = 40;
 
-		public static final Angle PIVOT_EXTENDED_ANGLE = Degrees.of(10);
-		public static final Angle PIVOT_RETRACTED_ANGLE = Degrees.of(90);
+		public static final Angle PIVOT_EXTENDED_ANGLE = Degrees.of(0);
+		public static final Angle PIVOT_RETRACTED_ANGLE = Degrees.of(90); // TODO: verify physical travel
 		public static final Angle PIVOT_ANGLE_TOLERANCE = Degrees.of(3);
 		public static final double PIVOT_GEAR_RATIO = (48.0 * 22.0) / 14.0;
 		public static final Distance PIVOT_ARM_LENGTH = Inches.of(12);
+
+		public static final double PIVOT_HOMING_OFFSET_DEG = -20; // degrees past current reading toward extended (down)
+		// hard stop
 
 		public static final double PIVOT_KP = 0.05;
 		public static final double PIVOT_KI = 0.0;
@@ -82,15 +89,19 @@ public final class Constants {
 		// Motion profile constraints for the pivot (degrees/s and degrees/s²)
 		public static final double PIVOT_MAX_VELOCITY_DEG_PER_S = 120.0;
 		public static final double PIVOT_MAX_ACCEL_DEG_PER_S2 = 240.0;
+		public static final double PIVOT_EXTEND_MAX_VELOCITY_DEG_PER_S = 60.0;
+		public static final double PIVOT_EXTEND_MAX_ACCEL_DEG_PER_S2 = 60.0;
 
-		public static final AngularVelocity ROLLER_INTAKE_VELOCITY = RPM.of(2500);
+		public static final AngularVelocity ROLLER_INTAKE_VELOCITY = RPM.of(2800);
+		public static final double ROLLER_SPEED_SCALE_MAX_RPM = 4000;
+		public static final double ROLLER_SPEED_SCALE_MAX_ROBOT_MPS = 3.0;
 		public static final AngularVelocity ROLLER_EJECT_VELOCITY = RPM.of(-1500);
 		public static final AngularVelocity ROLLER_VELOCITY_TOLERANCE = RPM.of(100);
 
 		public static final double ROLLER_KP = 2E-4;
-		public static final double ROLLER_KI = 1E-5;
+		public static final double ROLLER_KI = 1.3E-4;
 		public static final double ROLLER_KD = 0.0;
-		public static final double ROLLER_KV = 1.8E-4;
+		public static final double ROLLER_KV = 1.5E-4;
 		public static final double ROLLER_I_ZONE = 1E-3;
 
 		public static final double AT_POSITION_DEBOUNCE_TIME = 0.1;
@@ -106,7 +117,7 @@ public final class Constants {
 		public static final boolean FEEDER_INVERTED = true;
 		public static final boolean HOOD_INVERTED = true;
 		public static final int CURRENT_LIMIT = 25;
-		public static final int FEEDER_CURRENT_LIMIT = CURRENT_LIMIT;
+		public static final int FEEDER_CURRENT_LIMIT = 35;
 		public static final int HOOD_CURRENT_LIMIT = 20;
 
 		public static final double HOOD_GEAR_RATIO = 24.0;
@@ -149,7 +160,7 @@ public final class Constants {
 		public static final boolean INVERTED = true;
 		public static final int CURRENT_LIMIT = 20;
 
-		public static final Distance MAX_HEIGHT = Meters.of(1.23);
+		public static final Distance MAX_HEIGHT = Meters.of(3.6);
 		public static final Distance MIN_HEIGHT = Meters.of(0.0);
 		public static final Distance HANG_HEIGHT = Meters.of(0.5); // TODO: measure
 		public static final Distance RELEASE_HEIGHT = Meters.of(0.2); // TODO: measure
@@ -167,8 +178,9 @@ public final class Constants {
 		public static final double KG = 0.0; // 0.49
 		public static final double KV = 4.7; // 4.7
 
-		public static final double HOMING_VOLTAGE = 2.0;
-		public static final double HOMING_CURRENT_LIMIT = 10.0;
+		public static final double JOG_SPEED_METERS_PER_SECOND = 0.3;
+		public static final double JOG_CURRENT_LIMIT = 1;
+		public static final double JOG_SOFT_LIMIT_ROTATIONS = 9999.0;
 	}
 
 	public static class HopperConstants {

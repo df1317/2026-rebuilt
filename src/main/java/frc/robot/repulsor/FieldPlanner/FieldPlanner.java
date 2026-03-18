@@ -22,6 +22,7 @@ package frc.robot.repulsor.FieldPlanner;
 import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.Radians;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -52,6 +53,10 @@ public class FieldPlanner {
 	private static final double FORCE_THROUGH_GOAL_DIST = 2.0;
 	private static final double FORCE_THROUGH_WALL_DIST = 0.7;
 	public static final double GOAL_STRENGTH = 2.2;
+	private static final double DEFAULT_HEADING_BLEND_DIST = 0.75;
+
+	private double headingBlendDist = DEFAULT_HEADING_BLEND_DIST;
+	private Rotation2d headingOffset = null;
 
 	private static final class ClearMemo {
 		Boolean toGoalDyn;
@@ -221,9 +226,19 @@ public class FieldPlanner {
 		return forceModel.getForce(curLocation, target);
 	}
 
+	public void setHeadingBlendDist(double meters) {
+		this.headingBlendDist = meters;
+	}
+
+	public void resetHeadingBlendDist() {
+		this.headingBlendDist = DEFAULT_HEADING_BLEND_DIST;
+	}
+
 	public void setRequestedGoal(Pose2d requested) {
 		goalManager.setRequestedGoal(requested);
 		lastChosenSetpoint = Optional.empty();
+		stuckStepCount = 0;
+		headingOffset = null;
 	}
 
 	void setActiveGoal(Pose2d active) {
@@ -242,10 +257,9 @@ public class FieldPlanner {
 			List<? extends Obstacle> dynamicObstacles,
 			double robot_x,
 			double robot_y,
-			CategorySpec cat,
-			double shooterReleaseHeightMeters) {
+			CategorySpec cat) {
 		return calculate(
-				pose, dynamicObstacles, robot_x, robot_y, cat, false, shooterReleaseHeightMeters);
+				pose, dynamicObstacles, robot_x, robot_y, cat, false);
 	}
 
 	public RepulsorSample calculate(
@@ -254,8 +268,7 @@ public class FieldPlanner {
 			double robot_x,
 			double robot_y,
 			CategorySpec cat,
-			boolean suppressFallback,
-			double shooterReleaseHeightMeters) {
+			boolean suppressFallback) {
 
 		Translation2d curTrans = pose.getTranslation();
 		double distToGoal = curTrans.getDistance(goalManager.getGoalTranslation());
@@ -312,7 +325,6 @@ public class FieldPlanner {
 						Optional.of(pose),
 						Math.max(0.0, robot_x) * 2.0,
 						Math.max(0.0, robot_y) * 2.0,
-						shooterReleaseHeightMeters,
 						effectiveDynamics);
 
 				for (RepulsorSetpoint sp : cands) {
@@ -384,7 +396,22 @@ public class FieldPlanner {
 			return new RepulsorSample(curTrans, 0, 0, Radians.of(pose.getRotation().getRadians()));
 		}
 
-		Rotation2d desiredHeadingRaw = (cat == CategorySpec.kCollect) ? effectiveGoal.getRotation() : netForce.getAngle();
+		Rotation2d desiredHeadingRaw;
+		if (cat == CategorySpec.kCollect) {
+			desiredHeadingRaw = effectiveGoal.getRotation();
+		} else {
+			// Compute a 90°-quantized offset on first call so the robot picks the
+			// closest side (front/back/left/right) to face the travel direction
+			// and holds it through tight spaces.
+			if (headingOffset == null) {
+				double diff = pose.getRotation().minus(netForce.getAngle()).getDegrees();
+				double snapped = Math.round(diff / 90.0) * 90.0;
+				headingOffset = Rotation2d.fromDegrees(snapped);
+			}
+			Rotation2d travelHeading = netForce.getAngle().plus(headingOffset);
+			double t = MathUtil.clamp(1.0 - dist / headingBlendDist, 0.0, 1.0);
+			desiredHeadingRaw = travelHeading.interpolate(effectiveGoal.getRotation(), t);
+		}
 		Rotation2d desiredHeading = headingGate.filter(pose.getRotation(), desiredHeadingRaw, driveTuning.dtSeconds());
 
 		var turn = turnTuning.plan(

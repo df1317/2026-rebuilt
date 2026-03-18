@@ -8,7 +8,6 @@ import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.networktables.NetworkTablesJNI;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import frc.robot.Constants;
 import frc.robot.Constants.VisionConstants;
@@ -31,9 +30,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
-
-import static edu.wpi.first.units.Units.Microseconds;
-import static edu.wpi.first.units.Units.Seconds;
 
 /**
  * PhotonVision-based vision system for AprilTag pose estimation. Multi-camera support with outlier rejection and
@@ -116,7 +112,7 @@ public class Vision {
 
 	public boolean hasVision() {
 		for (Cameras camera : Cameras.values()) {
-			if (camera.camera.isConnected() && camera.estimatedRobotPose != null) {
+			if (camera.camera.isConnected() && camera.hasRecentPose()) {
 				return true;
 			}
 		}
@@ -195,11 +191,11 @@ public class Vision {
 		private final Matrix<N3, N1> singleTagStdDevs;
 		private final Matrix<N3, N1> multiTagStdDevs;
 		private final Transform3d robotToCamTransform;
-		private final double lastReadTimestamp = Microseconds.of(NetworkTablesJNI.now()).in(Seconds);
 		public Matrix<N3, N1> curStdDevs;
 		public PhotonCameraSim cameraSim;
 		public List<PhotonPipelineResult> resultsList = new ArrayList<>();
 		private EstimatedRobotPose estimatedRobotPose;
+		private double lastPoseTimestamp = -1;
 
 		Cameras(
 				String name,
@@ -254,6 +250,11 @@ public class Vision {
 				}
 			}
 			return Optional.ofNullable(bestResult);
+		}
+
+		public boolean hasRecentPose() {
+			return lastPoseTimestamp > 0
+					&& (edu.wpi.first.wpilibj.Timer.getFPGATimestamp() - lastPoseTimestamp) < 0.5;
 		}
 
 		public Optional<EstimatedRobotPose> getEstimatedGlobalPose(Pose2d referencePose) {
@@ -312,6 +313,7 @@ public class Vision {
 				if (est.isPresent()) {
 					updateEstimationStdDevs(est.get(), result.getTargets(), isMultiTag);
 					estimatedRobotPose = est.get();
+					lastPoseTimestamp = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
 					return;
 				}
 			}
