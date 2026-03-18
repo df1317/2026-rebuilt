@@ -86,27 +86,27 @@ public class RobotContainer {
 			// Build auto chooser
 			autoChooser = new SendableChooser<>();
 			autoChooser.setDefaultOption("Score Front",
-					Commands.defer(() -> AutoPositions.frontHubAndShoot(repulsor, teleopAutomation.shootCommand().repeatedly()), Set.of()));
+					Commands.defer(() -> AutoPositions.frontHubAndShoot(repulsor, teleopAutomation.shootCommand().repeatedly()), Set.of(drivebase)));
 			autoChooser.addOption("Left Hide + Shoot",
-					Commands.defer(() -> AutoPositions.leftCornerHideAndShoot(repulsor, teleopAutomation.shootCommand().repeatedly()), Set.of()));
+					Commands.defer(() -> AutoPositions.leftCornerHideAndShoot(repulsor, teleopAutomation.shootCommand().repeatedly()), Set.of(drivebase)));
 			autoChooser.addOption("Right Hide + Shoot",
-					Commands.defer(() -> AutoPositions.rightCornerHideAndShoot(repulsor, teleopAutomation.shootCommand().repeatedly()), Set.of()));
+					Commands.defer(() -> AutoPositions.rightCornerHideAndShoot(repulsor, teleopAutomation.shootCommand().repeatedly()), Set.of(drivebase)));
 			autoChooser.addOption("Go to center",
-					Commands.defer(() -> AutoPositions.centerFieldAuto(repulsor), Set.of()));
+					Commands.defer(() -> AutoPositions.centerFieldAuto(repulsor), Set.of(drivebase)));
 			autoChooser.addOption("Just Shoot",
-					Commands.defer(() -> teleopAutomation.shootCommand().repeatedly(), Set.of()));
+					Commands.defer(() -> teleopAutomation.shootCommand().repeatedly(), Set.of(drivebase)));
 			autoChooser.addOption("Collect + Shoot x1",
-					Commands.defer(() -> AutoPositions.collectAndShoot1(repulsor, teleopAutomation.shootCommand()), Set.of()));
+					Commands.defer(() -> AutoPositions.collectAndShoot1(repulsor, teleopAutomation.shootCommand()), Set.of(drivebase)));
 			autoChooser.addOption("Collect + Shoot x2",
-					Commands.defer(() -> AutoPositions.collectAndShoot2(repulsor, teleopAutomation.shootCommand()), Set.of()));
+					Commands.defer(() -> AutoPositions.collectAndShoot2(repulsor, teleopAutomation.shootCommand()), Set.of(drivebase)));
 			if (Constants.ENABLE_CLIMBER && climber != null) {
 				autoChooser.addOption("Climb Left",
-						Commands.defer(() -> AutoPositions.climbAuto(repulsor, climber, AutoPositions.CLIMB_LEFT, AutoPositions.CLIMB_LEFT_ENGAGE), Set.of()));
+						Commands.defer(() -> AutoPositions.climbAuto(repulsor, climber, AutoPositions.CLIMB_LEFT, AutoPositions.CLIMB_LEFT_ENGAGE), Set.of(drivebase)));
 				autoChooser.addOption("Climb Right",
-						Commands.defer(() -> AutoPositions.climbAuto(repulsor, climber, AutoPositions.CLIMB_RIGHT, AutoPositions.CLIMB_RIGHT_ENGAGE), Set.of()));
+						Commands.defer(() -> AutoPositions.climbAuto(repulsor, climber, AutoPositions.CLIMB_RIGHT, AutoPositions.CLIMB_RIGHT_ENGAGE), Set.of(drivebase)));
 			}
 			autoChain = new AutoChain(repulsor, teleopAutomation, climber);
-			autoChooser.addOption("Custom Chain", Commands.defer(() -> autoChain.asCommand(), Set.of()));
+			autoChooser.addOption("Custom Chain", Commands.defer(() -> autoChain.asCommand(), Set.of(drivebase)));
 			autoChooser.addOption("Do Nothing", Commands.none());
 			SmartDashboard.putData("misc/Auto Chooser", autoChooser);
 		}

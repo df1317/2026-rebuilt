@@ -57,7 +57,9 @@ public class TeleopZoneAutomation {
 			return Commands.none();
 		return Commands.parallel(
 				shooter.shootForDistanceCommand(() -> Meters.of(shooter.getActiveDistanceM())),
-				Commands.waitUntil(shooter::isAtSpeed).andThen(hopper.feedCommand()));
+				Commands.parallel(shooter.reverseFeederCommand(), hopper.reverseCommand())
+						.until(shooter::isAtSpeed)
+						.andThen(hopper.feedCommand()));
 	}
 
 	public Command shootCommand(BooleanSupplier aimed) {
