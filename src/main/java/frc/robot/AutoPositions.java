@@ -25,33 +25,28 @@ public final class AutoPositions {
 			RepulsorConstants.FIELD_LENGTH / 2.0,
 			RepulsorConstants.FIELD_WIDTH / 2.0,
 			Rotation2d.kZero);
-
-	// ===== Climb =====
-	private static final double CLIMB_ENGAGE_OFFSET = 0.2;
 	/** Left climb position, must move .2 m negative x to engage climber */
 	public static final Pose2d CLIMB_LEFT = new Pose2d(
 			1.062, 4.922, Rotation2d.kZero);
-	/** Left climb engage position (0.2 m negative x from CLIMB_LEFT). */
-	public static final Pose2d CLIMB_LEFT_ENGAGE = new Pose2d(
-			CLIMB_LEFT.getX() - CLIMB_ENGAGE_OFFSET, CLIMB_LEFT.getY(), CLIMB_LEFT.getRotation());
 	/** Right climb position, must move .2 positive x to engage climber */
 	public static final Pose2d CLIMB_RIGHT = new Pose2d(
 			1.062, 2.629, Rotation2d.k180deg);
+	static final Pose2d CORNER_HIDE_NEAR_BALLS = new Pose2d(new Translation2d(0.749, 7.324),
+			Rotation2d.fromDegrees(0));
+	static final Pose2d CORNER_HIDE = new Pose2d(new Translation2d(0.645, 0.645), Rotation2d.fromDegrees(0));
+	// ===== Climb =====
+	private static final double CLIMB_ENGAGE_OFFSET = 0.2;
+	/** Left climb engage position (0.2 m negative x from CLIMB_LEFT). */
+	public static final Pose2d CLIMB_LEFT_ENGAGE = new Pose2d(
+			CLIMB_LEFT.getX() - CLIMB_ENGAGE_OFFSET, CLIMB_LEFT.getY(), CLIMB_LEFT.getRotation());
 	/** Right climb engage position (0.2 m positive x from CLIMB_RIGHT). */
 	public static final Pose2d CLIMB_RIGHT_ENGAGE = new Pose2d(
 			CLIMB_RIGHT.getX() + CLIMB_ENGAGE_OFFSET, CLIMB_RIGHT.getY(), CLIMB_RIGHT.getRotation());
-
 	private static final double HUB_RADIUS = 0.9;
 	/** Hub radius + robot half-length in front of hub, facing the hub. */
 	public static final Pose2d HUB_FRONT = hubPose(0);
 	/** 1m further back from HUB_FRONT, rotated 180 (intake facing hub). */
-	public static final Pose2d HUB_FRONT_SHOOT = new Pose2d(
-			HUB_FRONT.getTranslation().minus(new Translation2d(1.0, HUB_FRONT.getRotation())),
-			HUB_FRONT.getRotation().rotateBy(Rotation2d.k180deg));
-
-	static final Pose2d CORNER_HIDE_NEAR_BALLS = new Pose2d(new Translation2d(0.749, 7.324),
-			Rotation2d.fromDegrees(0));
-	static final Pose2d CORNER_HIDE = new Pose2d(new Translation2d(0.645, 0.645), Rotation2d.fromDegrees(0));
+	public static final Pose2d HUB_FRONT_SHOOT = hubPoseBack(0, 1.0);
 
 	// empty constructor
 	private AutoPositions() {
@@ -66,7 +61,7 @@ public final class AutoPositions {
 				.build();
 	}
 
-	/** Drive to hub front and shoot. */
+	/** Drive to hub front, hold position, and shoot. */
 	public static Command frontHubAndShoot(Repulsor repulsor, Command shootCommand) {
 		return new AutoBuilder(repulsor)
 				.driveTo(HUB_FRONT_SHOOT)
@@ -126,9 +121,9 @@ public final class AutoPositions {
 	 * Drive to climb position, engage, and climb. Sequence: down → bottom → top → hang.
 	 *
 	 * @param climbPose
-	 *          the approach pose (CLIMB_LEFT or CLIMB_RIGHT)
+	 * 		the approach pose (CLIMB_LEFT or CLIMB_RIGHT)
 	 * @param engagePose
-	 *          the engage pose (CLIMB_LEFT_ENGAGE or CLIMB_RIGHT_ENGAGE)
+	 * 		the engage pose (CLIMB_LEFT_ENGAGE or CLIMB_RIGHT_ENGAGE)
 	 */
 	public static Command climbAuto(Repulsor repulsor, ClimberSubsystem climber,
 			Pose2d climbPose, Pose2d engagePose) {
@@ -148,5 +143,14 @@ public final class AutoPositions {
 		Translation2d pos = HUB_CENTER.minus(new Translation2d(standoff, angle));
 		Rotation2d faceHub = HUB_CENTER.minus(pos).getAngle();
 		return new Pose2d(pos, faceHub);
+	}
+
+	/** Like hubPose but with extra standoff and rotated 180 (intake facing hub). */
+	private static Pose2d hubPoseBack(double angleDeg, double extraStandoffM) {
+		Rotation2d angle = Rotation2d.fromDegrees(angleDeg);
+		double standoff = HUB_RADIUS + Constants.DrivebaseConstants.ROBOT_HALF_LENGTH + extraStandoffM;
+		Translation2d pos = HUB_CENTER.minus(new Translation2d(standoff, angle));
+		Rotation2d awayFromHub = HUB_CENTER.minus(pos).getAngle().rotateBy(Rotation2d.k180deg);
+		return new Pose2d(pos, awayFromHub);
 	}
 }

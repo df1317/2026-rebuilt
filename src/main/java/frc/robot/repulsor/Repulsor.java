@@ -168,7 +168,7 @@ public class Repulsor {
 				},
 				m_drive.asSubsystem())
 				.finallyDo(interrupted -> {
-					m_drive.runVelocity(new ChassisSpeeds());
+					m_drive.lock();
 					DogLog.forceNt.log("Repulsor/Target", new Pose2d());
 					DogLog.forceNt.log("Repulsor/Trajectory", new Pose2d[] {});
 				});

@@ -453,6 +453,7 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 		return swerveDrive.swerveDriveConfiguration;
 	}
 
+	@Override
 	public void lock() {
 		swerveDrive.lockPose();
 	}

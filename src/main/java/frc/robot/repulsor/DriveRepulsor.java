@@ -27,6 +27,8 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 public interface DriveRepulsor {
 	void runVelocity(ChassisSpeeds speeds);
 
+	void lock();
+
 	Pose2d getPose();
 
 	PIDController getOmegaPID();
