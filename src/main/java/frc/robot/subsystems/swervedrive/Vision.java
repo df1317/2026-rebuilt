@@ -112,7 +112,7 @@ public class Vision {
 
 	public boolean hasVision() {
 		for (Cameras camera : Cameras.values()) {
-			if (camera.camera.isConnected() && camera.estimatedRobotPose != null) {
+			if (camera.camera.isConnected() && camera.hasRecentPose()) {
 				return true;
 			}
 		}
@@ -195,6 +195,7 @@ public class Vision {
 		public PhotonCameraSim cameraSim;
 		public List<PhotonPipelineResult> resultsList = new ArrayList<>();
 		private EstimatedRobotPose estimatedRobotPose;
+		private double lastPoseTimestamp = -1;
 
 		Cameras(
 				String name,
@@ -249,6 +250,11 @@ public class Vision {
 				}
 			}
 			return Optional.ofNullable(bestResult);
+		}
+
+		public boolean hasRecentPose() {
+			return lastPoseTimestamp > 0
+					&& (edu.wpi.first.wpilibj.Timer.getFPGATimestamp() - lastPoseTimestamp) < 0.5;
 		}
 
 		public Optional<EstimatedRobotPose> getEstimatedGlobalPose(Pose2d referencePose) {
@@ -307,6 +313,7 @@ public class Vision {
 				if (est.isPresent()) {
 					updateEstimationStdDevs(est.get(), result.getTargets(), isMultiTag);
 					estimatedRobotPose = est.get();
+					lastPoseTimestamp = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
 					return;
 				}
 			}

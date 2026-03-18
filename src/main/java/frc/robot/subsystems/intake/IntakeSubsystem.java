@@ -25,8 +25,8 @@ import static edu.wpi.first.units.Units.Degrees;
 import static frc.robot.Constants.IntakeConstants.*;
 
 /**
- * Intake pivot subsystem. The roller is a separate {@link RollerSubsystem} so they can
- * run commands independently (e.g. roller keeps spinning while the pivot retracts).
+ * Intake pivot subsystem. The roller is a separate {@link RollerSubsystem} so they can run commands independently (e.g.
+ * roller keeps spinning while the pivot retracts).
  */
 public class IntakeSubsystem extends SubsystemBase {
 
@@ -43,13 +43,12 @@ public class IntakeSubsystem extends SubsystemBase {
 	private final DoubleSubscriber tunePivotKI = DogLog.tunable("Intake/Pivot/kI", PIVOT_KI);
 	private final DoubleSubscriber tunePivotKD = DogLog.tunable("Intake/Pivot/kD", PIVOT_KD);
 	private final DoubleSubscriber tunePivotKV = DogLog.tunable("Intake/Pivot/kV", 0.0);
+	private final ProfiledPIDController pivotProfiler = new ProfiledPIDController(0, 0, 0,
+			new TrapezoidProfile.Constraints(PIVOT_MAX_VELOCITY_DEG_PER_S, PIVOT_MAX_ACCEL_DEG_PER_S2));
+	private final RollerSubsystem roller;
 	Angle targetPivotAngle = PIVOT_RETRACTED_ANGLE;
 	boolean homed = false;
 	private double prevPivotKP = PIVOT_KP, prevPivotKI = PIVOT_KI, prevPivotKD = PIVOT_KD, prevPivotKV = 0.0;
-	private final ProfiledPIDController pivotProfiler = new ProfiledPIDController(0, 0, 0,
-			new TrapezoidProfile.Constraints(PIVOT_MAX_VELOCITY_DEG_PER_S, PIVOT_MAX_ACCEL_DEG_PER_S2));
-
-	private final RollerSubsystem roller;
 
 	public IntakeSubsystem(RollerSubsystem roller) {
 		this.roller = roller;
@@ -65,7 +64,7 @@ public class IntakeSubsystem extends SubsystemBase {
 
 		double initialAngle = pivotEncoder.getPosition();
 		pivotProfiler.reset(initialAngle);
-		setPivotAngle(Degrees.of(initialAngle));
+		setPivotAngle(PIVOT_RETRACTED_ANGLE);
 	}
 
 	private void configurePivotMotor() {
@@ -116,13 +115,13 @@ public class IntakeSubsystem extends SubsystemBase {
 	public boolean isExtended() {
 		return isPivotAtPosition()
 				&& Math.abs(targetPivotAngle.in(Degrees) - PIVOT_EXTENDED_ANGLE.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
-						.in(Degrees);
+				.in(Degrees);
 	}
 
 	public boolean isRetracted() {
 		return isPivotAtPosition()
 				&& Math.abs(targetPivotAngle.in(Degrees) - PIVOT_RETRACTED_ANGLE.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
-						.in(Degrees);
+				.in(Degrees);
 	}
 
 	// ==================== Control Methods ====================
@@ -169,8 +168,11 @@ public class IntakeSubsystem extends SubsystemBase {
 	}
 
 	public Command holdExtendedCommand() {
-		return run(() -> setPivotAngle(PIVOT_EXTENDED_ANGLE))
-				.withName("Hold Extended");
+		return run(() -> {
+			if (!isRetracted()) {
+				setPivotAngle(PIVOT_EXTENDED_ANGLE);
+			}
+		}).withName("Hold Extended");
 	}
 
 	// ==================== Test Mode ====================
@@ -202,8 +204,8 @@ public class IntakeSubsystem extends SubsystemBase {
 
 	public Command testPivotCommand() {
 		return Commands.run(() -> {
-			setPivotAngle(Degrees.of(testPivotDeg.get()));
-		}, this)
+					setPivotAngle(Degrees.of(testPivotDeg.get()));
+				}, this)
 				.finallyDo(pivotMotor::stopMotor)
 				.withName("Test Intake Pivot");
 	}
