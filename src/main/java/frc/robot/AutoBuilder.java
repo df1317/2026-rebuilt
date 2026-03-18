@@ -187,6 +187,31 @@ public final class AutoBuilder {
 		return this;
 	}
 
+	/**
+	 * Run a command alongside the <em>previous</em> drive step. The drive step remains the
+	 * deadline &mdash; when it finishes the alongside command is interrupted.
+	 *
+	 * <p>
+	 * Typical use: deploy the intake while driving to a collect position.
+	 *
+	 * <pre>{@code
+	 * new AutoBuilder(repulsor)
+	 *     .driveTo(COLLECT_POSE)
+	 *     .alongside(intake.extendCommand())
+	 *     .build();
+	 * }</pre>
+	 *
+	 * @throws IllegalStateException if there is no previous step to attach to
+	 */
+	public AutoBuilder alongside(Command command) {
+		if (steps.isEmpty()) {
+			throw new IllegalStateException("alongside() requires a preceding step");
+		}
+		Step previous = steps.remove(steps.size() - 1);
+		steps.add(() -> previous.create().deadlineFor(command));
+		return this;
+	}
+
 	/** Builds the auto command. Alliance and speed scale are resolved when the command is scheduled. */
 	public Command build() {
 		var capturedSteps = List.copyOf(steps);
@@ -224,6 +249,10 @@ public final class AutoBuilder {
 		return ref;
 	}
 
+	/**
+	 * The rotation in {@code bluePose} is used as an offset from the computed facing angle.
+	 * 0 = front faces target, 180 = back faces target (e.g. rear-mounted shooter).
+	 */
 	private AtomicReference<Pose2d> refForFacing(Pose2d bluePose, Translation2d blueAimTarget) {
 		var ref = new AtomicReference<Pose2d>();
 		resolvers.add(alliance -> {
@@ -231,7 +260,8 @@ public final class AutoBuilder {
 			Translation2d target = alliance == Alliance.Red
 					? SetpointUtil.flipToRed(blueAimTarget)
 					: blueAimTarget;
-			Rotation2d facing = target.minus(flipped.getTranslation()).getAngle();
+			Rotation2d towardTarget = target.minus(flipped.getTranslation()).getAngle();
+			Rotation2d facing = towardTarget.rotateBy(flipped.getRotation());
 			ref.set(new Pose2d(flipped.getTranslation(), facing));
 		});
 		return ref;
