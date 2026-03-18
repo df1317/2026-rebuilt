@@ -65,6 +65,12 @@ public class RobotContainer {
 			if (Constants.ENABLE_SHOOTER && shooter != null) {
 				shooter.setAutoDistanceSupplier(teleopAutomation::getTargetDistance);
 			}
+			if (Constants.ENABLE_INTAKE && intake != null) {
+				intake.setRobotSpeedSupplier(() -> {
+					var vel = drivebase.getFieldVelocity();
+					return Math.hypot(vel.vxMetersPerSecond, vel.vyMetersPerSecond);
+				});
+			}
 
 			driveAngularVelocity = SwerveInputStream
 					.of(drivebase.getSwerveDrive(), () -> driverXbox.getLeftY() * -1,

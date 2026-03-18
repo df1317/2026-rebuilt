@@ -17,12 +17,15 @@ import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.networktables.DoubleSubscriber;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+
+import java.util.function.DoubleSupplier;
 
 import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.RPM;
@@ -67,6 +70,7 @@ public class IntakeSubsystem extends SubsystemBase {
 	AngularVelocity targetRollerVelocity = RPM.of(0);
 	private double prevPivotKP = PIVOT_KP, prevPivotKI = PIVOT_KI, prevPivotKD = PIVOT_KD, prevPivotKV = 0.0;
 	private double prevRollerKP = ROLLER_KP, prevRollerKI = ROLLER_KI, prevRollerKD = ROLLER_KD, prevRollerKV = ROLLER_KV;
+	private DoubleSupplier robotSpeedSupplier = () -> 0.0;
 	private final ProfiledPIDController pivotProfiler = new ProfiledPIDController(0, 0, 0,
 			new TrapezoidProfile.Constraints(PIVOT_MAX_VELOCITY_DEG_PER_S, PIVOT_MAX_ACCEL_DEG_PER_S2));
 
@@ -193,6 +197,18 @@ public class IntakeSubsystem extends SubsystemBase {
 		rollerController.setSetpoint(velocity.in(RPM), ControlType.kVelocity);
 	}
 
+	/** Sets the supplier for robot ground speed in m/s, used to scale intake roller. */
+	public void setRobotSpeedSupplier(DoubleSupplier supplier) {
+		this.robotSpeedSupplier = supplier;
+	}
+
+	/** Returns intake roller velocity scaled by robot speed (lerp from base to max over 0–3 m/s). */
+	private AngularVelocity getSpeedScaledRollerVelocity() {
+		double t = MathUtil.clamp(robotSpeedSupplier.getAsDouble() / ROLLER_SPEED_SCALE_MAX_ROBOT_MPS, 0.0, 1.0);
+		double rpm = MathUtil.interpolate(ROLLER_INTAKE_VELOCITY.in(RPM), ROLLER_SPEED_SCALE_MAX_RPM, t);
+		return RPM.of(rpm);
+	}
+
 	public void stopRoller() {
 		setRollerVelocity(RPM.of(0));
 	}
@@ -239,8 +255,7 @@ public class IntakeSubsystem extends SubsystemBase {
 	}
 
 	public Command intakeCommand() {
-		return runOnce(() -> setRollerVelocity(ROLLER_INTAKE_VELOCITY))
-				.andThen(Commands.idle(this))
+		return run(() -> setRollerVelocity(getSpeedScaledRollerVelocity()))
 				.finallyDo(this::stopRoller)
 				.withName("Intake Full Sequence");
 	}
