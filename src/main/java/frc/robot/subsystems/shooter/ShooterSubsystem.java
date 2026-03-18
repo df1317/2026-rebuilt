@@ -405,6 +405,16 @@ public class ShooterSubsystem extends SubsystemBase {
 		return Commands.run(() -> setForDistance(distance), this).finallyDo(this::stop);
 	}
 
+	public Command spinUpReverseFeederThenShootCommand(Supplier<Distance> distance) {
+		return Commands.run(() -> {
+			setVelocity(getRPMForDistance(distance.get()));
+			setFeederVelocity(RPM.of(-FEEDER_RPM));
+			setHoodPercent(getHoodPercentForDistance(distance.get()));
+		}, this).until(this::isAtSpeed)
+				.andThen(Commands.run(() -> setForDistance(distance), this))
+				.finallyDo(this::stop);
+	}
+
 	public void setAutoDistanceSupplier(Supplier<Distance> supplier) {
 		autoDistanceSupplier = supplier;
 	}
