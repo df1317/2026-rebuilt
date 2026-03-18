@@ -42,6 +42,7 @@ public class RobotContainer {
 	private final HopperSubsystem hopper = Constants.ENABLE_HOPPER ? new HopperSubsystem() : null;
 	private final BooleanSubscriber obstacleClampEnabled = DogLog.tunable("Drive/ObstacleClampEnabled", false);
 	private final SendableChooser<Command> autoChooser;
+	private final AutoChain autoChain;
 	// Repulsor
 	private final Repulsor repulsor;
 	private final SwerveInputStream driveAngularVelocity;
@@ -84,6 +85,18 @@ public class RobotContainer {
 			autoChooser.addOption("Go to center",
 					AutoPositions.centerFieldAuto(repulsor));
 			autoChooser.addOption("Just Shoot", teleopAutomation.shootCommand().repeatedly());
+			autoChooser.addOption("Collect + Shoot x1",
+					AutoPositions.collectAndShoot1(repulsor, teleopAutomation.shootCommand()));
+			autoChooser.addOption("Collect + Shoot x2",
+					AutoPositions.collectAndShoot2(repulsor, teleopAutomation.shootCommand()));
+			if (Constants.ENABLE_CLIMBER && climber != null) {
+				autoChooser.addOption("Climb Left",
+						AutoPositions.climbAuto(repulsor, climber, AutoPositions.CLIMB_LEFT, AutoPositions.CLIMB_LEFT_ENGAGE));
+				autoChooser.addOption("Climb Right",
+						AutoPositions.climbAuto(repulsor, climber, AutoPositions.CLIMB_RIGHT, AutoPositions.CLIMB_RIGHT_ENGAGE));
+			}
+			autoChain = new AutoChain(repulsor, teleopAutomation, climber);
+			autoChooser.addOption("Custom Chain", autoChain.asCommand());
 			autoChooser.addOption("Do Nothing", Commands.none());
 			SmartDashboard.putData("misc/Auto Chooser", autoChooser);
 		}
@@ -119,9 +132,9 @@ public class RobotContainer {
 				}
 			}).andThen(Constants.ENABLE_SWERVE && drivebase != null
 					? Commands.parallel(
-					teleopAutomation.shootCommand(drivebase::isAimed),
-					drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY,
-							teleopAutomation::getShootingPose))
+							teleopAutomation.shootCommand(drivebase::isAimed),
+							drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY,
+									teleopAutomation::getShootingPose))
 					: teleopAutomation.shootCommand()));
 		}
 		if (Constants.ENABLE_INTAKE && intake != null) {
@@ -183,8 +196,8 @@ public class RobotContainer {
 		if (Constants.ENABLE_SHOOTER && shooter != null) {
 			panel.key(2, 3).and(inTest).whileTrue(
 					Commands.parallel(
-									Commands.runOnce(() -> shooter.setTestHoodPercent()),
-									shooter.spinUpAndWaitCommand(shooter::getShooterTestRPM, shooter::getFeederTestRPM))
+							Commands.runOnce(() -> shooter.setTestHoodPercent()),
+							shooter.spinUpAndWaitCommand(shooter::getShooterTestRPM, shooter::getFeederTestRPM))
 							.andThen(Constants.ENABLE_HOPPER && hopper != null
 									? hopper.setHopperVelocityCommand(hopper::getHopperTestRPM)
 									: Commands.none())

@@ -11,6 +11,7 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.repulsor.Repulsor;
+import frc.robot.repulsor.RepulsorConstants;
 import frc.robot.repulsor.Setpoints.SetpointUtil;
 
 import java.util.ArrayList;
@@ -37,6 +38,8 @@ import java.util.concurrent.atomic.AtomicReference;
 public final class AutoBuilder {
 
 	private static final Distance DEFAULT_TOLERANCE = Meters.of(0.15);
+	/** Y offset from field center for collect positions (meters). */
+	private static final double COLLECT_Y_OFFSET = 1.5;
 
 	private final Repulsor repulsor;
 	private final List<Step> steps = new ArrayList<>();
@@ -45,6 +48,11 @@ public final class AutoBuilder {
 
 	public AutoBuilder(Repulsor repulsor) {
 		this.repulsor = repulsor;
+	}
+
+	/** Returns the current number of steps in the builder. */
+	public int stepCount() {
+		return steps.size();
 	}
 
 	/** Navigate to pose, finishing when within 15cm. */
@@ -132,6 +140,47 @@ public final class AutoBuilder {
 		return this;
 	}
 
+	/**
+	 * Navigate back to wherever the robot was when the auto started.
+	 * The pose is captured at schedule time (no alliance flipping).
+	 */
+	public AutoBuilder driveToStart() {
+		return driveToStart(DEFAULT_TOLERANCE);
+	}
+
+	/** Navigate back to the starting pose with custom tolerance. */
+	public AutoBuilder driveToStart(Distance tolerance) {
+		var ref = startPoseRef();
+		steps.add(() -> repulsor.navigateTo(ref::get)
+				.until(repulsor.within(tolerance)));
+		return this;
+	}
+
+	/**
+	 * Navigate to a collect position on the closest side of the field center line,
+	 * based on the robot's starting Y position. Avoids driving all the way to dead center.
+	 */
+	public AutoBuilder driveToCollect() {
+		return driveToCollect(DEFAULT_TOLERANCE);
+	}
+
+	/** Navigate to collect with custom tolerance. */
+	public AutoBuilder driveToCollect(Distance tolerance) {
+		var ref = new AtomicReference<Pose2d>();
+		resolvers.add(alliance -> {
+			Pose2d startPose = repulsor.getDrive().getPose();
+			double fieldCenterX = RepulsorConstants.FIELD_LENGTH / 2.0;
+			double fieldCenterY = RepulsorConstants.FIELD_WIDTH / 2.0;
+			double collectY = startPose.getY() > fieldCenterY
+					? fieldCenterY + COLLECT_Y_OFFSET
+					: fieldCenterY - COLLECT_Y_OFFSET;
+			ref.set(new Pose2d(fieldCenterX, collectY, Rotation2d.kZero));
+		});
+		steps.add(() -> repulsor.navigateTo(ref::get)
+				.until(repulsor.within(tolerance)));
+		return this;
+	}
+
 	/** Insert any WPILib command into the sequence. */
 	public AutoBuilder run(Command command) {
 		steps.add(() -> command);
@@ -162,6 +211,12 @@ public final class AutoBuilder {
 	}
 
 	// ===== Internal =====
+
+	private AtomicReference<Pose2d> startPoseRef() {
+		var ref = new AtomicReference<Pose2d>();
+		resolvers.add(alliance -> ref.set(repulsor.getDrive().getPose()));
+		return ref;
+	}
 
 	private AtomicReference<Pose2d> refFor(Pose2d bluePose) {
 		var ref = new AtomicReference<Pose2d>();
