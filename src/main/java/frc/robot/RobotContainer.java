@@ -24,6 +24,7 @@ import frc.robot.util.FieldZones;
 import swervelib.SwerveInputStream;
 
 import java.io.File;
+import java.util.Set;
 import java.util.function.Supplier;
 
 import static edu.wpi.first.units.Units.RPM;
@@ -85,26 +86,27 @@ public class RobotContainer {
 			// Build auto chooser
 			autoChooser = new SendableChooser<>();
 			autoChooser.setDefaultOption("Score Front",
-					AutoPositions.frontHubAndShoot(repulsor, teleopAutomation.shootCommand().repeatedly()));
+					Commands.defer(() -> AutoPositions.frontHubAndShoot(repulsor, teleopAutomation.shootCommand().repeatedly()), Set.of()));
 			autoChooser.addOption("Left Hide + Shoot",
-					AutoPositions.leftCornerHideAndShoot(repulsor, teleopAutomation.shootCommand().repeatedly()));
+					Commands.defer(() -> AutoPositions.leftCornerHideAndShoot(repulsor, teleopAutomation.shootCommand().repeatedly()), Set.of()));
 			autoChooser.addOption("Right Hide + Shoot",
-					AutoPositions.rightCornerHideAndShoot(repulsor, teleopAutomation.shootCommand().repeatedly()));
+					Commands.defer(() -> AutoPositions.rightCornerHideAndShoot(repulsor, teleopAutomation.shootCommand().repeatedly()), Set.of()));
 			autoChooser.addOption("Go to center",
-					AutoPositions.centerFieldAuto(repulsor));
-			autoChooser.addOption("Just Shoot", teleopAutomation.shootCommand().repeatedly());
+					Commands.defer(() -> AutoPositions.centerFieldAuto(repulsor), Set.of()));
+			autoChooser.addOption("Just Shoot",
+					Commands.defer(() -> teleopAutomation.shootCommand().repeatedly(), Set.of()));
 			autoChooser.addOption("Collect + Shoot x1",
-					AutoPositions.collectAndShoot1(repulsor, teleopAutomation.shootCommand()));
+					Commands.defer(() -> AutoPositions.collectAndShoot1(repulsor, teleopAutomation.shootCommand()), Set.of()));
 			autoChooser.addOption("Collect + Shoot x2",
-					AutoPositions.collectAndShoot2(repulsor, teleopAutomation.shootCommand()));
+					Commands.defer(() -> AutoPositions.collectAndShoot2(repulsor, teleopAutomation.shootCommand()), Set.of()));
 			if (Constants.ENABLE_CLIMBER && climber != null) {
 				autoChooser.addOption("Climb Left",
-						AutoPositions.climbAuto(repulsor, climber, AutoPositions.CLIMB_LEFT, AutoPositions.CLIMB_LEFT_ENGAGE));
+						Commands.defer(() -> AutoPositions.climbAuto(repulsor, climber, AutoPositions.CLIMB_LEFT, AutoPositions.CLIMB_LEFT_ENGAGE), Set.of()));
 				autoChooser.addOption("Climb Right",
-						AutoPositions.climbAuto(repulsor, climber, AutoPositions.CLIMB_RIGHT, AutoPositions.CLIMB_RIGHT_ENGAGE));
+						Commands.defer(() -> AutoPositions.climbAuto(repulsor, climber, AutoPositions.CLIMB_RIGHT, AutoPositions.CLIMB_RIGHT_ENGAGE), Set.of()));
 			}
 			autoChain = new AutoChain(repulsor, teleopAutomation, climber);
-			autoChooser.addOption("Custom Chain", autoChain.asCommand());
+			autoChooser.addOption("Custom Chain", Commands.defer(() -> autoChain.asCommand(), Set.of()));
 			autoChooser.addOption("Do Nothing", Commands.none());
 			SmartDashboard.putData("misc/Auto Chooser", autoChooser);
 		}
