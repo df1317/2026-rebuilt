@@ -115,13 +115,13 @@ public class IntakeSubsystem extends SubsystemBase {
 	public boolean isExtended() {
 		return isPivotAtPosition()
 				&& Math.abs(targetPivotAngle.in(Degrees) - PIVOT_EXTENDED_ANGLE.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
-				.in(Degrees);
+						.in(Degrees);
 	}
 
 	public boolean isRetracted() {
 		return isPivotAtPosition()
 				&& Math.abs(targetPivotAngle.in(Degrees) - PIVOT_RETRACTED_ANGLE.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
-				.in(Degrees);
+						.in(Degrees);
 	}
 
 	// ==================== Control Methods ====================
@@ -204,8 +204,8 @@ public class IntakeSubsystem extends SubsystemBase {
 
 	public Command testPivotCommand() {
 		return Commands.run(() -> {
-					setPivotAngle(Degrees.of(testPivotDeg.get()));
-				}, this)
+			setPivotAngle(Degrees.of(testPivotDeg.get()));
+		}, this)
 				.finallyDo(pivotMotor::stopMotor)
 				.withName("Test Intake Pivot");
 	}
