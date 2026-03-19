@@ -3,8 +3,10 @@ package frc.robot;
 import dev.doglog.DogLog;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.networktables.BooleanSubscriber;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
+import edu.wpi.first.wpilibj.GenericHID.RumbleType;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -44,6 +46,7 @@ public class RobotContainer {
 	private final IntakeSubsystem intake = Constants.ENABLE_INTAKE ? new IntakeSubsystem(roller) : null;
 	private final HopperSubsystem hopper = Constants.ENABLE_HOPPER ? new HopperSubsystem() : null;
 	private final BooleanSubscriber obstacleClampEnabled = DogLog.tunable("Drive/ObstacleClampEnabled", false);
+	private final BooleanSubscriber repulsorRumbleEnabled = DogLog.tunable("Drive/RepulsorRumbleEnabled", false);
 	private final SendableChooser<Command> autoChooser;
 	private final AutoChain autoChain;
 	// Repulsor
@@ -136,8 +139,16 @@ public class RobotContainer {
 					drivebase.robotDriveCommand(driveAngularVelocity, () -> robotRelative,
 							speeds -> {
 								if (obstacleClampEnabled.get() && repulsor != null) {
-									return repulsor.clampDriveSpeed(speeds, drivebase.getPose());
+									ChassisSpeeds clamped = repulsor.clampDriveSpeed(speeds, drivebase.getPose());
+									if (repulsorRumbleEnabled.get()) {
+										double rumble = repulsor.getRepulsionIntensity() * 0.5;
+										driverXbox.getHID().setRumble(RumbleType.kBothRumble, rumble);
+									} else {
+										driverXbox.getHID().setRumble(RumbleType.kBothRumble, 0);
+									}
+									return clamped;
 								}
+								driverXbox.getHID().setRumble(RumbleType.kBothRumble, 0);
 								return speeds;
 							}));
 

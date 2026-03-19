@@ -196,12 +196,13 @@ public final class AutoBuilder {
 	 *
 	 * <pre>{@code
 	 * new AutoBuilder(repulsor)
-	 *     .driveTo(COLLECT_POSE)
-	 *     .alongside(intake.extendCommand())
-	 *     .build();
+	 * 		.driveTo(COLLECT_POSE)
+	 * 		.alongside(intake.extendCommand())
+	 * 		.build();
 	 * }</pre>
 	 *
-	 * @throws IllegalStateException if there is no previous step to attach to
+	 * @throws IllegalStateException
+	 *           if there is no previous step to attach to
 	 */
 	public AutoBuilder alongside(Command command) {
 		if (steps.isEmpty()) {

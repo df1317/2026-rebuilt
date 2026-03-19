@@ -57,6 +57,7 @@ public class Repulsor {
 	private FieldPlanner m_planner;
 	private DriveRepulsor m_drive;
 	private final DriveTuningHeat m_driveTuning;
+	private double m_lastRepulsionIntensity = 0.0;
 
 	private RepulsorSetpoint m_currentGoal;
 
@@ -211,6 +212,7 @@ public class Repulsor {
 		Force totalRepulsion = obstacleForce.plus(wallForce);
 
 		if (totalRepulsion.getNorm() < 1e-6) {
+			m_lastRepulsionIntensity = 0.0;
 			return requested;
 		}
 
@@ -230,6 +232,7 @@ public class Repulsor {
 
 		if (dot >= 0) {
 			// Already driving away from obstacles, no clamping needed
+			m_lastRepulsionIntensity = 0.0;
 			return requested;
 		}
 
@@ -237,11 +240,18 @@ public class Repulsor {
 		// Use repulsion magnitude to determine aggressiveness (stronger repulsion = more clamping)
 		double scale = Math.max(0.0, 1.0 - Math.min(1.0, repNorm / 10.0));
 
+		// Store repulsion intensity (0 = no clamping, 1 = full clamping)
+		m_lastRepulsionIntensity = 1.0 - scale;
+
 		// Remove the toward-obstacle component and scale it
 		double clampedVx = vx - dot * repDirX * (1.0 - scale);
 		double clampedVy = vy - dot * repDirY * (1.0 - scale);
 
 		return new ChassisSpeeds(clampedVx, clampedVy, requested.omegaRadiansPerSecond);
+	}
+
+	public double getRepulsionIntensity() {
+		return m_lastRepulsionIntensity;
 	}
 
 	// ===== Setpoint Queries =====
