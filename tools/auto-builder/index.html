@@ -464,6 +464,61 @@
     justify-content: flex-end;
   }
 
+  /* === LOAD MODAL === */
+  #load-modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  #load-modal.visible { display: flex; }
+  #load-modal .modal-content {
+    background: var(--panel);
+    border: 2px solid var(--panel-border);
+    border-radius: 12px;
+    width: 700px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+  }
+  #load-modal .modal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--panel-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  #load-modal .modal-header h2 { font-size: 16px; }
+  #load-modal .modal-close {
+    background: none; border: none;
+    color: var(--text-dim); font-size: 20px; cursor: pointer;
+  }
+  #load-modal textarea {
+    flex: 1;
+    min-height: 250px;
+    padding: 16px 20px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #c9d1d9;
+    background: #0d1117;
+    border: none;
+    resize: vertical;
+    tab-size: 4;
+    outline: none;
+  }
+  #load-modal textarea::placeholder { color: #484f58; }
+  #load-modal .modal-footer {
+    padding: 12px 20px;
+    border-top: 1px solid var(--panel-border);
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
   /* === PROPERTY EDITOR (right panel) === */
   #prop-panel {
     width: 260px;
@@ -598,8 +653,7 @@
 
   <div id="bottom-bar">
     <button class="toolbar-btn secondary" onclick="clearAll()">Clear</button>
-    <button class="toolbar-btn secondary" onclick="saveAuto()">Save</button>
-    <button class="toolbar-btn secondary" onclick="loadAuto()">Load</button>
+    <button class="toolbar-btn secondary" onclick="openLoadModal()">Load Java</button>
     <button class="toolbar-btn primary" onclick="exportCode()">Export Java</button>
   </div>
 </div>
@@ -698,6 +752,25 @@
     <div class="modal-footer">
       <button class="toolbar-btn secondary" onclick="copyCode()">Copy to Clipboard</button>
       <button class="toolbar-btn primary" onclick="closeModal()">Done</button>
+    </div>
+  </div>
+</div>
+
+<div id="load-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Load AutoBuilder Java</h2>
+      <button class="modal-close" onclick="closeLoadModal()">&times;</button>
+    </div>
+    <textarea id="load-input" placeholder="Paste AutoBuilder Java code here...
+Example:
+new AutoBuilder(repulsor)
+    .driveTo(new Pose2d(3.0, 4.0, Rotation2d.fromDegrees(90)))
+    .run(shootCommand)
+    .build();" spellcheck="false"></textarea>
+    <div class="modal-footer">
+      <button class="toolbar-btn secondary" onclick="loadFromFile()">Load from File</button>
+      <button class="toolbar-btn primary" onclick="submitLoadModal()">Load</button>
     </div>
   </div>
 </div>
@@ -2112,49 +2185,244 @@ function closeModal() {
   document.getElementById('code-modal').classList.remove('visible');
 }
 
-// ===== SAVE / LOAD =====
-function saveAuto() {
-  const data = {
-    version: 1,
-    alliance,
-    steps: steps.map(s => ({ ...s })),
-  };
-  const json = JSON.stringify(data, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `auto_${new Date().toISOString().slice(0,19).replace(/[:-]/g,'')}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
+// ===== LOAD JAVA =====
+function openLoadModal() {
+  document.getElementById('load-input').value = '';
+  document.getElementById('load-modal').classList.add('visible');
+  document.getElementById('load-input').focus();
 }
 
-function loadAuto() {
+function closeLoadModal() {
+  document.getElementById('load-modal').classList.remove('visible');
+}
+
+function submitLoadModal() {
+  const java = document.getElementById('load-input').value;
+  if (!java.trim()) return;
+  try {
+    const parsed = parseJavaAuto(java);
+    if (parsed.length === 0) {
+      alert('No AutoBuilder steps found.');
+      return;
+    }
+    steps = parsed;
+    selectedStepIdx = -1;
+    document.getElementById('prop-panel').classList.remove('visible');
+    closeLoadModal();
+    renderStepList();
+    render();
+  } catch (err) {
+    alert('Error parsing Java: ' + err.message);
+  }
+}
+
+function loadFromFile() {
   const input = document.createElement('input');
   input.type = 'file';
-  input.accept = '.json';
+  input.accept = '.java,.txt';
   input.onchange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      try {
-        const data = JSON.parse(ev.target.result);
-        if (data.steps) {
-          steps = data.steps;
-          if (data.alliance) setAlliance(data.alliance);
-          selectedStepIdx = -1;
-          document.getElementById('prop-panel').classList.remove('visible');
-          renderStepList();
-          render();
-        }
-      } catch (err) {
-        alert('Invalid auto file: ' + err.message);
-      }
+      document.getElementById('load-input').value = ev.target.result;
     };
     reader.readAsText(file);
   };
   input.click();
+}
+
+/** Reverse-lookup: find named pose key from a Java ref like "AutoPositions.HUB_FRONT" */
+function findNamedPose(ref) {
+  for (const [key, np] of Object.entries(NAMED_POSES)) {
+    if (np.ref === ref) return key;
+  }
+  return null;
+}
+
+function findNamedTarget(ref) {
+  for (const [key, nt] of Object.entries(NAMED_TARGETS)) {
+    if (nt.ref === ref) return key;
+  }
+  return null;
+}
+
+/** Parse a Pose2d expression — either AutoPositions.X or new Pose2d(x, y, Rotation2d.fromDegrees(d)) */
+function parsePoseArg(arg) {
+  arg = arg.trim();
+  // Named: AutoPositions.SOMETHING
+  const namedMatch = arg.match(/^AutoPositions\.(\w+)$/);
+  if (namedMatch) {
+    const key = namedMatch[1];
+    const np = NAMED_POSES[key];
+    if (np) return { x: np.x, y: np.y, rot: np.rot, namedPose: key };
+  }
+  // Inline: new Pose2d(x, y, Rotation2d.fromDegrees(d))
+  const poseMatch = arg.match(/new\s+Pose2d\(\s*([^,]+),\s*([^,]+),\s*Rotation2d\.fromDegrees\(\s*([^)]+)\)\s*\)/);
+  if (poseMatch) {
+    return { x: parseFloat(poseMatch[1]), y: parseFloat(poseMatch[2]), rot: parseFloat(poseMatch[3]) };
+  }
+  // Rotation2d.kZero / k180deg
+  const poseZeroMatch = arg.match(/new\s+Pose2d\(\s*([^,]+),\s*([^,]+),\s*Rotation2d\.(kZero|k180deg)\s*\)/);
+  if (poseZeroMatch) {
+    const rot = poseZeroMatch[3] === 'k180deg' ? 180 : 0;
+    return { x: parseFloat(poseZeroMatch[1]), y: parseFloat(poseZeroMatch[2]), rot };
+  }
+  return null;
+}
+
+/** Parse a Translation2d expression */
+function parseTranslation2dArg(arg) {
+  arg = arg.trim();
+  const namedMatch = arg.match(/^AutoPositions\.(\w+)$/);
+  if (namedMatch) {
+    const key = namedMatch[1];
+    const nt = NAMED_TARGETS[key];
+    if (nt) return { x: nt.x, y: nt.y, namedAim: key };
+  }
+  const match = arg.match(/new\s+Translation2d\(\s*([^,]+),\s*([^)]+)\)/);
+  if (match) {
+    return { x: parseFloat(match[1]), y: parseFloat(match[2]) };
+  }
+  return null;
+}
+
+/** Map known command expressions back to step types */
+const REVERSE_COMMANDS = {
+  'shootCommand': 'shoot',
+  'runRollerCommand': 'runRoller',
+  'extendIntake': 'intakeDown',
+  'retractIntake': 'intakeUp',
+};
+
+function parseCommandExpr(expr) {
+  expr = expr.trim();
+  // Check for .withTimeout(n)
+  let timeout = 0;
+  const timeoutMatch = expr.match(/^(.+)\.withTimeout\(\s*([^)]+)\)$/);
+  if (timeoutMatch) {
+    expr = timeoutMatch[1].trim();
+    timeout = parseFloat(timeoutMatch[2]);
+  }
+  // Match known commands
+  for (const [pattern, type] of Object.entries(REVERSE_COMMANDS)) {
+    if (expr.includes(pattern)) return { type, timeout };
+  }
+  return { type: 'custom', customExpr: expr, timeout };
+}
+
+/** Parse Java AutoBuilder chain into steps array */
+function parseJavaAuto(java) {
+  const parsed = [];
+  // Strip comments and normalize whitespace
+  const code = java.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ');
+
+  // Find the AutoBuilder chain
+  const chainMatch = code.match(/new\s+AutoBuilder\s*\(\s*\w+\s*\)([\s\S]*?)\.build\s*\(\s*\)/);
+  if (!chainMatch) return [];
+
+  const chain = chainMatch[1];
+
+  // Match each .method(...) call — handle nested parens
+  const calls = [];
+  const re = /\.(\w+)\s*\(/g;
+  let m;
+  while ((m = re.exec(chain)) !== null) {
+    const method = m[1];
+    const argStart = m.index + m[0].length;
+    // Find matching closing paren
+    let depth = 1;
+    let i = argStart;
+    while (i < chain.length && depth > 0) {
+      if (chain[i] === '(') depth++;
+      else if (chain[i] === ')') depth--;
+      i++;
+    }
+    const args = chain.substring(argStart, i - 1).trim();
+    calls.push({ method, args });
+  }
+
+  for (const call of calls) {
+    switch (call.method) {
+      case 'driveTo': {
+        // Split args: first is Pose2d, optional second is Meters.of(...)
+        const pose = parsePoseArg(call.args.replace(/,\s*Meters\.of\([^)]*\)/, ''));
+        if (!pose) break;
+        const tolMatch = call.args.match(/Meters\.of\(\s*([^)]+)\)/);
+        const step = { type: 'driveTo', x: pose.x, y: pose.y, rot: pose.rot, tolerance: tolMatch ? parseFloat(tolMatch[1]) : 0.15 };
+        if (pose.namedPose) step.namedPose = pose.namedPose;
+        parsed.push(step);
+        break;
+      }
+      case 'driveToFacing': {
+        // Split: Pose2d, Translation2d, optional Meters.of(...)
+        // Find the Translation2d boundary
+        const parts = splitTopLevelArgs(call.args);
+        const pose = parsePoseArg(parts[0]);
+        const aim = parts[1] ? parseTranslation2dArg(parts[1]) : null;
+        if (!pose) break;
+        const tolMatch = call.args.match(/Meters\.of\(\s*([^)]+)\)/);
+        const step = { type: 'driveToFacing', x: pose.x, y: pose.y, rot: pose.rot, tolerance: tolMatch ? parseFloat(tolMatch[1]) : 0.15 };
+        if (pose.namedPose) step.namedPose = pose.namedPose;
+        if (aim) {
+          step.aimX = aim.x;
+          step.aimY = aim.y;
+          if (aim.namedAim) step.namedAim = aim.namedAim;
+        }
+        parsed.push(step);
+        break;
+      }
+      case 'driveToAndHold': {
+        const pose = parsePoseArg(call.args);
+        if (!pose) break;
+        const step = { type: 'driveToAndHold', x: pose.x, y: pose.y, rot: pose.rot, tolerance: 0.15 };
+        if (pose.namedPose) step.namedPose = pose.namedPose;
+        parsed.push(step);
+        break;
+      }
+      case 'driveToStart':
+        parsed.push({ type: 'driveToStart' });
+        break;
+      case 'driveToCollect':
+        parsed.push({ type: 'collect' });
+        break;
+      case 'waitSeconds':
+        parsed.push({ type: 'wait', waitSeconds: parseFloat(call.args) || 0.5 });
+        break;
+      case 'run': {
+        const cmd = parseCommandExpr(call.args);
+        parsed.push(cmd);
+        break;
+      }
+      case 'alongside': {
+        const cmd = parseCommandExpr(call.args);
+        cmd.alongside = true;
+        parsed.push(cmd);
+        break;
+      }
+      case 'speedScale':
+        // Ignore for now
+        break;
+    }
+  }
+  return parsed;
+}
+
+/** Split a string by commas, respecting nested parens */
+function splitTopLevelArgs(str) {
+  const parts = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < str.length; i++) {
+    if (str[i] === '(' || str[i] === '<') depth++;
+    else if (str[i] === ')' || str[i] === '>') depth--;
+    else if (str[i] === ',' && depth === 0) {
+      parts.push(str.substring(start, i).trim());
+      start = i + 1;
+    }
+  }
+  parts.push(str.substring(start).trim());
+  return parts;
 }
 
 function clearAll() {
