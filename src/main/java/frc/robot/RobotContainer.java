@@ -90,27 +90,32 @@ public class RobotContainer {
 			autoChooser = new SendableChooser<>();
 			autoChooser.setDefaultOption("Score Front",
 					Commands.defer(
-							() -> AutoPositions.frontHubAndShoot(repulsor, () -> teleopAutomation.shootCommand().repeatedly()),
+							() -> AutoPositions.frontHubAndShoot(repulsor,
+									() -> teleopAutomation.shootCommand().withTimeout(4)),
 							Set.of(drivebase)));
 			autoChooser.addOption("Left Hide + Shoot",
 					Commands.defer(
-							() -> AutoPositions.leftCornerHideAndShoot(repulsor, () -> teleopAutomation.shootCommand().repeatedly()),
+							() -> AutoPositions.leftCornerHideAndShoot(repulsor,
+									() -> teleopAutomation.shootCommand().withTimeout(4)),
 							Set.of(drivebase)));
 			autoChooser.addOption("Right Hide + Shoot",
 					Commands.defer(
-							() -> AutoPositions.rightCornerHideAndShoot(repulsor, () -> teleopAutomation.shootCommand().repeatedly()),
+							() -> AutoPositions.rightCornerHideAndShoot(repulsor,
+									() -> teleopAutomation.shootCommand().withTimeout(4)),
 							Set.of(drivebase)));
 			autoChooser.addOption("Go to center",
 					Commands.defer(() -> AutoPositions.centerFieldAuto(repulsor), Set.of(drivebase)));
 			autoChooser.addOption("Just Shoot",
-					Commands.defer(() -> teleopAutomation.shootCommand().repeatedly(), Set.of(drivebase)));
+					Commands.defer(() -> teleopAutomation.shootCommand().withTimeout(4), Set.of(drivebase)));
 			if (intake != null) {
 				autoChooser.addOption("Collect + Shoot x1",
-						Commands.defer(() -> AutoPositions.collectAndShoot1(repulsor, () -> teleopAutomation.shootCommand(),
+						Commands.defer(() -> AutoPositions.collectAndShoot1(repulsor,
+								() -> teleopAutomation.shootCommand().withTimeout(4),
 								intake::extendCommand, () -> Commands.parallel(roller.intakeCommand(), intake.holdExtendedCommand())),
 								Set.of(drivebase)));
 				autoChooser.addOption("Collect + Shoot x2",
-						Commands.defer(() -> AutoPositions.collectAndShoot2(repulsor, () -> teleopAutomation.shootCommand(),
+						Commands.defer(() -> AutoPositions.collectAndShoot2(repulsor,
+								() -> teleopAutomation.shootCommand().withTimeout(4),
 								intake::extendCommand, () -> Commands.parallel(roller.intakeCommand(), intake.holdExtendedCommand())),
 								Set.of(drivebase)));
 			}
