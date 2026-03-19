@@ -44,6 +44,14 @@ public final class AutoBuilder {
 	/** X offset (negative = toward blue alliance wall) for collect positions. */
 	private static final double COLLECT_X_OFFSET = -0.5;
 
+	/** Global preamble command run before every auto (e.g. hood homing). */
+	private static Supplier<Command> preamble;
+
+	/** Set a command to run at the start of every auto (before any steps). Use Commands.sequence() to chain multiple. */
+	public static void setPreamble(Supplier<Command> command) {
+		preamble = command;
+	}
+
 	private final Repulsor repulsor;
 	private final List<Step> steps = new ArrayList<>();
 	private final List<Resolver> resolvers = new ArrayList<>();
@@ -245,11 +253,14 @@ public final class AutoBuilder {
 
 			repulsor.setAutoSpeedScale(capturedScale);
 
-			Command[] commands = new Command[capturedSteps.size()];
-			for (int i = 0; i < capturedSteps.size(); i++) {
-				commands[i] = capturedSteps.get(i).create();
+			List<Command> commands = new ArrayList<>();
+			if (preamble != null) {
+				commands.add(preamble.get());
 			}
-			return Commands.sequence(commands)
+			for (var step : capturedSteps) {
+				commands.add(step.create());
+			}
+			return Commands.sequence(commands.toArray(Command[]::new))
 					.finallyDo(interrupted -> repulsor.resetSpeedScale());
 		}, Set.of(repulsor.getDrive().asSubsystem()));
 	}

@@ -86,6 +86,11 @@ public class RobotContainer {
 					.deadband(OperatorConstants.DEADBAND)
 					.scaleTranslation(DrivebaseConstants.TRANSLATION_SCALE).allianceRelativeControl(true);
 
+			// Register auto preamble (run before every auto)
+			if (shooter != null) {
+				AutoBuilder.setPreamble(shooter::homeHoodCommand);
+			}
+
 			// Build auto chooser
 			autoChooser = new SendableChooser<>();
 			autoChooser.setDefaultOption("Score Front",
