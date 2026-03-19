@@ -291,7 +291,7 @@ public final class AutoBuilder {
 					? SetpointUtil.flipToRed(blueAimTarget)
 					: blueAimTarget;
 			Rotation2d towardTarget = target.minus(flipped.getTranslation()).getAngle();
-			Rotation2d facing = towardTarget.rotateBy(flipped.getRotation());
+			Rotation2d facing = towardTarget.rotateBy(bluePose.getRotation());
 			ref.set(new Pose2d(flipped.getTranslation(), facing));
 		});
 		return ref;
