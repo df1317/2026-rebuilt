@@ -947,22 +947,29 @@ function fieldToCanvas(fx, fy) {
 }
 
 function canvasToField(cx, cy) {
-  return {
+  const raw = {
     x: (cx - panX) / canvasScale,
     y: FIELD_WIDTH - (cy - panY) / canvasScale
   };
+  // Un-flip: canvas shows red-flipped, but data is always blue-alliance
+  return alliance === 'red' ? { x: flipX(raw.x), y: raw.y } : raw;
 }
 
-// Alliance flip (blue -> red)
-function flipPose(x, y, rotDeg) {
-  if (alliance === 'red') {
-    return {
-      x: FIELD_LENGTH - x,
-      y: y,
-      rot: 180 - rotDeg
-    };
-  }
-  return { x, y, rot: rotDeg };
+// Alliance flip (blue -> red) - mirrors X, keeps Y, flips heading
+function flipX(x) { return FIELD_LENGTH - x; }
+function flipField(fx, fy) {
+  return alliance === 'red' ? { x: flipX(fx), y: fy } : { x: fx, y: fy };
+}
+
+// Field-to-canvas with alliance flip applied (for rendering only - data stays blue)
+function fieldToCanvasFlipped(fx, fy) {
+  const f = flipField(fx, fy);
+  return fieldToCanvas(f.x, f.y);
+}
+
+function effectiveHeadingDegFlipped(step) {
+  const deg = effectiveHeadingDeg(step);
+  return alliance === 'red' ? 180 - deg : deg;
 }
 
 // ===== RENDERING =====
@@ -1035,7 +1042,7 @@ function drawPathLines() {
   ctx.setLineDash([8, 6]);
 
   for (let i = 0; i < driveSteps.length; i++) {
-    const p = fieldToCanvas(driveSteps[i].x, driveSteps[i].y);
+    const p = fieldToCanvasFlipped(driveSteps[i].x, driveSteps[i].y);
     if (i === 0) ctx.moveTo(p.x, p.y);
     else ctx.lineTo(p.x, p.y);
   }
@@ -1044,8 +1051,8 @@ function drawPathLines() {
 
   // Draw arrow heads between points
   for (let i = 0; i < driveSteps.length - 1; i++) {
-    const p1 = fieldToCanvas(driveSteps[i].x, driveSteps[i].y);
-    const p2 = fieldToCanvas(driveSteps[i+1].x, driveSteps[i+1].y);
+    const p1 = fieldToCanvasFlipped(driveSteps[i].x, driveSteps[i].y);
+    const p2 = fieldToCanvasFlipped(driveSteps[i+1].x, driveSteps[i+1].y);
     const mx = (p1.x + p2.x) / 2;
     const my = (p1.y + p2.y) / 2;
     const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
@@ -1074,12 +1081,12 @@ function effectiveHeadingDeg(step) {
 }
 
 function drawWaypoint(step, idx) {
-  const p = fieldToCanvas(step.x, step.y);
+  const p = fieldToCanvasFlipped(step.x, step.y);
   const isSelected = idx === selectedStepIdx;
   const isHover = idx === hoverStep;
   const radius = isSelected ? 14 : (isHover ? 12 : 10);
 
-  const headingDeg = effectiveHeadingDeg(step);
+  const headingDeg = effectiveHeadingDegFlipped(step);
 
   // Robot footprint (length along heading, width perpendicular)
   const halfLen = ROBOT_HALF_LENGTH * canvasScale;
@@ -1146,8 +1153,8 @@ function drawWaypoint(step, idx) {
 }
 
 function drawAimTarget(step, idx) {
-  const p = fieldToCanvas(step.aimX, step.aimY);
-  const wp = fieldToCanvas(step.x, step.y);
+  const p = fieldToCanvasFlipped(step.aimX, step.aimY);
+  const wp = fieldToCanvasFlipped(step.x, step.y);
   const isSelected = idx === selectedStepIdx;
 
   // Dashed line from waypoint to aim target
@@ -1204,15 +1211,17 @@ function onMouseMove(e) {
       updatePropPanel();
     } else if (dragging.type === 'rotation') {
       const step = steps[dragging.stepIdx];
-      const wp = fieldToCanvas(step.x, step.y);
+      const wp = fieldToCanvasFlipped(step.x, step.y);
       const canvasAngle = Math.atan2(cy - wp.y, cx - wp.x);
       const draggedHeadingDeg = -canvasAngle * 180 / Math.PI;
+      // When red, the visual heading is 180-deg from blue, so convert back to blue data
+      const blueHeadingDeg = alliance === 'red' ? 180 - draggedHeadingDeg : draggedHeadingDeg;
       if (step.type === 'driveToFacing' && step.aimX !== undefined) {
         // rot is offset from facing: dragged heading = facing + offset
         const facingDeg = Math.atan2(step.aimY - step.y, step.aimX - step.x) * 180 / Math.PI;
-        step.rot = draggedHeadingDeg - facingDeg;
+        step.rot = blueHeadingDeg - facingDeg;
       } else {
-        step.rot = draggedHeadingDeg;
+        step.rot = blueHeadingDeg;
       }
       updatePropPanel();
     } else if (dragging.type === 'aim') {
@@ -1401,7 +1410,7 @@ function hitTestWaypoint(cx, cy) {
   for (let i = steps.length - 1; i >= 0; i--) {
     const step = steps[i];
     if (step.x === undefined) continue;
-    const p = fieldToCanvas(step.x, step.y);
+    const p = fieldToCanvasFlipped(step.x, step.y);
     const dx = cx - p.x, dy = cy - p.y;
     if (dx * dx + dy * dy < 225) return i; // 15px radius
   }
@@ -1412,8 +1421,8 @@ function hitTestRotation(cx, cy) {
   for (let i = steps.length - 1; i >= 0; i--) {
     const step = steps[i];
     if (step.x === undefined) continue;
-    const p = fieldToCanvas(step.x, step.y);
-    const rotRad = -effectiveHeadingDeg(step) * Math.PI / 180;
+    const p = fieldToCanvasFlipped(step.x, step.y);
+    const rotRad = -effectiveHeadingDegFlipped(step) * Math.PI / 180;
     const ax = p.x + Math.cos(rotRad) * 30;
     const ay = p.y + Math.sin(rotRad) * 30;
     const dx = cx - ax, dy = cy - ay;
@@ -1426,7 +1435,7 @@ function hitTestAimTarget(cx, cy) {
   for (let i = steps.length - 1; i >= 0; i--) {
     const step = steps[i];
     if (step.aimX === undefined) continue;
-    const p = fieldToCanvas(step.aimX, step.aimY);
+    const p = fieldToCanvasFlipped(step.aimX, step.aimY);
     const dx = cx - p.x, dy = cy - p.y;
     if (dx * dx + dy * dy < 144) return i;
   }
