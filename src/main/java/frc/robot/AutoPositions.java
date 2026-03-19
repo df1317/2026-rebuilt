@@ -73,14 +73,14 @@ public final class AutoPositions {
 
 	public static Command leftCornerHideAndShoot(Repulsor repulsor, Supplier<Command> shootCommand) {
 		return new AutoBuilder(repulsor)
-				.driveToFacing(CORNER_HIDE_NEAR_BALLS, HUB_CENTER)
+				.driveToFacing(CORNER_HIDE_NEAR_BALLS, HUB_CENTER, 180)
 				.run(shootCommand)
 				.build();
 	}
 
 	public static Command rightCornerHideAndShoot(Repulsor repulsor, Supplier<Command> shootCommand) {
 		return new AutoBuilder(repulsor)
-				.driveToFacing(CORNER_HIDE, HUB_CENTER)
+				.driveToFacing(CORNER_HIDE, HUB_CENTER, 180)
 				.run(shootCommand)
 				.build();
 	}
@@ -95,8 +95,8 @@ public final class AutoPositions {
 	// ===== Collect & Shoot Autos =====
 
 	/**
-	 * Shoot to clear, collect from closest side, return to start, shoot.
-	 * All commands are Suppliers — WPILib prohibits composing the same command instance twice.
+	 * Shoot to clear, collect from closest side, return to start, shoot. All commands are Suppliers — WPILib prohibits
+	 * composing the same command instance twice.
 	 */
 	public static Command collectAndShoot1(Repulsor repulsor, Supplier<Command> shootCommand,
 			Supplier<Command> extendIntake, Supplier<Command> runRollerCommand) {
@@ -111,8 +111,8 @@ public final class AutoPositions {
 	}
 
 	/**
-	 * Shoot to clear, collect from closest side, return and shoot, repeat once more.
-	 * All commands are Suppliers — WPILib prohibits composing the same command instance twice.
+	 * Shoot to clear, collect from closest side, return and shoot, repeat once more. All commands are Suppliers — WPILib
+	 * prohibits composing the same command instance twice.
 	 */
 	public static Command collectAndShoot2(Repulsor repulsor, Supplier<Command> shootCommand,
 			Supplier<Command> extendIntake, Supplier<Command> runRollerCommand) {
@@ -136,9 +136,9 @@ public final class AutoPositions {
 	 * Drive to climb position, engage, and climb. Sequence: down → bottom → top → hang.
 	 *
 	 * @param climbPose
-	 *          the approach pose (CLIMB_LEFT or CLIMB_RIGHT)
+	 * 		the approach pose (CLIMB_LEFT or CLIMB_RIGHT)
 	 * @param engagePose
-	 *          the engage pose (CLIMB_LEFT_ENGAGE or CLIMB_RIGHT_ENGAGE)
+	 * 		the engage pose (CLIMB_LEFT_ENGAGE or CLIMB_RIGHT_ENGAGE)
 	 */
 	public static Command climbAuto(Repulsor repulsor, ClimberSubsystem climber,
 			Pose2d climbPose, Pose2d engagePose) {

@@ -2073,6 +2073,14 @@ function exportCode() {
     return `new Pose2d(${step.x.toFixed(3)}, ${step.y.toFixed(3)}, Rotation2d.fromDegrees(${(step.rot || 0).toFixed(1)}))`;
   }
 
+  /** Pose2d without rotation (for driveToFacing where rot is a separate param). */
+  function poseExprNoRot(step) {
+    if (step.namedPose && NAMED_POSES[step.namedPose]) {
+      return NAMED_POSES[step.namedPose].ref;
+    }
+    return `new Pose2d(${step.x.toFixed(3)}, ${step.y.toFixed(3)}, Rotation2d.kZero)`;
+  }
+
   function aimExpr(step) {
     if (step.namedAim && NAMED_TARGETS[step.namedAim]) {
       return NAMED_TARGETS[step.namedAim].ref;
@@ -2092,11 +2100,19 @@ function exportCode() {
         break;
       }
       case 'driveToFacing': {
+        const rot = step.rot || 0;
+        const hasRot = Math.abs(rot) > 0.1;
         const tol = step.tolerance !== undefined && Math.abs(step.tolerance - 0.15) > 0.001;
-        if (tol) {
-          code += `\t.driveToFacing(${poseExpr(step)}, ${aimExpr(step)}, Meters.of(${step.tolerance.toFixed(2)}))\n`;
+        const pose = hasRot ? poseExprNoRot(step) : poseExprNoRot(step);
+        const aim = aimExpr(step);
+        if (hasRot && tol) {
+          code += `\t.driveToFacing(${pose}, ${aim}, ${rot.toFixed(1)}, Meters.of(${step.tolerance.toFixed(2)}))\n`;
+        } else if (hasRot) {
+          code += `\t.driveToFacing(${pose}, ${aim}, ${rot.toFixed(1)})\n`;
+        } else if (tol) {
+          code += `\t.driveToFacing(${pose}, ${aim}, Meters.of(${step.tolerance.toFixed(2)}))\n`;
         } else {
-          code += `\t.driveToFacing(${poseExpr(step)}, ${aimExpr(step)})\n`;
+          code += `\t.driveToFacing(${pose}, ${aim})\n`;
         }
         break;
       }
@@ -2351,14 +2367,18 @@ function parseJavaAuto(java) {
         break;
       }
       case 'driveToFacing': {
-        // Split: Pose2d, Translation2d, optional Meters.of(...)
-        // Find the Translation2d boundary
+        // Split: Pose2d, Translation2d, optional rotationDeg, optional Meters.of(...)
         const parts = splitTopLevelArgs(call.args);
         const pose = parsePoseArg(parts[0]);
         const aim = parts[1] ? parseTranslation2dArg(parts[1]) : null;
         if (!pose) break;
         const tolMatch = call.args.match(/Meters\.of\(\s*([^)]+)\)/);
-        const step = { type: 'driveToFacing', x: pose.x, y: pose.y, rot: pose.rot, tolerance: tolMatch ? parseFloat(tolMatch[1]) : 0.15 };
+        // Check for rotation offset as 3rd param (a plain number, not Meters.of or Translation2d)
+        let rotOffset = pose.rot || 0;
+        if (parts[2] && !parts[2].includes('Meters') && !parts[2].includes('new')) {
+          rotOffset = parseFloat(parts[2]);
+        }
+        const step = { type: 'driveToFacing', x: pose.x, y: pose.y, rot: rotOffset, tolerance: tolMatch ? parseFloat(tolMatch[1]) : 0.15 };
         if (pose.namedPose) step.namedPose = pose.namedPose;
         if (aim) {
           step.aimX = aim.x;

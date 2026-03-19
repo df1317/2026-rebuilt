@@ -71,9 +71,19 @@ public final class AutoBuilder {
 		return this;
 	}
 
-	/** Navigate to pose, facing the aim target on arrival. Finishes when within 15cm. */
+	/** Navigate to pose, facing the aim target on arrival (front faces target). Finishes when within 15cm. */
 	public AutoBuilder driveToFacing(Pose2d bluePose, Translation2d blueAimTarget) {
-		return driveToFacing(bluePose, blueAimTarget, DEFAULT_TOLERANCE, null);
+		return driveToFacing(bluePose, blueAimTarget, 0.0);
+	}
+
+	/**
+	 * Navigate to pose, facing the aim target on arrival with a rotation offset.
+	 * @param rotationOffsetDeg offset from facing angle (0 = front faces target, 180 = back faces target)
+	 */
+	public AutoBuilder driveToFacing(Pose2d bluePose, Translation2d blueAimTarget, double rotationOffsetDeg) {
+		return driveToFacing(
+				new Pose2d(bluePose.getTranslation(), Rotation2d.fromDegrees(rotationOffsetDeg)),
+				blueAimTarget, DEFAULT_TOLERANCE, null);
 	}
 
 	/** Navigate to pose, facing the aim target on arrival. Custom tolerance. */
