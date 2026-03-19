@@ -46,8 +46,9 @@ public class IntakeSubsystem extends SubsystemBase {
 	private final ProfiledPIDController pivotProfiler = new ProfiledPIDController(0, 0, 0,
 			new TrapezoidProfile.Constraints(PIVOT_MAX_VELOCITY_DEG_PER_S, PIVOT_MAX_ACCEL_DEG_PER_S2));
 	private final RollerSubsystem roller;
-	Angle targetPivotAngle = PIVOT_RETRACTED_ANGLE;
 	boolean homed = false;
+	private Angle extendedPivotAngle = PIVOT_EXTENDED_ANGLE;
+	Angle targetPivotAngle = extendedPivotAngle.plus(PIVOT_RETRACTED_DELTA);
 	private double prevPivotKP = PIVOT_KP, prevPivotKI = PIVOT_KI, prevPivotKD = PIVOT_KD, prevPivotKV = 0.0;
 
 	public IntakeSubsystem(RollerSubsystem roller) {
@@ -114,14 +115,15 @@ public class IntakeSubsystem extends SubsystemBase {
 
 	public boolean isExtended() {
 		return isPivotAtPosition()
-				&& Math.abs(targetPivotAngle.in(Degrees) - PIVOT_EXTENDED_ANGLE.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
-						.in(Degrees);
+				&& Math.abs(targetPivotAngle.in(Degrees) - extendedPivotAngle.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
+				.in(Degrees);
 	}
 
 	public boolean isRetracted() {
 		return isPivotAtPosition()
-				&& Math.abs(targetPivotAngle.in(Degrees) - PIVOT_RETRACTED_ANGLE.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
-						.in(Degrees);
+				&& Math.abs(targetPivotAngle.in(Degrees) - extendedPivotAngle.plus(PIVOT_RETRACTED_DELTA)
+				.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
+				.in(Degrees);
 	}
 
 	// ==================== Control Methods ====================
@@ -141,7 +143,7 @@ public class IntakeSubsystem extends SubsystemBase {
 		return runOnce(() -> {
 			pivotProfiler.setConstraints(new TrapezoidProfile.Constraints(
 					PIVOT_EXTEND_MAX_VELOCITY_DEG_PER_S, PIVOT_EXTEND_MAX_ACCEL_DEG_PER_S2));
-			setPivotAngle(PIVOT_EXTENDED_ANGLE);
+			setPivotAngle(extendedPivotAngle);
 		})
 				.andThen(idle().until(() -> isPivotStalled() || isPivotAtPosition()))
 				.andThen(runOnce(() -> setPivotAngle(Degrees.of(pivotEncoder.getPosition()))))
@@ -151,7 +153,7 @@ public class IntakeSubsystem extends SubsystemBase {
 	}
 
 	public Command retractCommand() {
-		return runOnce(() -> setPivotAngle(PIVOT_RETRACTED_ANGLE))
+		return runOnce(() -> setPivotAngle(extendedPivotAngle.plus(PIVOT_RETRACTED_DELTA)))
 				.andThen(idle().until(() -> isPivotStalled() || isPivotAtPosition()))
 				.andThen(runOnce(() -> setPivotAngle(Degrees.of(pivotEncoder.getPosition()))))
 				.withName("Intake Retract");
@@ -159,6 +161,27 @@ public class IntakeSubsystem extends SubsystemBase {
 
 	public Command stowCommand() {
 		return retractCommand().withName("Intake Stow");
+	}
+
+	public Command jogDownCommand() {
+		return run(() -> {
+			pivotMotor.set(-0.1);
+		}).finallyDo(() -> {
+			pivotMotor.stopMotor();
+			double pos = pivotEncoder.getPosition();
+			pivotProfiler.reset(pos);
+			setPivotAngle(Degrees.of(pos));
+		});
+	}
+
+	public Command zeroIntakeCommand() {
+		return runOnce(() -> {
+			double currentAngle = pivotEncoder.getPosition();
+			extendedPivotAngle = Degrees.of(currentAngle);
+			pivotProfiler.reset(currentAngle);
+			setPivotAngle(extendedPivotAngle);
+			homed = true;
+		});
 	}
 
 	/**
@@ -172,7 +195,7 @@ public class IntakeSubsystem extends SubsystemBase {
 	public Command holdExtendedCommand() {
 		return run(() -> {
 			if (!isRetracted()) {
-				setPivotAngle(PIVOT_EXTENDED_ANGLE);
+				setPivotAngle(extendedPivotAngle);
 			}
 		}).withName("Hold Extended");
 	}
@@ -196,18 +219,10 @@ public class IntakeSubsystem extends SubsystemBase {
 				.withName("Home Intake");
 	}
 
-	public Command zeroCommand() {
-		return runOnce(() -> {
-			pivotEncoder.setPosition(0);
-			pivotProfiler.reset(0);
-			setPivotAngle(Degrees.of(0));
-		}).withName("Intake Zero");
-	}
-
 	public Command testPivotCommand() {
 		return Commands.run(() -> {
-			setPivotAngle(Degrees.of(testPivotDeg.get()));
-		}, this)
+					setPivotAngle(Degrees.of(testPivotDeg.get()));
+				}, this)
 				.finallyDo(pivotMotor::stopMotor)
 				.withName("Test Intake Pivot");
 	}

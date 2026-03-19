@@ -106,11 +106,11 @@ public class RobotContainer {
 			if (intake != null) {
 				autoChooser.addOption("Collect + Shoot x1",
 						Commands.defer(() -> AutoPositions.collectAndShoot1(repulsor, teleopAutomation.shootCommand(),
-								intake.extendCommand(), Commands.parallel(roller.intakeCommand(), intake.holdExtendedCommand())),
+										intake.extendCommand(), Commands.parallel(roller.intakeCommand(), intake.holdExtendedCommand())),
 								Set.of(drivebase)));
 				autoChooser.addOption("Collect + Shoot x2",
 						Commands.defer(() -> AutoPositions.collectAndShoot2(repulsor, teleopAutomation.shootCommand(),
-								intake.extendCommand(), Commands.parallel(roller.intakeCommand(), intake.holdExtendedCommand())),
+										intake.extendCommand(), Commands.parallel(roller.intakeCommand(), intake.holdExtendedCommand())),
 								Set.of(drivebase)));
 			}
 			if (Constants.ENABLE_CLIMBER && climber != null) {
@@ -166,9 +166,9 @@ public class RobotContainer {
 				}
 			}).andThen(Constants.ENABLE_SWERVE && drivebase != null
 					? Commands.parallel(
-							teleopAutomation.shootCommand(drivebase::isAimed),
-							drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY,
-									teleopAutomation::getShootingPose))
+					teleopAutomation.shootCommand(drivebase::isAimed),
+					drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY,
+							teleopAutomation::getShootingPose))
 					: teleopAutomation.shootCommand()));
 		}
 		if (Constants.ENABLE_INTAKE && intake != null) {
@@ -179,9 +179,11 @@ public class RobotContainer {
 
 		// ===== Teleop Panel Controls (Maypad — see docs for layout) =====
 		// Row 2 — Feed / Intake
-		if (Constants.ENABLE_INTAKE && roller != null) {
+		if (Constants.ENABLE_INTAKE && roller != null && intake != null) {
 			panel.key(2, 1).and(inTeleop).whileTrue(roller.runRollerCommand()); // intakeForward
 			panel.key(3, 1).and(inTeleop).whileTrue(roller.ejectCommand()); // intakeReverse
+			panel.key(0, 1).and(inTeleop).onTrue(intake.zeroIntakeCommand());
+			panel.key(0, 2).and(inTeleop).whileTrue(intake.jogDownCommand());
 		}
 		if (Constants.ENABLE_HOPPER && hopper != null) {
 			panel.key(2, 2).and(inTeleop).whileTrue(hopper.feedCommand()); // hopperForward
@@ -210,6 +212,8 @@ public class RobotContainer {
 		// Row 0 — Climber / Intake
 		if (Constants.ENABLE_INTAKE && intake != null) {
 			panel.key(0, 0).onTrue(intake.homeCommand()); // intakeHome
+			panel.key(2, 1).and(inTest).onTrue(intake.zeroIntakeCommand());
+			panel.key(2, 2).and(inTest).whileTrue(intake.jogDownCommand());
 		}
 		if (Constants.ENABLE_CLIMBER && climber != null) {
 			panel.key(0, 1).and(inTest).onTrue(climber.zeroCommand());
@@ -231,8 +235,8 @@ public class RobotContainer {
 		if (Constants.ENABLE_SHOOTER && shooter != null) {
 			panel.key(2, 3).and(inTest).whileTrue(
 					Commands.parallel(
-							Commands.runOnce(() -> shooter.setTestHoodPercent()),
-							shooter.spinUpAndWaitCommand(shooter::getShooterTestRPM, shooter::getFeederTestRPM))
+									Commands.runOnce(() -> shooter.setTestHoodPercent()),
+									shooter.spinUpAndWaitCommand(shooter::getShooterTestRPM, shooter::getFeederTestRPM))
 							.andThen(Constants.ENABLE_HOPPER && hopper != null
 									? hopper.setHopperVelocityCommand(hopper::getHopperTestRPM)
 									: Commands.none())
