@@ -115,13 +115,13 @@ public class RobotContainer {
 			if (intake != null) {
 				autoChooser.addOption("Collect + Shoot x1",
 						Commands.defer(() -> AutoPositions.collectAndShoot1(repulsor,
-								() -> teleopAutomation.shootCommand().withTimeout(4),
-								intake::extendCommand, () -> Commands.parallel(roller.intakeCommand(), intake.holdExtendedCommand())),
+										() -> teleopAutomation.shootCommand().withTimeout(4),
+										intake::extendCommand, () -> Commands.parallel(roller.intakeCommand(), intake.holdExtendedCommand())),
 								Set.of(drivebase)));
 				autoChooser.addOption("Collect + Shoot x2",
 						Commands.defer(() -> AutoPositions.collectAndShoot2(repulsor,
-								() -> teleopAutomation.shootCommand().withTimeout(4),
-								intake::extendCommand, () -> Commands.parallel(roller.intakeCommand(), intake.holdExtendedCommand())),
+										() -> teleopAutomation.shootCommand().withTimeout(4),
+										intake::extendCommand, () -> Commands.parallel(roller.intakeCommand(), intake.holdExtendedCommand())),
 								Set.of(drivebase)));
 			}
 			if (Constants.ENABLE_CLIMBER && climber != null) {
@@ -177,15 +177,18 @@ public class RobotContainer {
 				}
 			}).andThen(Constants.ENABLE_SWERVE && drivebase != null
 					? Commands.parallel(
-							teleopAutomation.shootCommand(drivebase::isAimed),
-							drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY,
-									teleopAutomation::getShootingPose))
+					teleopAutomation.shootCommand(drivebase::isAimed),
+					drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY,
+							teleopAutomation::getShootingPose))
 					: teleopAutomation.shootCommand()));
 		}
 		if (Constants.ENABLE_INTAKE && intake != null) {
 			driverXbox.x().onTrue(intake.stowToggleCommand());
+			panel.key(1, 2).and(inTeleop).onTrue(intake.stowToggleCommand());
 			driverXbox.leftTrigger().and(inTeleop).whileTrue(roller.intakeCommand());
 			driverXbox.leftTrigger().and(inTeleop).whileTrue(intake.holdExtendedCommand());
+			panel.key(1, 3).and(inTeleop).whileTrue(roller.intakeCommand());
+			panel.key(1, 3).and(inTeleop).whileTrue(intake.holdExtendedCommand());
 		}
 
 		// ===== Teleop Panel Controls (Maypad — see docs for layout) =====
@@ -246,8 +249,8 @@ public class RobotContainer {
 		if (Constants.ENABLE_SHOOTER && shooter != null) {
 			panel.key(2, 3).and(inTest).whileTrue(
 					Commands.parallel(
-							Commands.runOnce(() -> shooter.setTestHoodPercent()),
-							shooter.spinUpAndWaitCommand(shooter::getShooterTestRPM, shooter::getFeederTestRPM))
+									Commands.runOnce(() -> shooter.setTestHoodPercent()),
+									shooter.spinUpAndWaitCommand(shooter::getShooterTestRPM, shooter::getFeederTestRPM))
 							.andThen(Constants.ENABLE_HOPPER && hopper != null
 									? hopper.setHopperVelocityCommand(hopper::getHopperTestRPM)
 									: Commands.none())

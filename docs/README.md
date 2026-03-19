@@ -45,7 +45,7 @@ Firmware: [df1317/maypad-frc](https://github.com/df1317/maypad-frc) — grab the
 |           | Col 0                    | Col 1                  | Col 2                  | Col 3                  |
 |-----------|--------------------------|------------------------|------------------------|------------------------|
 | **Row 0** | `intakeHome` (once)*     | `intakeZero` (once)    | `intakeDown` (hold)    | -                      |
-| **Row 1** | `autoDistance` (once)    | `hoodHome` (once)*     | -                      | -                      |
+| **Row 1** | `autoDistance` (once)    | `hoodHome` (once)*     | `intakeToggle` (once)  | `rollerRun` (hold)     |
 | **Row 2** | `distanceAdvance` (once) | `intakeForward` (hold) | `hopperForward` (hold) | `Shoot+Feed` (hold)    |
 | **Row 3** | `distanceReduce` (once)  | `intakeReverse` (hold) | `hopperReverse` (hold) | `feederReverse` (hold) |
 | **Row 4** | `climbBottom` (once)     | `climbTop` (once)      | `climbHang` (once)     | `climbRelease` (once)  |
@@ -60,8 +60,8 @@ Firmware: [df1317/maypad-frc](https://github.com/df1317/maypad-frc) — grab the
 | **row 1**   |                  |                                                                                          |
 | `key(1, 0)` | Auto Distance    | Returns to auto setting the distance from vision                                         |
 | `key(1, 1)` | Home Hood*       | Homes the shooter hood (works in both teleop and test)                                   |
-| `key(1, 2)` | -                |                                                                                          |
-| `key(1, 3)` | -                |                                                                                          |
+| `key(1, 2)` | Intake Toggle    | Extends and stows the intake                                                             |
+| `key(1, 3)` | Intake Run       | Runs the rollers and holds down                                                          |
 | **row 2**   |                  |                                                                                          |
 | `key(2, 0)` | Distance Advance | Switches to manual distance and advances distance map by one increment                   |
 | `key(2, 1)` | Intake Forward   | Runs intake roller forward                                                               |
