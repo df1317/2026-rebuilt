@@ -77,8 +77,8 @@ public final class AutoChain {
 
 		// Shoot
 		if (teleopAutomation != null) {
-			steps.put("Shoot", b -> b.run(teleopAutomation.shootCommand()));
-			steps.put("Shoot (repeat)", b -> b.run(teleopAutomation.shootCommand().repeatedly()));
+			steps.put("Shoot", b -> b.run(() -> teleopAutomation.shootCommand()));
+			steps.put("Shoot (repeat)", b -> b.run(() -> teleopAutomation.shootCommand().repeatedly()));
 		}
 
 		// Wait
@@ -88,10 +88,10 @@ public final class AutoChain {
 
 		// Climb
 		if (climber != null) {
-			steps.put("Climb", b -> b.run(climber.climbTopCommand())
-					.run(climber.climbHangCommand()));
-			steps.put("Descend", b -> b.run(climber.climbReleaseCommand())
-					.run(climber.climbBottomCommand()));
+			steps.put("Climb", b -> b.run(climber::climbTopCommand)
+					.run(climber::climbHangCommand));
+			steps.put("Descend", b -> b.run(climber::climbReleaseCommand)
+					.run(climber::climbBottomCommand));
 		}
 	}
 }

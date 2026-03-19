@@ -9,6 +9,8 @@ import frc.robot.repulsor.RepulsorConstants;
 import frc.robot.repulsor.Setpoints.Specific._Rebuilt2026;
 import frc.robot.subsystems.climber.ClimberSubsystem;
 
+import java.util.function.Supplier;
+
 /**
  * Auto target positions and pre-built routines.
  *
@@ -62,21 +64,21 @@ public final class AutoPositions {
 	}
 
 	/** Drive to hub front, hold position, and shoot. */
-	public static Command frontHubAndShoot(Repulsor repulsor, Command shootCommand) {
+	public static Command frontHubAndShoot(Repulsor repulsor, Supplier<Command> shootCommand) {
 		return new AutoBuilder(repulsor)
 				.driveTo(HUB_FRONT_SHOOT)
 				.run(shootCommand)
 				.build();
 	}
 
-	public static Command leftCornerHideAndShoot(Repulsor repulsor, Command shootCommand) {
+	public static Command leftCornerHideAndShoot(Repulsor repulsor, Supplier<Command> shootCommand) {
 		return new AutoBuilder(repulsor)
 				.driveToFacing(CORNER_HIDE_NEAR_BALLS, HUB_CENTER)
 				.run(shootCommand)
 				.build();
 	}
 
-	public static Command rightCornerHideAndShoot(Repulsor repulsor, Command shootCommand) {
+	public static Command rightCornerHideAndShoot(Repulsor repulsor, Supplier<Command> shootCommand) {
 		return new AutoBuilder(repulsor)
 				.driveToFacing(CORNER_HIDE, HUB_CENTER)
 				.run(shootCommand)
@@ -92,9 +94,12 @@ public final class AutoPositions {
 
 	// ===== Collect & Shoot Autos =====
 
-	/** Shoot to clear, collect from closest side, return to start, shoot. */
-	public static Command collectAndShoot1(Repulsor repulsor, Command shootCommand, Command extendIntake,
-			Command runRollerCommand) {
+	/**
+	 * Shoot to clear, collect from closest side, return to start, shoot.
+	 * All commands are Suppliers — WPILib prohibits composing the same command instance twice.
+	 */
+	public static Command collectAndShoot1(Repulsor repulsor, Supplier<Command> shootCommand,
+			Supplier<Command> extendIntake, Supplier<Command> runRollerCommand) {
 		return new AutoBuilder(repulsor)
 				.run(shootCommand)
 				.run(extendIntake)
@@ -105,9 +110,12 @@ public final class AutoPositions {
 				.build();
 	}
 
-	/** Shoot to clear, collect from closest side, return and shoot, repeat once more. */
-	public static Command collectAndShoot2(Repulsor repulsor, Command shootCommand, Command extendIntake,
-			Command runRollerCommand) {
+	/**
+	 * Shoot to clear, collect from closest side, return and shoot, repeat once more.
+	 * All commands are Suppliers — WPILib prohibits composing the same command instance twice.
+	 */
+	public static Command collectAndShoot2(Repulsor repulsor, Supplier<Command> shootCommand,
+			Supplier<Command> extendIntake, Supplier<Command> runRollerCommand) {
 		return new AutoBuilder(repulsor)
 				.run(shootCommand)
 				.run(extendIntake)
@@ -136,10 +144,10 @@ public final class AutoPositions {
 			Pose2d climbPose, Pose2d engagePose) {
 		return new AutoBuilder(repulsor)
 				.driveTo(climbPose)
-				.run(climber.climbBottomCommand())
+				.run(climber::climbBottomCommand)
 				.driveTo(engagePose)
-				.run(climber.climbTopCommand())
-				.run(climber.climbHangCommand())
+				.run(climber::climbTopCommand)
+				.run(climber::climbHangCommand)
 				.build();
 	}
 

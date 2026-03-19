@@ -89,15 +89,16 @@ public class RobotContainer {
 			// Build auto chooser
 			autoChooser = new SendableChooser<>();
 			autoChooser.setDefaultOption("Score Front",
-					Commands.defer(() -> AutoPositions.frontHubAndShoot(repulsor, teleopAutomation.shootCommand().repeatedly()),
+					Commands.defer(
+							() -> AutoPositions.frontHubAndShoot(repulsor, () -> teleopAutomation.shootCommand().repeatedly()),
 							Set.of(drivebase)));
 			autoChooser.addOption("Left Hide + Shoot",
 					Commands.defer(
-							() -> AutoPositions.leftCornerHideAndShoot(repulsor, teleopAutomation.shootCommand().repeatedly()),
+							() -> AutoPositions.leftCornerHideAndShoot(repulsor, () -> teleopAutomation.shootCommand().repeatedly()),
 							Set.of(drivebase)));
 			autoChooser.addOption("Right Hide + Shoot",
 					Commands.defer(
-							() -> AutoPositions.rightCornerHideAndShoot(repulsor, teleopAutomation.shootCommand().repeatedly()),
+							() -> AutoPositions.rightCornerHideAndShoot(repulsor, () -> teleopAutomation.shootCommand().repeatedly()),
 							Set.of(drivebase)));
 			autoChooser.addOption("Go to center",
 					Commands.defer(() -> AutoPositions.centerFieldAuto(repulsor), Set.of(drivebase)));
@@ -105,12 +106,12 @@ public class RobotContainer {
 					Commands.defer(() -> teleopAutomation.shootCommand().repeatedly(), Set.of(drivebase)));
 			if (intake != null) {
 				autoChooser.addOption("Collect + Shoot x1",
-						Commands.defer(() -> AutoPositions.collectAndShoot1(repulsor, teleopAutomation.shootCommand(),
-										intake.extendCommand(), Commands.parallel(roller.intakeCommand(), intake.holdExtendedCommand())),
+						Commands.defer(() -> AutoPositions.collectAndShoot1(repulsor, () -> teleopAutomation.shootCommand(),
+								intake::extendCommand, () -> Commands.parallel(roller.intakeCommand(), intake.holdExtendedCommand())),
 								Set.of(drivebase)));
 				autoChooser.addOption("Collect + Shoot x2",
-						Commands.defer(() -> AutoPositions.collectAndShoot2(repulsor, teleopAutomation.shootCommand(),
-										intake.extendCommand(), Commands.parallel(roller.intakeCommand(), intake.holdExtendedCommand())),
+						Commands.defer(() -> AutoPositions.collectAndShoot2(repulsor, () -> teleopAutomation.shootCommand(),
+								intake::extendCommand, () -> Commands.parallel(roller.intakeCommand(), intake.holdExtendedCommand())),
 								Set.of(drivebase)));
 			}
 			if (Constants.ENABLE_CLIMBER && climber != null) {
@@ -166,9 +167,9 @@ public class RobotContainer {
 				}
 			}).andThen(Constants.ENABLE_SWERVE && drivebase != null
 					? Commands.parallel(
-					teleopAutomation.shootCommand(drivebase::isAimed),
-					drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY,
-							teleopAutomation::getShootingPose))
+							teleopAutomation.shootCommand(drivebase::isAimed),
+							drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY,
+									teleopAutomation::getShootingPose))
 					: teleopAutomation.shootCommand()));
 		}
 		if (Constants.ENABLE_INTAKE && intake != null) {
@@ -235,8 +236,8 @@ public class RobotContainer {
 		if (Constants.ENABLE_SHOOTER && shooter != null) {
 			panel.key(2, 3).and(inTest).whileTrue(
 					Commands.parallel(
-									Commands.runOnce(() -> shooter.setTestHoodPercent()),
-									shooter.spinUpAndWaitCommand(shooter::getShooterTestRPM, shooter::getFeederTestRPM))
+							Commands.runOnce(() -> shooter.setTestHoodPercent()),
+							shooter.spinUpAndWaitCommand(shooter::getShooterTestRPM, shooter::getFeederTestRPM))
 							.andThen(Constants.ENABLE_HOPPER && hopper != null
 									? hopper.setHopperVelocityCommand(hopper::getHopperTestRPM)
 									: Commands.none())

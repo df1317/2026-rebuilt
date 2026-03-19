@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 /**
  * Fluent builder for autonomous command sequences using Repulsor path planning.
@@ -185,9 +186,12 @@ public final class AutoBuilder {
 		return this;
 	}
 
-	/** Insert any WPILib command into the sequence. */
-	public AutoBuilder run(Command command) {
-		steps.add(() -> command);
+	/**
+	 * Insert a command into the sequence.
+	 * Takes a Supplier so each scheduling creates a fresh instance — WPILib prohibits composing the same command twice.
+	 */
+	public AutoBuilder run(Supplier<Command> commandSupplier) {
+		steps.add(commandSupplier::get);
 		return this;
 	}
 
@@ -196,24 +200,24 @@ public final class AutoBuilder {
 	 * deadline &mdash; when it finishes the alongside command is interrupted.
 	 *
 	 * <p>
-	 * Typical use: deploy the intake while driving to a collect position.
+	 * Takes a Supplier so each scheduling creates a fresh instance — WPILib prohibits composing the same command twice.
 	 *
 	 * <pre>{@code
 	 * new AutoBuilder(repulsor)
 	 * 		.driveTo(COLLECT_POSE)
-	 * 		.alongside(intake.extendCommand())
+	 * 		.alongside(intake::extendCommand)
 	 * 		.build();
 	 * }</pre>
 	 *
 	 * @throws IllegalStateException
 	 *           if there is no previous step to attach to
 	 */
-	public AutoBuilder alongside(Command command) {
+	public AutoBuilder alongside(Supplier<Command> commandSupplier) {
 		if (steps.isEmpty()) {
 			throw new IllegalStateException("alongside() requires a preceding step");
 		}
 		Step previous = steps.remove(steps.size() - 1);
-		steps.add(() -> previous.create().deadlineFor(command));
+		steps.add(() -> previous.create().deadlineFor(commandSupplier.get()));
 		return this;
 	}
 
