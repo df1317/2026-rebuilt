@@ -9,6 +9,32 @@
 
 This is the code for 1317's 2026 robot for this years Rebuilt FRC game!
 
+## Operator Panel (Maypad)
+
+The co-driver uses a [Keyhive Maypad](https://keyhive.xyz/shop/may-pad) flashed with our custom firmware from
+[df1317/maypad-frc](https://github.com/df1317/maypad-frc). It enumerates as a USB HID joystick on DS port **2** — no
+drivers needed.
+
+> [!NOTE]
+> Grab the latest firmware `.hex` from the
+> [maypad-frc Actions tab](https://github.com/df1317/maypad-frc/actions).
+
+Bindings use [`OperatorPanel`](/src/main/java/frc/robot/OperatorPanel.java), which exposes keys by physical position.
+See [`docs/README.md`](/docs/README.md#test-mode) for the full binding reference.
+
+```java
+// RobotContainer.java
+public class RobotContainer {
+
+	private final OperatorPanel panel = new OperatorPanel(2);
+
+	public RobotContainer {
+		// bind row 0, col 0 (top-left key) to a command
+		panel.key(0, 0).onTrue(Commands.run(() -> doSomething()));
+	}
+}
+```
+
 ## Contributing / Code Style
 
 ### Formatting
@@ -159,6 +185,7 @@ public class SwerveSubsystem extends SubsystemBase {
 ```
 
 To change tunables at runtime:
+
 1. Open AdvantageScope or Glass
 2. Navigate to `Tunable/` table in NetworkTables
 3. Edit values live - changes apply immediately

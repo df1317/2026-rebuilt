@@ -10,91 +10,98 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
+import dev.doglog.DogLog;
+import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
+import edu.wpi.first.math.trajectory.TrapezoidProfile;
+import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 import static edu.wpi.first.units.Units.Degrees;
-import static edu.wpi.first.units.Units.RPM;
 import static frc.robot.Constants.IntakeConstants.*;
 
 /**
- * Intake subsystem with a pivoting arm and roller mechanism.
+ * Intake pivot subsystem. The roller is a separate {@link RollerSubsystem} so they can run commands independently (e.g.
+ * roller keeps spinning while the pivot retracts).
  */
 public class IntakeSubsystem extends SubsystemBase {
 
-	// ==================== Hardware (package-private for telemetry/visualization) ====================
 	final SparkMax pivotMotor;
-	final SparkMax rollerMotor;
-	private final SparkClosedLoopController pivotController;
-	private final SparkClosedLoopController rollerController;
 	final RelativeEncoder pivotEncoder;
-	final RelativeEncoder rollerEncoder;
-
-	// ==================== Control State (package-private for telemetry/visualization) ====================
-	Angle targetPivotAngle = PIVOT_RETRACTED_ANGLE;
-	AngularVelocity targetRollerVelocity = RPM.of(0);
+	private final SparkClosedLoopController pivotController;
 	private final Debouncer atPositionDebouncer;
-
-	// ==================== Visualization & Telemetry ====================
-	private final IntakeVisualization visualization;
+	private final Debouncer stallDebouncer = new Debouncer(0.1, DebounceType.kBoth);
+	private final DoubleSubscriber testPivotDeg = DogLog.tunable("Intake/Pivot/Degrees",
+			PIVOT_EXTENDED_ANGLE.in(Degrees), Degrees);
 	private final IntakeTelemetry telemetry;
+	// Pivot PID tunables
+	private final DoubleSubscriber tunePivotKP = DogLog.tunable("Intake/Pivot/kP", PIVOT_KP);
+	private final DoubleSubscriber tunePivotKI = DogLog.tunable("Intake/Pivot/kI", PIVOT_KI);
+	private final DoubleSubscriber tunePivotKD = DogLog.tunable("Intake/Pivot/kD", PIVOT_KD);
+	private final DoubleSubscriber tunePivotKV = DogLog.tunable("Intake/Pivot/kV", 0.0);
+	private final ProfiledPIDController pivotProfiler = new ProfiledPIDController(0, 0, 0,
+			new TrapezoidProfile.Constraints(PIVOT_MAX_VELOCITY_DEG_PER_S, PIVOT_MAX_ACCEL_DEG_PER_S2));
+	private final RollerSubsystem roller;
+	Angle targetPivotAngle = PIVOT_RETRACTED_ANGLE;
+	boolean homed = false;
+	private double prevPivotKP = PIVOT_KP, prevPivotKI = PIVOT_KI, prevPivotKD = PIVOT_KD, prevPivotKV = 0.0;
 
-	public IntakeSubsystem() {
+	public IntakeSubsystem(RollerSubsystem roller) {
+		this.roller = roller;
 		pivotMotor = new SparkMax(PIVOT_MOTOR_ID, MotorType.kBrushless);
-		rollerMotor = new SparkMax(ROLLER_MOTOR_ID, MotorType.kBrushless);
 		pivotController = pivotMotor.getClosedLoopController();
-		rollerController = rollerMotor.getClosedLoopController();
 		pivotEncoder = pivotMotor.getEncoder();
-		rollerEncoder = rollerMotor.getEncoder();
 
 		configurePivotMotor();
-		configureRollerMotor();
 
 		atPositionDebouncer = new Debouncer(AT_POSITION_DEBOUNCE_TIME, DebounceType.kRising);
 
-		visualization = new IntakeVisualization(this);
-		telemetry = new IntakeTelemetry(this);
+		telemetry = new IntakeTelemetry(this, roller);
+
+		double initialAngle = pivotEncoder.getPosition();
+		pivotProfiler.reset(initialAngle);
+		setPivotAngle(PIVOT_RETRACTED_ANGLE);
 	}
 
 	private void configurePivotMotor() {
 		SparkMaxConfig config = new SparkMaxConfig();
-		config
-				.idleMode(IdleMode.kBrake)
-				.smartCurrentLimit(PIVOT_CURRENT_LIMIT)
+		config.idleMode(IdleMode.kBrake).smartCurrentLimit(PIVOT_CURRENT_LIMIT)
 				.inverted(PIVOT_INVERTED);
 		config.encoder
-				// Converts encoder rotations to degrees: (360 deg/rot) / gear_ratio
 				.positionConversionFactor(360.0 / PIVOT_GEAR_RATIO);
-		config.closedLoop
-				.pid(PIVOT_KP, PIVOT_KI, PIVOT_KD)
+		config.closedLoop.pid(PIVOT_KP, PIVOT_KI, PIVOT_KD)
 				.allowedClosedLoopError(PIVOT_ANGLE_TOLERANCE.in(Degrees), ClosedLoopSlot.kSlot0);
 
 		pivotMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
 	}
 
-	private void configureRollerMotor() {
-		SparkMaxConfig config = new SparkMaxConfig();
-		config
-				.idleMode(IdleMode.kCoast)
-				.smartCurrentLimit(ROLLER_CURRENT_LIMIT)
-				.inverted(ROLLER_INVERTED);
-		config.closedLoop
-				.pid(ROLLER_KP, ROLLER_KI, ROLLER_KD);
-		config.closedLoop.feedForward
-				.kV(ROLLER_KV);
-
-		rollerMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
-	}
-
 	@Override
 	public void periodic() {
-		visualization.update();
 		telemetry.log();
+		updatePivotPIDIfChanged();
+		double profiledSetpoint = pivotProfiler.calculate(pivotEncoder.getPosition());
+		pivotController.setSetpoint(pivotProfiler.getSetpoint().position, ControlType.kPosition);
+		DogLog.log("Intake/Pivot/ProfiledSetpoint", profiledSetpoint);
+		DogLog.log("Intake/Pivot/ProfiledVelocity", pivotProfiler.getSetpoint().velocity);
+	}
+
+	private void updatePivotPIDIfChanged() {
+		double kP = tunePivotKP.getAsDouble(), kI = tunePivotKI.getAsDouble(),
+				kD = tunePivotKD.getAsDouble(), kV = tunePivotKV.getAsDouble();
+		if (kP == prevPivotKP && kI == prevPivotKI && kD == prevPivotKD && kV == prevPivotKV)
+			return;
+		prevPivotKP = kP;
+		prevPivotKI = kI;
+		prevPivotKD = kD;
+		prevPivotKV = kV;
+		SparkMaxConfig config = new SparkMaxConfig();
+		config.closedLoop.pid(kP, kI, kD);
+		config.closedLoop.feedForward.kV(kV);
+		pivotMotor.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
 	}
 
 	// ==================== State Query Methods ====================
@@ -105,70 +112,110 @@ public class IntakeSubsystem extends SubsystemBase {
 		return atPositionDebouncer.calculate(atPositionRaw);
 	}
 
-	boolean isRollerAtSpeed() {
-		return Math.abs(rollerEncoder.getVelocity() - targetRollerVelocity.in(RPM)) < ROLLER_VELOCITY_TOLERANCE.in(RPM);
+	public boolean isExtended() {
+		return isPivotAtPosition()
+				&& Math.abs(targetPivotAngle.in(Degrees) - PIVOT_EXTENDED_ANGLE.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
+						.in(Degrees);
+	}
+
+	public boolean isRetracted() {
+		return isPivotAtPosition()
+				&& Math.abs(targetPivotAngle.in(Degrees) - PIVOT_RETRACTED_ANGLE.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
+						.in(Degrees);
 	}
 
 	// ==================== Control Methods ====================
 
 	public void setPivotAngle(Angle angle) {
 		targetPivotAngle = angle;
-		pivotController.setSetpoint(angle.in(Degrees), ControlType.kPosition);
-	}
-
-	public void setRollerVelocity(AngularVelocity velocity) {
-		targetRollerVelocity = velocity;
-		rollerController.setSetpoint(velocity.in(RPM), ControlType.kVelocity);
-	}
-
-	public void stopRoller() {
-		setRollerVelocity(RPM.of(0));
+		pivotProfiler.setGoal(angle.in(Degrees));
 	}
 
 	public void stop() {
-		stopRoller();
 		pivotMotor.stopMotor();
 	}
 
 	// ==================== Command Factory Methods ====================
 
 	public Command extendCommand() {
-		return runOnce(() -> setPivotAngle(PIVOT_EXTENDED_ANGLE))
+		return runOnce(() -> {
+			pivotProfiler.setConstraints(new TrapezoidProfile.Constraints(
+					PIVOT_EXTEND_MAX_VELOCITY_DEG_PER_S, PIVOT_EXTEND_MAX_ACCEL_DEG_PER_S2));
+			setPivotAngle(PIVOT_EXTENDED_ANGLE);
+		})
+				.andThen(idle().until(() -> isPivotStalled() || isPivotAtPosition()))
+				.andThen(runOnce(() -> setPivotAngle(Degrees.of(pivotEncoder.getPosition()))))
+				.finallyDo(() -> pivotProfiler.setConstraints(new TrapezoidProfile.Constraints(
+						PIVOT_MAX_VELOCITY_DEG_PER_S, PIVOT_MAX_ACCEL_DEG_PER_S2)))
 				.withName("Intake Extend");
 	}
 
 	public Command retractCommand() {
 		return runOnce(() -> setPivotAngle(PIVOT_RETRACTED_ANGLE))
+				.andThen(idle().until(() -> isPivotStalled() || isPivotAtPosition()))
+				.andThen(runOnce(() -> setPivotAngle(Degrees.of(pivotEncoder.getPosition()))))
 				.withName("Intake Retract");
 	}
 
-	public Command runRollerCommand() {
-		return runOnce(() -> setRollerVelocity(ROLLER_INTAKE_VELOCITY))
-				.withName("Intake Run Roller");
-	}
-
-	public Command ejectCommand() {
-		return runOnce(() -> setRollerVelocity(ROLLER_EJECT_VELOCITY))
-				.withName("Intake Eject");
-	}
-
-	public Command stopRollerCommand() {
-		return runOnce(this::stopRoller)
-				.withName("Intake Stop Roller");
-	}
-
-	public Command intakeCommand() {
-		return Commands.sequence(
-				extendCommand(),
-				Commands.waitUntil(this::isPivotAtPosition),
-				runRollerCommand())
-				.withName("Intake Full Sequence");
-	}
-
 	public Command stowCommand() {
-		return Commands.sequence(
-				stopRollerCommand(),
-				retractCommand())
-				.withName("Intake Stow");
+		return retractCommand().withName("Intake Stow");
+	}
+
+	/** Extends or stows depending on current position. */
+	public Command stowToggleCommand() {
+		return Commands.either(stowCommand(), extendCommand(), this::isExtended)
+				.withName("Intake Stow Toggle");
+	}
+
+	public Command holdExtendedCommand() {
+		return run(() -> {
+			if (!isRetracted()) {
+				setPivotAngle(PIVOT_EXTENDED_ANGLE);
+			}
+		}).withName("Hold Extended");
+	}
+
+	// ==================== Test Mode ====================
+
+	public Command homeCommand() {
+		return runOnce(() -> {
+			pivotProfiler.setConstraints(new TrapezoidProfile.Constraints(
+					PIVOT_MAX_VELOCITY_DEG_PER_S, PIVOT_MAX_ACCEL_DEG_PER_S2));
+			setPivotAngle(Degrees.of(pivotEncoder.getPosition() + PIVOT_HOMING_OFFSET_DEG));
+		})
+				.andThen(idle().until(this::isPivotStalled).withTimeout(5.0))
+				.finallyDo(() -> {
+					pivotMotor.stopMotor();
+					pivotEncoder.setPosition(0);
+					pivotProfiler.reset(0);
+					setPivotAngle(Degrees.of(0));
+					homed = true;
+				})
+				.withName("Home Intake");
+	}
+
+	public Command zeroCommand() {
+		return runOnce(() -> {
+			pivotEncoder.setPosition(0);
+			pivotProfiler.reset(0);
+			setPivotAngle(Degrees.of(0));
+		}).withName("Intake Zero");
+	}
+
+	public Command testPivotCommand() {
+		return Commands.run(() -> {
+			setPivotAngle(Degrees.of(testPivotDeg.get()));
+		}, this)
+				.finallyDo(pivotMotor::stopMotor)
+				.withName("Test Intake Pivot");
+	}
+
+	// ==================== Stall Detection ====================
+
+	public boolean isPivotStalled() {
+		double pivotMotorCurrent = pivotMotor.getOutputCurrent();
+		double pivotMotorRPM = pivotMotor.getEncoder().getVelocity();
+		boolean isPivotStalled = Math.abs(pivotMotorRPM) < 2.0 && pivotMotorCurrent > PIVOT_CURRENT_LIMIT * 0.5;
+		return stallDebouncer.calculate(isPivotStalled);
 	}
 }
