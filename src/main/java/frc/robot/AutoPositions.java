@@ -1,5 +1,7 @@
 package frc.robot;
 
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -72,15 +74,21 @@ public final class AutoPositions {
 	}
 
 	public static Command leftCornerHideAndShoot(Repulsor repulsor, Supplier<Command> shootCommand) {
+		// Swap positions on red so "left" always means driver's left
+		boolean red = DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red;
+		Pose2d pose = red ? CORNER_HIDE : CORNER_HIDE_NEAR_BALLS;
 		return new AutoBuilder(repulsor)
-				.driveToFacing(CORNER_HIDE_NEAR_BALLS, HUB_CENTER, 180)
+				.driveToFacing(pose, HUB_CENTER, 180)
 				.run(shootCommand)
 				.build();
 	}
 
 	public static Command rightCornerHideAndShoot(Repulsor repulsor, Supplier<Command> shootCommand) {
+		// Swap positions on red so "right" always means driver's right
+		boolean red = DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red;
+		Pose2d pose = red ? CORNER_HIDE_NEAR_BALLS : CORNER_HIDE;
 		return new AutoBuilder(repulsor)
-				.driveToFacing(CORNER_HIDE, HUB_CENTER, 180)
+				.driveToFacing(pose, HUB_CENTER, 180)
 				.run(shootCommand)
 				.build();
 	}
