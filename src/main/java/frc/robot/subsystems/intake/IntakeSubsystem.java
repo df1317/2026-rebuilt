@@ -64,7 +64,7 @@ public class IntakeSubsystem extends SubsystemBase {
 
 		double initialAngle = pivotEncoder.getPosition();
 		pivotProfiler.reset(initialAngle);
-		setPivotAngle(PIVOT_RETRACTED_ANGLE);
+		setPivotAngle(Degrees.of(initialAngle));
 	}
 
 	private void configurePivotMotor() {
@@ -161,7 +161,9 @@ public class IntakeSubsystem extends SubsystemBase {
 		return retractCommand().withName("Intake Stow");
 	}
 
-	/** Extends or stows depending on current position. */
+	/**
+	 * Extends or stows depending on current position.
+	 */
 	public Command stowToggleCommand() {
 		return Commands.either(stowCommand(), extendCommand(), this::isExtended)
 				.withName("Intake Stow Toggle");
