@@ -439,9 +439,22 @@
     font-size: 13px;
     line-height: 1.5;
     color: #c9d1d9;
+    background: #0d1117;
     white-space: pre;
     tab-size: 4;
+    user-select: text;
+    cursor: text;
   }
+
+  /* Syntax highlighting */
+  .hl-kw   { color: #ff7b72; }              /* keywords: new */
+  .hl-type { color: #79c0ff; }              /* types: Pose2d, Rotation2d, etc */
+  .hl-meth { color: #d2a8ff; }              /* method calls: .driveTo, .run */
+  .hl-num  { color: #a5d6ff; }              /* numbers */
+  .hl-str  { color: #a5d6ff; }              /* strings */
+  .hl-cmt  { color: #8b949e; font-style: italic; } /* comments */
+  .hl-ref  { color: #ffa657; }              /* AutoPositions refs */
+  .hl-punc { color: #c9d1d9; }              /* punctuation */
 
   #code-modal .modal-footer {
     padding: 12px 20px;
@@ -1866,8 +1879,36 @@ function exportCode() {
 
   code += '\t.build();\n';
 
-  document.getElementById('code-output').textContent = code;
+  document.getElementById('code-output').innerHTML = highlightJava(code);
   document.getElementById('code-modal').classList.add('visible');
+}
+
+function highlightJava(code) {
+  // Escape HTML first
+  let html = code
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  // Comments (// ...)
+  html = html.replace(/(\/\/.*)/g, '<span class="hl-cmt">$1</span>');
+
+  // Keywords
+  html = html.replace(/\b(new|return|import|static|final|public|private|void)\b/g, '<span class="hl-kw">$1</span>');
+
+  // Types (PascalCase words that are known WPILib/project types)
+  html = html.replace(/\b(Pose2d|Rotation2d|Translation2d|Meters|AutoPositions|AutoBuilder|Command|Commands)\b/g, '<span class="hl-type">$1</span>');
+
+  // AutoPositions.CONSTANT references
+  html = html.replace(/(AutoPositions\.)([A-Z_]+)/g, '<span class="hl-type">AutoPositions</span>.<span class="hl-ref">$2</span>');
+
+  // Method calls (.methodName)
+  html = html.replace(/\.([a-z]\w*)\(/g, '.<span class="hl-meth">$1</span>(');
+
+  // Numbers (including decimals and negatives)
+  html = html.replace(/\b(-?\d+\.?\d*)\b/g, '<span class="hl-num">$1</span>');
+
+  return html;
 }
 
 function copyCode() {
