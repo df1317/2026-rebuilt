@@ -39,7 +39,9 @@ public final class AutoBuilder {
 
 	private static final Distance DEFAULT_TOLERANCE = Meters.of(0.15);
 	/** Y offset from field center for collect positions (meters). */
-	private static final double COLLECT_Y_OFFSET = 1.5;
+	private static final double COLLECT_Y_OFFSET = 1.8;
+	/** X offset (negative = toward blue alliance wall) for collect positions. */
+	private static final double COLLECT_X_OFFSET = -0.5;
 
 	private final Repulsor repulsor;
 	private final List<Step> steps = new ArrayList<>();
@@ -171,10 +173,12 @@ public final class AutoBuilder {
 			Pose2d startPose = repulsor.getDrive().getPose();
 			double fieldCenterX = RepulsorConstants.FIELD_LENGTH / 2.0;
 			double fieldCenterY = RepulsorConstants.FIELD_WIDTH / 2.0;
-			double collectY = startPose.getY() > fieldCenterY
+			boolean fromTop = startPose.getY() > fieldCenterY;
+			double collectY = fromTop
 					? fieldCenterY + COLLECT_Y_OFFSET
 					: fieldCenterY - COLLECT_Y_OFFSET;
-			ref.set(new Pose2d(fieldCenterX, collectY, Rotation2d.kZero));
+			double collectDeg = fromTop ? 150.0 : -150.0;
+			ref.set(new Pose2d(fieldCenterX + COLLECT_X_OFFSET, collectY, Rotation2d.fromDegrees(collectDeg)));
 		});
 		steps.add(() -> repulsor.navigateTo(ref::get)
 				.until(repulsor.within(tolerance)));

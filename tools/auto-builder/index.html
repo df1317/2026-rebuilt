@@ -1098,11 +1098,14 @@ function getGhostPosition(step, idx) {
       // Show the likely position solid, and the alternate position faded.
       const prevY = getLastWaypointY(idx);
       const centerY = FIELD_WIDTH / 2;
-      const likelyY = prevY > centerY ? centerY + 1.5 : centerY - 1.5;
-      const altY = prevY > centerY ? centerY - 1.5 : centerY + 1.5;
+      const fromTop = prevY > centerY;
+      const likelyY = fromTop ? centerY + 1.8 : centerY - 1.8;
+      const altY = fromTop ? centerY - 1.8 : centerY + 1.8;
+      const likelyRot = fromTop ? 150 : -150;
+      const altRot = fromTop ? -150 : 150;
       return {
-        x: FIELD_LENGTH / 2, y: likelyY, rot: 0, label: 'Collect', collect: true,
-        alt: { x: FIELD_LENGTH / 2, y: altY, rot: 0 }
+        x: FIELD_LENGTH / 2 - 0.5, y: likelyY, rot: likelyRot, collect: true,
+        alt: { x: FIELD_LENGTH / 2 - 0.5, y: altY, rot: altRot }
       };
     }
     case 'driveToStart': {
@@ -1201,31 +1204,7 @@ function drawGhostMarker(ghost, idx) {
   ctx.setLineDash([]);
   ctx.restore();
 
-  // Heading arrow
-  const arrowLen = 25;
-  const ax = p.x + Math.cos(rotRad) * arrowLen;
-  const ay = p.y + Math.sin(rotRad) * arrowLen;
-  ctx.beginPath();
-  ctx.moveTo(p.x + Math.cos(rotRad) * 12, p.y + Math.sin(rotRad) * 12);
-  ctx.lineTo(ax, ay);
-  ctx.setLineDash([3, 3]);
-  ctx.strokeStyle = arrowColor;
-  ctx.lineWidth = 4;
-  ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.save();
-  ctx.translate(ax, ay);
-  ctx.rotate(rotRad);
-  ctx.beginPath();
-  ctx.moveTo(5, 0);
-  ctx.lineTo(-3, -3);
-  ctx.lineTo(-3, 3);
-  ctx.closePath();
-  ctx.fillStyle = arrowColor;
-  ctx.fill();
-  ctx.restore();
-
-  // Circle with letter in center
+  // Circle with letter in center (drawn first so arrow renders on top)
   const circleR = 12;
   ctx.beginPath();
   ctx.arc(p.x, p.y, circleR, 0, Math.PI * 2);
@@ -1242,11 +1221,28 @@ function drawGhostMarker(ghost, idx) {
   ctx.textBaseline = 'middle';
   ctx.fillText(isCollect ? 'C' : (idx + 1), p.x, p.y);
 
-  // Label above footprint
-  ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.font = '9px system-ui';
-  const labelOffset = ROBOT_HALF_WIDTH * canvasScale + 10;
-  ctx.fillText(ghost.label, p.x, p.y - labelOffset);
+  // Heading arrow (starts outside circle)
+  const arrowStart = circleR + 4;
+  const arrowLen = 30;
+  const ax = p.x + Math.cos(rotRad) * arrowLen;
+  const ay = p.y + Math.sin(rotRad) * arrowLen;
+  ctx.beginPath();
+  ctx.moveTo(p.x + Math.cos(rotRad) * arrowStart, p.y + Math.sin(rotRad) * arrowStart);
+  ctx.lineTo(ax, ay);
+  ctx.strokeStyle = arrowColor;
+  ctx.lineWidth = 4;
+  ctx.stroke();
+  ctx.save();
+  ctx.translate(ax, ay);
+  ctx.rotate(rotRad);
+  ctx.beginPath();
+  ctx.moveTo(7, 0);
+  ctx.lineTo(-4, -5);
+  ctx.lineTo(-4, 5);
+  ctx.closePath();
+  ctx.fillStyle = arrowColor;
+  ctx.fill();
+  ctx.restore();
 }
 
 function drawObstacles() {
