@@ -93,23 +93,30 @@ public final class AutoPositions {
 	// ===== Collect & Shoot Autos =====
 
 	/** Shoot to clear, collect from closest side, return to start, shoot. */
-	public static Command collectAndShoot1(Repulsor repulsor, Command shootCommand) {
+	public static Command collectAndShoot1(Repulsor repulsor, Command shootCommand, Command extendIntake,
+			Command runRollerCommand) {
 		return new AutoBuilder(repulsor)
 				.run(shootCommand)
+				.run(extendIntake)
 				.driveToCollect()
+				.alongside(runRollerCommand)
 				.driveToStart()
 				.run(shootCommand)
 				.build();
 	}
 
 	/** Shoot to clear, collect from closest side, return and shoot, repeat once more. */
-	public static Command collectAndShoot2(Repulsor repulsor, Command shootCommand) {
+	public static Command collectAndShoot2(Repulsor repulsor, Command shootCommand, Command extendIntake,
+			Command runRollerCommand) {
 		return new AutoBuilder(repulsor)
 				.run(shootCommand)
+				.run(extendIntake)
 				.driveToCollect()
+				.alongside(runRollerCommand)
 				.driveToStart()
 				.run(shootCommand)
 				.driveToCollect()
+				.alongside(runRollerCommand)
 				.driveToStart()
 				.run(shootCommand)
 				.build();
@@ -121,9 +128,9 @@ public final class AutoPositions {
 	 * Drive to climb position, engage, and climb. Sequence: down → bottom → top → hang.
 	 *
 	 * @param climbPose
-	 *          the approach pose (CLIMB_LEFT or CLIMB_RIGHT)
+	 * 		the approach pose (CLIMB_LEFT or CLIMB_RIGHT)
 	 * @param engagePose
-	 *          the engage pose (CLIMB_LEFT_ENGAGE or CLIMB_RIGHT_ENGAGE)
+	 * 		the engage pose (CLIMB_LEFT_ENGAGE or CLIMB_RIGHT_ENGAGE)
 	 */
 	public static Command climbAuto(Repulsor repulsor, ClimberSubsystem climber,
 			Pose2d climbPose, Pose2d engagePose) {
