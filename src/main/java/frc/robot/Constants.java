@@ -27,7 +27,8 @@ public final class Constants {
 	public static final double MAX_ANGULAR_ACCELERATION = Math.toRadians(540.0);
 
 	// HIGH in dev mode, LOW at competition to reduce NT traffic
-	public static final TelemetryVerbosity SwerveTelemetryVerbosity = DevMode.isEnabled() ? TelemetryVerbosity.HIGH
+	public static final TelemetryVerbosity SwerveTelemetryVerbosity = DevMode.isEnabled()
+			? TelemetryVerbosity.HIGH
 			: TelemetryVerbosity.LOW;
 
 	public static final AprilTagFields FIELD_LAYOUT = AprilTagFields.k2026RebuiltWelded;
@@ -73,8 +74,9 @@ public final class Constants {
 		public static final int PIVOT_CURRENT_LIMIT = 35;
 		public static final int ROLLER_CURRENT_LIMIT = 40;
 
-		public static final Angle PIVOT_EXTENDED_ANGLE = Degrees.of(0);
-		public static final Angle PIVOT_RETRACTED_ANGLE = Degrees.of(90); // TODO: verify physical travel
+		public static final Angle PIVOT_EXTENDED_ANGLE = Degrees.of(71);
+		public static final Angle PIVOT_RETRACTED_ANGLE = Degrees.of(
+				160); // TODO: verify physical travel
 		public static final Angle PIVOT_ANGLE_TOLERANCE = Degrees.of(3);
 		public static final double PIVOT_GEAR_RATIO = (48.0 * 22.0) / 14.0;
 		public static final Distance PIVOT_ARM_LENGTH = Inches.of(12);
