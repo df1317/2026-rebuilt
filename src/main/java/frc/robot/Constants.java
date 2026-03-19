@@ -160,10 +160,10 @@ public final class Constants {
 		public static final boolean INVERTED = true;
 		public static final int CURRENT_LIMIT = 20;
 
-		public static final Distance MAX_HEIGHT = Meters.of(3.6);
+		public static final Distance MAX_HEIGHT = Meters.of(3.96);
 		public static final Distance MIN_HEIGHT = Meters.of(0.0);
-		public static final Distance HANG_HEIGHT = Meters.of(0.5); // TODO: measure
-		public static final Distance RELEASE_HEIGHT = Meters.of(0.2); // TODO: measure
+		public static final Distance HANG_HEIGHT = Meters.of(1.75); // TODO: measure
+		public static final Distance RELEASE_HEIGHT = Meters.of(1.3); // TODO: measure
 		public static final double ROTATIONS_PER_METER = 42.4;
 		public static final Distance POSITION_TOLERANCE = Centimeters.of(2);
 
