@@ -184,7 +184,8 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 			isAimed = !hasVision() || Math.abs(error) <= AIM_TOLERANCE;
 
 			ChassisSpeeds speeds = SwerveInputStream.of(getSwerveDrive(),
-					() -> -translateY.getAsDouble(), () -> -translateX.getAsDouble()).get();
+					() -> -translateY.getAsDouble(), () -> -translateX.getAsDouble())
+					.withControllerRotationAxis(() -> 0).get();
 			speeds.omegaRadiansPerSecond = omega;
 			swerveDrive.driveFieldOrientedAndRobotOriented(speeds, new ChassisSpeeds());
 
@@ -205,7 +206,8 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 						getSwerveDrive().getRobotVelocity().omegaRadiansPerSecond),
 				() -> {
 					ChassisSpeeds speeds = SwerveInputStream.of(getSwerveDrive(),
-							() -> -translateY.getAsDouble(), () -> -translateX.getAsDouble()).get();
+							() -> -translateY.getAsDouble(), () -> -translateX.getAsDouble())
+							.withControllerRotationAxis(() -> 0).get();
 
 					if (vision != null && vision.hasVision()) {
 						Pose2d currentPose = getPose();
