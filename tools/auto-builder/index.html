@@ -562,6 +562,8 @@
         <button class="action-btn" id="mode-driveToAndHold" onclick="setPlaceMode('driveToAndHold')">&#128204; Hold</button>
         <button class="action-btn" onclick="addAction('driveToStart')">&#8634; To Start</button>
         <button class="action-btn" onclick="addAction('collect')">&#128230; Collect</button>
+        <button class="action-btn" onclick="addAction('climbLeft')">&#11014; Climb L</button>
+        <button class="action-btn" onclick="addAction('climbRight')">&#11014; Climb R</button>
       </div>
     </div>
 
@@ -575,8 +577,6 @@
         <button class="action-btn" onclick="addAction('wait', 0.5)">&#9202; Wait 0.5s</button>
         <button class="action-btn" onclick="addAction('wait', 1.0)">&#9202; Wait 1.0s</button>
         <button class="action-btn" onclick="addAction('custom')">&#9998; Custom</button>
-        <button class="action-btn" onclick="addAction('climbLeft')">&#11014; Climb L</button>
-        <button class="action-btn" onclick="addAction('climbRight')">&#11014; Climb R</button>
         <button class="action-btn" onclick="toggleAlongside()" id="alongside-btn" title="Run in parallel with previous step">&#8644; Alongside</button>
       </div>
     </div>
@@ -1009,6 +1009,171 @@ function render() {
       drawAimTarget(step, i);
     }
   }
+
+  // Draw ghost markers for position-less drive steps (collect, driveToStart, climb)
+  for (let i = 0; i < steps.length; i++) {
+    const ghost = getGhostPosition(steps[i], i);
+    if (ghost) drawGhostMarker(ghost, i);
+  }
+}
+
+/** Compute an approximate display position for steps that don't store x/y. */
+function getGhostPosition(step, idx) {
+  switch (step.type) {
+    case 'collect': {
+      // Collect dynamically picks the closer side at runtime based on robot Y.
+      // Show the likely position solid, and the alternate position faded.
+      const prevY = getLastWaypointY(idx);
+      const centerY = FIELD_WIDTH / 2;
+      const likelyY = prevY > centerY ? centerY + 1.5 : centerY - 1.5;
+      const altY = prevY > centerY ? centerY - 1.5 : centerY + 1.5;
+      return {
+        x: FIELD_LENGTH / 2, y: likelyY, rot: 0, label: 'Collect', collect: true,
+        alt: { x: FIELD_LENGTH / 2, y: altY, rot: 0 }
+      };
+    }
+    case 'driveToStart': {
+      // Return to where the first waypoint is (approximation of starting pose)
+      const first = steps.find(s => s.x !== undefined);
+      if (first) return { x: first.x, y: first.y, label: 'To Start' };
+      return null;
+    }
+    case 'climbLeft':
+      return { x: 1.062, y: 4.922, rot: 0, label: 'Climb L' };
+    case 'climbRight':
+      return { x: 1.062, y: 2.629, rot: 180, label: 'Climb R' };
+    default:
+      return null;
+  }
+}
+
+/** Get the Y of the last waypoint before step index idx. */
+function getLastWaypointY(idx) {
+  for (let i = idx - 1; i >= 0; i--) {
+    if (steps[i].y !== undefined) return steps[i].y;
+  }
+  return FIELD_WIDTH / 2;
+}
+
+/** Draw a semi-transparent ghost marker for a position-less drive step. */
+function drawGhostMarker(ghost, idx) {
+  const isSelected = idx === selectedStepIdx;
+  const isCollect = ghost.collect;
+
+  // Draw alternate position first (fainter) if present
+  if (ghost.alt) {
+    const ap = fieldToCanvasFlipped(ghost.alt.x, ghost.alt.y);
+      // Alt robot footprint
+      const aHalfLen = ROBOT_HALF_LENGTH * canvasScale;
+      const aHalfWid = ROBOT_HALF_WIDTH * canvasScale;
+      const aRotRad = -(ghost.alt.rot || 0) * Math.PI / 180;
+      ctx.save();
+      ctx.translate(ap.x, ap.y);
+      ctx.rotate(aRotRad);
+      ctx.fillStyle = isCollect ? 'rgba(96, 165, 250, 0.07)' : 'rgba(251, 191, 36, 0.07)';
+      ctx.fillRect(-aHalfLen, -aHalfWid, aHalfLen * 2, aHalfWid * 2);
+      ctx.setLineDash([3, 4]);
+      ctx.strokeStyle = isCollect ? 'rgba(96, 165, 250, 0.2)' : 'rgba(251, 191, 36, 0.2)';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(-aHalfLen, -aHalfWid, aHalfLen * 2, aHalfWid * 2);
+      ctx.setLineDash([]);
+      ctx.restore();
+      // Alt circle with C
+      ctx.beginPath();
+      ctx.arc(ap.x, ap.y, 9, 0, Math.PI * 2);
+      ctx.fillStyle = isCollect ? 'rgba(59, 130, 246, 0.35)' : 'rgba(251, 191, 36, 0.35)';
+      ctx.fill();
+      ctx.setLineDash([3, 4]);
+      ctx.strokeStyle = isCollect ? 'rgba(96, 165, 250, 0.4)' : 'rgba(251, 191, 36, 0.4)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.font = 'bold 9px system-ui';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('C', ap.x, ap.y);
+  }
+
+  // Primary ghost position
+  const p = fieldToCanvasFlipped(ghost.x, ghost.y);
+
+  // Color scheme: blue for collect, amber for others
+  const baseColor = isCollect ? (isSelected ? '#3b82f6' : '#60a5fa') : (isSelected ? '#f97316' : '#fbbf24');
+  const fadeColor = isCollect
+    ? (isSelected ? 'rgba(59, 130, 246, 0.6)' : 'rgba(96, 165, 250, 0.4)')
+    : (isSelected ? 'rgba(249, 115, 22, 0.6)' : 'rgba(251, 191, 36, 0.4)');
+  const arrowColor = isCollect
+    ? (isSelected ? 'rgba(59, 130, 246, 0.7)' : 'rgba(96, 165, 250, 0.5)')
+    : (isSelected ? 'rgba(249, 115, 22, 0.7)' : 'rgba(251, 191, 36, 0.5)');
+
+  // Robot footprint (dashed outline, rotated)
+  const halfLen = ROBOT_HALF_LENGTH * canvasScale;
+  const halfWid = ROBOT_HALF_WIDTH * canvasScale;
+  const ghostRotDeg = ghost.rot || 0;
+  const ghostRotFlipped = alliance === 'red' ? 180 - ghostRotDeg : ghostRotDeg;
+  const rotRad = -ghostRotFlipped * Math.PI / 180;
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  ctx.rotate(rotRad);
+  const fillColor = isCollect
+    ? (isSelected ? 'rgba(59, 130, 246, 0.15)' : 'rgba(96, 165, 250, 0.1)')
+    : (isSelected ? 'rgba(249, 115, 22, 0.15)' : 'rgba(251, 191, 36, 0.1)');
+  ctx.fillStyle = fillColor;
+  ctx.fillRect(-halfLen, -halfWid, halfLen * 2, halfWid * 2);
+  ctx.setLineDash([4, 3]);
+  ctx.strokeStyle = fadeColor;
+  ctx.lineWidth = 4;
+  ctx.strokeRect(-halfLen, -halfWid, halfLen * 2, halfWid * 2);
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  // Heading arrow
+  const arrowLen = 25;
+  const ax = p.x + Math.cos(rotRad) * arrowLen;
+  const ay = p.y + Math.sin(rotRad) * arrowLen;
+  ctx.beginPath();
+  ctx.moveTo(p.x + Math.cos(rotRad) * 12, p.y + Math.sin(rotRad) * 12);
+  ctx.lineTo(ax, ay);
+  ctx.setLineDash([3, 3]);
+  ctx.strokeStyle = arrowColor;
+  ctx.lineWidth = 4;
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.save();
+  ctx.translate(ax, ay);
+  ctx.rotate(rotRad);
+  ctx.beginPath();
+  ctx.moveTo(5, 0);
+  ctx.lineTo(-3, -3);
+  ctx.lineTo(-3, 3);
+  ctx.closePath();
+  ctx.fillStyle = arrowColor;
+  ctx.fill();
+  ctx.restore();
+
+  // Circle with letter in center
+  const circleR = 12;
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, circleR, 0, Math.PI * 2);
+  ctx.fillStyle = baseColor;
+  ctx.fill();
+  ctx.strokeStyle = isSelected ? '#fff' : 'rgba(0,0,0,0.4)';
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  // Letter inside circle
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 11px system-ui';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(isCollect ? 'C' : (idx + 1), p.x, p.y);
+
+  // Label above footprint
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.font = '9px system-ui';
+  const labelOffset = ROBOT_HALF_WIDTH * canvasScale + 10;
+  ctx.fillText(ghost.label, p.x, p.y - labelOffset);
 }
 
 function drawObstacles() {
@@ -1033,7 +1198,17 @@ function drawFieldRect(cx, cy, w, h) {
 }
 
 function drawPathLines() {
-  const driveSteps = steps.filter(s => s.x !== undefined);
+  // Include ghost positions (collect, driveToStart, climb) in the path
+  const driveSteps = [];
+  for (let i = 0; i < steps.length; i++) {
+    const s = steps[i];
+    if (s.x !== undefined) {
+      driveSteps.push({ x: s.x, y: s.y });
+    } else {
+      const ghost = getGhostPosition(s, i);
+      if (ghost) driveSteps.push({ x: ghost.x, y: ghost.y, ghost: true });
+    }
+  }
   if (driveSteps.length < 2) return;
 
   ctx.beginPath();
@@ -1095,6 +1270,8 @@ function drawWaypoint(step, idx) {
   ctx.save();
   ctx.translate(p.x, p.y);
   ctx.rotate(rotRad);
+  ctx.fillStyle = isSelected ? 'rgba(249, 115, 22, 0.15)' : 'rgba(251, 191, 36, 0.1)';
+  ctx.fillRect(-halfLen, -halfWid, halfLen * 2, halfWid * 2);
   ctx.strokeStyle = isSelected ? 'rgba(249, 115, 22, 0.4)' : 'rgba(251, 191, 36, 0.2)';
   ctx.lineWidth = 1.5;
   ctx.strokeRect(-halfLen, -halfWid, halfLen * 2, halfWid * 2);
@@ -1496,9 +1673,11 @@ function addAction(type, value) {
 function toggleAlongside() {
   if (selectedStepIdx < 0) return;
   const step = steps[selectedStepIdx];
-  // Only non-drive action steps can be alongside, and they need a preceding drive step
-  if (step.x !== undefined) {
-    alert('Alongside applies to action steps (shoot, collect, intake, etc.), not drive steps.');
+  // Only non-drive action steps can be alongside
+  const DRIVE_TYPES = ['driveTo', 'driveToFacing', 'driveToAndHold', 'driveToCollect',
+    'collect', 'driveToStart', 'climbLeft', 'climbRight'];
+  if (step.x !== undefined || DRIVE_TYPES.includes(step.type)) {
+    alert('Alongside applies to action steps (shoot, intake, etc.), not drive steps.');
     return;
   }
   if (selectedStepIdx === 0) {
