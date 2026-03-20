@@ -53,6 +53,8 @@ public class ShooterSubsystem extends SubsystemBase {
 	private final Debouncer atSpeedDebouncer;
 	private final Debouncer atFeederSpeedDebouncer;
 	private final Debouncer stallDebouncer;
+	private final InterpolatingDoubleTreeMap distanceToRPM = new InterpolatingDoubleTreeMap();
+	private final InterpolatingDoubleTreeMap distanceToHoodPercent = new InterpolatingDoubleTreeMap();
 	private final InterpolatingDoubleTreeMap rpmToBallSpeed = new InterpolatingDoubleTreeMap();
 	private final InterpolatingDoubleTreeMap hoodPercentToLaunchAngle = new InterpolatingDoubleTreeMap();
 	private final SysIdRoutine sysIdRoutine;
@@ -158,44 +160,37 @@ public class ShooterSubsystem extends SubsystemBase {
 
 	// ==================== State Queries ====================
 
-	// Blend zone: quartic below BLEND_START, quadratic above BLEND_END, linear blend between
-	private static final double BLEND_START = 2.3;
-	private static final double BLEND_END = 2.8;
-
-	// Quartic fit for close range (captures the dip at 1-2.3m)
-	private static final double[] RPM_QUARTIC = { 34.381, -447.749, 2134.640, -4165.446, 5436.875 };
-
-	// Quadratic fit for mid-range and extrapolation
-	private static final double[] RPM_QUAD = { 109.602, -496.440, 3279.834 };
-
-	// hood% = 0.05706*d^2 - 0.17218*d + 0.11705
-	private static final double[] HOOD_QUAD = { 0.05706, -0.17218, 0.11705 };
-
-	private static double evalPoly(double[] c, double d) {
-		double result = 0;
-		for (double coeff : c) {
-			result = result * d + coeff;
-		}
-		return result;
-	}
-
-	private static double rpmCurve(double d) {
-		double quartic = evalPoly(RPM_QUARTIC, d);
-		double quadratic = evalPoly(RPM_QUAD, d);
-		if (d <= BLEND_START) {
-			return quartic;
-		} else if (d >= BLEND_END) {
-			return quadratic;
-		}
-		double t = (d - BLEND_START) / (BLEND_END - BLEND_START);
-		return quartic + (quadratic - quartic) * t;
-	}
-
-	private static double hoodCurve(double d) {
-		return evalPoly(HOOD_QUAD, d);
-	}
-
 	private void populateLookupTable() {
+		// Distance (m) -> Flywheel RPM (derived from quartic→quadratic blend, sampled at 0.5m)
+		distanceToRPM.put(1.0, 2993.0);
+		distanceToRPM.put(1.5, 2655.0);
+		distanceToRPM.put(2.0, 2613.0);
+		distanceToRPM.put(2.5, 2717.0);
+		distanceToRPM.put(3.0, 2777.0);
+		distanceToRPM.put(3.5, 2885.0);
+		distanceToRPM.put(4.0, 3048.0);
+		distanceToRPM.put(4.5, 3265.0);
+		distanceToRPM.put(5.0, 3538.0);
+		distanceToRPM.put(5.5, 3865.0);
+		distanceToRPM.put(6.0, 4247.0);
+		distanceToRPM.put(6.5, 4684.0);
+		distanceToRPM.put(7.0, 5175.0);
+
+		// Distance (m) -> Hood position (derived from quadratic fit, sampled at 0.5m, clamped 0-1)
+		distanceToHoodPercent.put(1.0, 0.00);
+		distanceToHoodPercent.put(1.5, 0.00);
+		distanceToHoodPercent.put(2.0, 0.00);
+		distanceToHoodPercent.put(2.5, 0.04);
+		distanceToHoodPercent.put(3.0, 0.11);
+		distanceToHoodPercent.put(3.5, 0.21);
+		distanceToHoodPercent.put(4.0, 0.34);
+		distanceToHoodPercent.put(4.5, 0.50);
+		distanceToHoodPercent.put(5.0, 0.68);
+		distanceToHoodPercent.put(5.5, 0.90);
+		distanceToHoodPercent.put(6.0, 1.00);
+		distanceToHoodPercent.put(6.5, 1.00);
+		distanceToHoodPercent.put(7.0, 1.00);
+
 		// Flywheel RPM -> Ball exit speed (m/s)
 		rpmToBallSpeed.put(2555.0, BALL_SPEED_LOW_M_S);
 		rpmToBallSpeed.put(3250.0, BALL_SPEED_HIGH_M_S);
@@ -305,8 +300,8 @@ public class ShooterSubsystem extends SubsystemBase {
 
 	public AngularVelocity getRPMForDistance(Distance distance) {
 		double distanceMeters = distance.in(Meters);
-		double d = Math.max(1.0, distanceMeters);
-		return RPM.of(rpmCurve(d));
+		double d = Math.max(1.0, Math.min(7.0, distanceMeters));
+		return RPM.of(distanceToRPM.get(d));
 	}
 
 	public AngularVelocity getTargetVelocity() {
@@ -318,8 +313,8 @@ public class ShooterSubsystem extends SubsystemBase {
 	}
 
 	public double getHoodPercentForDistance(Distance distance) {
-		double d = Math.max(1.0, distance.in(Meters));
-		return Math.min(1.0, Math.max(0.0, hoodCurve(d)));
+		double d = Math.max(1.0, Math.min(7.0, distance.in(Meters)));
+		return distanceToHoodPercent.get(d);
 	}
 
 	public void setForDistance(Supplier<Distance> distance) {

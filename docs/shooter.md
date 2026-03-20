@@ -91,6 +91,26 @@ The solution: **blend the quartic into the quadratic**. The quartic handles 1.0â
 
 Gray dashed line is the old LUT (linear interpolation, stopped at 4.6m). Blue solid line is the new polynomial curve fit that extends beyond the tested range.
 
+### LUT Values (sampled at 0.5m, linearly interpolated at runtime)
+
+These are the values stored in the `InterpolatingDoubleTreeMap` â€” the robot lerps between them at runtime.
+
+| Distance (m) | RPM  | Hood % |
+|--------------|------|--------|
+| 1.0          | 2993 | 0.00   |
+| 1.5          | 2655 | 0.00   |
+| 2.0          | 2613 | 0.00   |
+| 2.5          | 2717 | 0.04   |
+| 3.0          | 2777 | 0.11   |
+| 3.5          | 2885 | 0.21   |
+| 4.0          | 3048 | 0.34   |
+| 4.5          | 3265 | 0.50   |
+| 5.0          | 3538 | 0.68   |
+| 5.5          | 3865 | 0.90   |
+| 6.0          | 4247 | 1.00   |
+| 6.5          | 4684 | 1.00   |
+| 7.0          | 5175 | 1.00   |
+
 ## Key Constants (`ShooterConstants`)
 
 | Constant              | Value   | Description                              |
