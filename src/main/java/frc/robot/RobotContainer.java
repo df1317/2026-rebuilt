@@ -172,14 +172,21 @@ public class RobotContainer {
 		}
 		if (Constants.ENABLE_SHOOTER && shooter != null) {
 			driverXbox.rightTrigger().whileTrue(Commands.runOnce(() -> {
-				if (Constants.ENABLE_SWERVE && drivebase != null && drivebase.hasVision()) {
+				// If vision is healthy, reset to auto distance
+				if (Constants.ENABLE_SWERVE && drivebase != null
+						&& drivebase.hasVision() && !drivebase.isVisionStale()) {
 					shooter.clearManualDistanceOverride();
 				}
 			}).andThen(Constants.ENABLE_SWERVE && drivebase != null
-					? Commands.parallel(
-							teleopAutomation.shootCommand(drivebase::isAimed),
-							drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY,
-									teleopAutomation::getShootingPose))
+					? Commands.either(
+							// Vision healthy: aim + auto distance
+							Commands.parallel(
+									teleopAutomation.shootCommand(drivebase::isAimed),
+									drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY,
+											teleopAutomation::getShootingPose)),
+							// Vision stale/disabled: manual distance, no aim
+							teleopAutomation.shootCommand(),
+							() -> drivebase.hasVision() && !drivebase.isVisionStale())
 					: teleopAutomation.shootCommand()));
 		}
 		if (Constants.ENABLE_INTAKE && intake != null) {
@@ -207,7 +214,8 @@ public class RobotContainer {
 			panel.key(2, 3).and(inTeleop).whileTrue(teleopAutomation.shootCommand()); // shoot+feed (no aim)
 			panel.key(3, 3).and(inTeleop).whileTrue(shooter.reverseFeederCommand()); // feederReverse
 			panel.key(1, 0).and(inTeleop).onTrue(Commands.runOnce(() -> { // autoDistance
-				if (Constants.ENABLE_SWERVE && drivebase != null && drivebase.hasVision()) {
+				if (Constants.ENABLE_SWERVE && drivebase != null
+						&& drivebase.hasVision() && !drivebase.isVisionStale()) {
 					shooter.clearManualDistanceOverride();
 				}
 			}));

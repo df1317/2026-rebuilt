@@ -417,10 +417,10 @@ public class ShooterSubsystem extends SubsystemBase {
 
 	public Command spinUpReverseFeederThenShootCommand(Supplier<Distance> distance) {
 		return Commands.run(() -> {
-					setVelocity(getRPMForDistance(distance.get()));
-					setFeederVelocity(RPM.of(-FEEDER_RPM));
-					setHoodPercent(getHoodPercentForDistance(distance.get()));
-				}, this).until(this::isAtSpeed)
+			setVelocity(getRPMForDistance(distance.get()));
+			setFeederVelocity(RPM.of(-FEEDER_RPM));
+			setHoodPercent(getHoodPercentForDistance(distance.get()));
+		}, this).until(this::isAtSpeed)
 				.andThen(Commands.run(() -> setForDistance(distance), this))
 				.finallyDo(this::stop);
 	}
@@ -490,9 +490,9 @@ public class ShooterSubsystem extends SubsystemBase {
 
 	public Command testFullMotorCommand() {
 		return Commands.run(() -> {
-					setVelocity(RPM.of(testShooterRPM.get()));
-					setFeederVelocity(RPM.of(testFeederRPM.get()));
-				}, this)
+			setVelocity(RPM.of(testShooterRPM.get()));
+			setFeederVelocity(RPM.of(testFeederRPM.get()));
+		}, this)
 				.finallyDo(() -> {
 					motor.stopMotor();
 					feeder.stopMotor();
@@ -525,45 +525,45 @@ public class ShooterSubsystem extends SubsystemBase {
 
 	public Command homeHoodCommand() {
 		return Commands.sequence(
-						// Disable soft limits so homing can reach the hard stops
-						Commands.runOnce(() -> {
-							SparkMaxConfig config = new SparkMaxConfig();
-							config.softLimit
-									.forwardSoftLimitEnabled(false)
-									.reverseSoftLimitEnabled(false);
-							hood.configure(config, ResetMode.kNoResetSafeParameters,
-									PersistMode.kNoPersistParameters);
-						}, this),
-						// Drive hood toward min stop
-						Commands.runOnce(() -> {
-							stallDebouncer.calculate(false); // reset stale debouncer state
-							hood.setVoltage(-ShooterConstants.HOOD_HOMING_VOLTAGE);
-						}),
-						Commands.waitUntil(this::isHoodStalled).withTimeout(2.0),
-						Commands.runOnce(() -> {
-							hood.stopMotor();
-							hoodEncoder.setPosition(0.0);
-							stallDebouncer.calculate(false); // reset debouncer between phases
-						}),
-						// Drive hood toward max stop
-						Commands.runOnce(() -> {
-							hood.setVoltage(ShooterConstants.HOOD_HOMING_VOLTAGE);
-						}),
-						Commands.waitUntil(this::isHoodStalled).withTimeout(2.0),
-						Commands.runOnce(() -> {
-							hood.stopMotor();
-							hoodMaxDeg = hoodEncoder.getPosition();
-							DogLog.log("Shooter/HoodMaxDeg", hoodMaxDeg);
-							// Apply soft limits based on measured range
-							SparkMaxConfig config = new SparkMaxConfig();
-							config.softLimit
-									.forwardSoftLimit((float) hoodMaxDeg)
-									.forwardSoftLimitEnabled(true)
-									.reverseSoftLimit(0.0f)
-									.reverseSoftLimitEnabled(true);
-							hood.configure(config, ResetMode.kNoResetSafeParameters,
-									PersistMode.kNoPersistParameters);
-						}), zeroHood())
+				// Disable soft limits so homing can reach the hard stops
+				Commands.runOnce(() -> {
+					SparkMaxConfig config = new SparkMaxConfig();
+					config.softLimit
+							.forwardSoftLimitEnabled(false)
+							.reverseSoftLimitEnabled(false);
+					hood.configure(config, ResetMode.kNoResetSafeParameters,
+							PersistMode.kNoPersistParameters);
+				}, this),
+				// Drive hood toward min stop
+				Commands.runOnce(() -> {
+					stallDebouncer.calculate(false); // reset stale debouncer state
+					hood.setVoltage(-ShooterConstants.HOOD_HOMING_VOLTAGE);
+				}),
+				Commands.waitUntil(this::isHoodStalled).withTimeout(2.0),
+				Commands.runOnce(() -> {
+					hood.stopMotor();
+					hoodEncoder.setPosition(0.0);
+					stallDebouncer.calculate(false); // reset debouncer between phases
+				}),
+				// Drive hood toward max stop
+				Commands.runOnce(() -> {
+					hood.setVoltage(ShooterConstants.HOOD_HOMING_VOLTAGE);
+				}),
+				Commands.waitUntil(this::isHoodStalled).withTimeout(2.0),
+				Commands.runOnce(() -> {
+					hood.stopMotor();
+					hoodMaxDeg = hoodEncoder.getPosition();
+					DogLog.log("Shooter/HoodMaxDeg", hoodMaxDeg);
+					// Apply soft limits based on measured range
+					SparkMaxConfig config = new SparkMaxConfig();
+					config.softLimit
+							.forwardSoftLimit((float) hoodMaxDeg)
+							.forwardSoftLimitEnabled(true)
+							.reverseSoftLimit(0.0f)
+							.reverseSoftLimitEnabled(true);
+					hood.configure(config, ResetMode.kNoResetSafeParameters,
+							PersistMode.kNoPersistParameters);
+				}), zeroHood())
 				.finallyDo(hood::stopMotor)
 				.withName("Home Hood");
 	}

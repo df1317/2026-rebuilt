@@ -1,6 +1,7 @@
 package frc.robot.subsystems.swervedrive;
 
 import dev.doglog.DogLog;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
@@ -119,6 +120,17 @@ public class Vision {
 		return false;
 	}
 
+	/** Returns true if any camera has received a pose estimate within the given timeout. */
+	public boolean hasRecentVision(double timeoutSeconds) {
+		double now = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
+		for (Cameras camera : Cameras.values()) {
+			if (camera.lastPoseTimestamp > 0 && (now - camera.lastPoseTimestamp) < timeoutSeconds) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	private Optional<EstimatedRobotPose> getEstimatedGlobalPose(Cameras camera) {
 		Optional<EstimatedRobotPose> poseEst = camera.getEstimatedGlobalPose(currentPose.get());
 		if (Robot.isSimulation()) {
@@ -194,7 +206,10 @@ public class Vision {
 		public Matrix<N3, N1> curStdDevs;
 		public PhotonCameraSim cameraSim;
 		public List<PhotonPipelineResult> resultsList = new ArrayList<>();
+		private static final Matrix<N3, N1> STARTUP_STD_DEVS = VecBuilder.fill(0.1, 0.1, 0.1);
+		private static final double STARTUP_TRUST_DURATION_S = 5.0;
 		private EstimatedRobotPose estimatedRobotPose;
+		private double firstMeasurementTimestamp = -1;
 		private double lastPoseTimestamp = -1;
 
 		Cameras(
@@ -252,6 +267,11 @@ public class Vision {
 			return Optional.ofNullable(bestResult);
 		}
 
+		private boolean isInStartupWindow() {
+			return firstMeasurementTimestamp < 0
+					|| (edu.wpi.first.wpilibj.Timer.getFPGATimestamp() - firstMeasurementTimestamp) < STARTUP_TRUST_DURATION_S;
+		}
+
 		public boolean hasRecentPose() {
 			return lastPoseTimestamp > 0
 					&& (edu.wpi.first.wpilibj.Timer.getFPGATimestamp() - lastPoseTimestamp) < 0.5;
@@ -304,7 +324,8 @@ public class Vision {
 				boolean isMultiTag = est.isPresent();
 
 				if (est.isEmpty()) {
-					if (result.getBestTarget().getPoseAmbiguity() > 0.2) {
+					if (!isInStartupWindow() && !DriverStation.isAutonomous()
+							&& result.getBestTarget().getPoseAmbiguity() > 0.2) {
 						continue;
 					}
 					est = poseEstimator.estimateClosestToReferencePose(result, referencePose3d);
@@ -347,8 +368,18 @@ public class Vision {
 
 			avgDist /= numTags;
 
-			if (numTags == 1 && avgDist > VisionConstants.MAX_SINGLE_TAG_DISTANCE_METERS) {
+			if (!isInStartupWindow() && !DriverStation.isAutonomous()
+					&& numTags == 1 && avgDist > VisionConstants.MAX_SINGLE_TAG_DISTANCE_METERS) {
 				curStdDevs = null;
+				return;
+			}
+
+			double now = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
+			if (firstMeasurementTimestamp < 0) {
+				firstMeasurementTimestamp = now;
+			}
+			if ((now - firstMeasurementTimestamp) < STARTUP_TRUST_DURATION_S) {
+				curStdDevs = STARTUP_STD_DEVS;
 				return;
 			}
 

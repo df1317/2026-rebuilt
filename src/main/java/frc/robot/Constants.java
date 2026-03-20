@@ -56,8 +56,8 @@ public final class Constants {
 		public static final double HIGH_LATENCY_THRESHOLD_MS = 100.0;
 
 		public static final class CameraStdDevs {
-			public static final double[] SINGLE_TAG = { 4.0, 4.0, 8.0 };
-			public static final double[] MULTI_TAG = { 0.5, 0.5, 1.0 };
+			public static final double[] SINGLE_TAG = { 4.0, 4.0, 6.0 };
+			public static final double[] MULTI_TAG = { 0.5, 0.5, 4.0 };
 		}
 	}
 

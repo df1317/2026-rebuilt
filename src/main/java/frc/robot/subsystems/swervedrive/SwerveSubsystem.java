@@ -127,8 +127,15 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 		vision = new Vision(swerveDrive::getPose, swerveDrive.field);
 	}
 
+	private static final double VISION_STALE_TIMEOUT_S = 30.0;
+
 	public boolean hasVision() {
 		return visionEnabled.get() && vision != null && vision.hasVision();
+	}
+
+	/** True if vision is enabled but no measurement has been received in 30 seconds. */
+	public boolean isVisionStale() {
+		return vision == null || !visionEnabled.get() || !vision.hasRecentVision(VISION_STALE_TIMEOUT_S);
 	}
 
 	@Override
