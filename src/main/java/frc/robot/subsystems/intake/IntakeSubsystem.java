@@ -150,11 +150,18 @@ public class IntakeSubsystem extends SubsystemBase {
 
 	public Command extendCommand() {
 		return runOnce(() -> {
-			pivotProfiler.setConstraints(new TrapezoidProfile.Constraints(
-					PIVOT_EXTEND_MAX_VELOCITY_DEG_PER_S, PIVOT_EXTEND_MAX_ACCEL_DEG_PER_S2));
-			setPivotAngle(extendedPivotAngle);
-			wantToExtend = true;
+			// Brief voltage kick to push through the panel
+			pivotMotor.setVoltage(-PIVOT_KICK_VOLTAGE);
 		})
+				.andThen(Commands.waitSeconds(PIVOT_KICK_DURATION_S))
+				.andThen(runOnce(() -> {
+					double pos = pivotEncoder.getPosition();
+					pivotProfiler.reset(pos);
+					pivotProfiler.setConstraints(new TrapezoidProfile.Constraints(
+							PIVOT_EXTEND_MAX_VELOCITY_DEG_PER_S, PIVOT_EXTEND_MAX_ACCEL_DEG_PER_S2));
+					setPivotAngle(extendedPivotAngle);
+					wantToExtend = true;
+				}))
 				.andThen(idle().until(() -> isPivotStalled() || isPivotAtPosition()))
 				.andThen(runOnce(() -> setPivotAngle(Degrees.of(pivotEncoder.getPosition()))))
 				.finallyDo(() -> pivotProfiler.setConstraints(new TrapezoidProfile.Constraints(
