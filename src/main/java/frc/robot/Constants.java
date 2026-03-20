@@ -170,8 +170,8 @@ public final class Constants {
 		public static final double ROTATIONS_PER_METER = 42.4;
 		public static final Distance POSITION_TOLERANCE = Centimeters.of(2);
 
-		public static final LinearVelocity MAX_VELOCITY = MetersPerSecond.of(0.25);
-		public static final LinearAcceleration MAX_ACCELERATION = MetersPerSecondPerSecond.of(0.5);
+		public static final LinearVelocity MAX_VELOCITY = MetersPerSecond.of(1.0);
+		public static final LinearAcceleration MAX_ACCELERATION = MetersPerSecondPerSecond.of(2.0);
 
 		public static final double KP = 0.0; // 0.00065
 		public static final double KI = 0.0;
