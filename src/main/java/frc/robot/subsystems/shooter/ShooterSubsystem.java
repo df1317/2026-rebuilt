@@ -539,18 +539,17 @@ public class ShooterSubsystem extends SubsystemBase {
 					stallDebouncer.calculate(false); // reset stale debouncer state
 					hood.setVoltage(-ShooterConstants.HOOD_HOMING_VOLTAGE);
 				}),
-				Commands.waitUntil(this::isHoodStalled).withTimeout(5.0),
+				Commands.waitUntil(this::isHoodStalled).withTimeout(2.0),
 				Commands.runOnce(() -> {
 					hood.stopMotor();
 					hoodEncoder.setPosition(0.0);
+					stallDebouncer.calculate(false); // reset debouncer between phases
 				}),
-				Commands.waitSeconds(0.25),
 				// Drive hood toward max stop
 				Commands.runOnce(() -> {
-					stallDebouncer.calculate(false); // reset debouncer between phases
 					hood.setVoltage(ShooterConstants.HOOD_HOMING_VOLTAGE);
 				}),
-				Commands.waitUntil(this::isHoodStalled).withTimeout(5.0),
+				Commands.waitUntil(this::isHoodStalled).withTimeout(2.0),
 				Commands.runOnce(() -> {
 					hood.stopMotor();
 					hoodMaxDeg = hoodEncoder.getPosition();
