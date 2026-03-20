@@ -114,16 +114,14 @@ public class IntakeSubsystem extends SubsystemBase {
 	}
 
 	public boolean isExtended() {
-		return isPivotAtPosition()
-				&& Math.abs(targetPivotAngle.in(Degrees) - extendedPivotAngle.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
-						.in(Degrees);
+		return Math.abs(pivotEncoder.getPosition() - extendedPivotAngle.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
+				.in(Degrees);
 	}
 
 	public boolean isRetracted() {
-		return isPivotAtPosition()
-				&& Math.abs(targetPivotAngle.in(Degrees) - extendedPivotAngle.plus(PIVOT_RETRACTED_DELTA)
-						.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
-								.in(Degrees);
+		return Math.abs(pivotEncoder.getPosition() - extendedPivotAngle.plus(PIVOT_RETRACTED_DELTA)
+				.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
+						.in(Degrees);
 	}
 
 	// ==================== Control Methods ====================

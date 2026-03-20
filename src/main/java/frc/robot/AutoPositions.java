@@ -144,9 +144,9 @@ public final class AutoPositions {
 	 * Drive to climb position, engage, and climb. Sequence: down → bottom → top → hang.
 	 *
 	 * @param climbPose
-	 * 		the approach pose (CLIMB_LEFT or CLIMB_RIGHT)
+	 *          the approach pose (CLIMB_LEFT or CLIMB_RIGHT)
 	 * @param engagePose
-	 * 		the engage pose (CLIMB_LEFT_ENGAGE or CLIMB_RIGHT_ENGAGE)
+	 *          the engage pose (CLIMB_LEFT_ENGAGE or CLIMB_RIGHT_ENGAGE)
 	 */
 	public static Command climbAuto(Repulsor repulsor, ClimberSubsystem climber,
 			Pose2d climbPose, Pose2d engagePose) {

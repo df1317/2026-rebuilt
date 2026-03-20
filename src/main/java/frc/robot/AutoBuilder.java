@@ -86,7 +86,9 @@ public final class AutoBuilder {
 
 	/**
 	 * Navigate to pose, facing the aim target on arrival with a rotation offset.
-	 * @param rotationOffsetDeg offset from facing angle (0 = front faces target, 180 = back faces target)
+	 *
+	 * @param rotationOffsetDeg
+	 *          offset from facing angle (0 = front faces target, 180 = back faces target)
 	 */
 	public AutoBuilder driveToFacing(Pose2d bluePose, Translation2d blueAimTarget, double rotationOffsetDeg) {
 		return driveToFacing(
