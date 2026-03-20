@@ -34,7 +34,7 @@ public final class Constants {
 	public static final AprilTagFields FIELD_LAYOUT = AprilTagFields.k2026RebuiltWelded;
 
 	public static final class AutoConstants {
-		public static final double SPEED_SCALE = 0.05;
+		public static final double SPEED_SCALE = 0.4;
 	}
 
 	public static final class DrivebaseConstants {
