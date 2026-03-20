@@ -47,6 +47,7 @@ public class IntakeSubsystem extends SubsystemBase {
 			new TrapezoidProfile.Constraints(PIVOT_MAX_VELOCITY_DEG_PER_S, PIVOT_MAX_ACCEL_DEG_PER_S2));
 	private final RollerSubsystem roller;
 	boolean homed = false;
+	private boolean wantToExtend = false;
 	private Angle extendedPivotAngle = PIVOT_EXTENDED_ANGLE;
 	Angle targetPivotAngle = extendedPivotAngle.plus(PIVOT_RETRACTED_DELTA);
 	private double prevPivotKP = PIVOT_KP, prevPivotKI = PIVOT_KI, prevPivotKD = PIVOT_KD, prevPivotKV = 0.0;
@@ -121,7 +122,7 @@ public class IntakeSubsystem extends SubsystemBase {
 	public boolean isRetracted() {
 		return Math.abs(pivotEncoder.getPosition() - extendedPivotAngle.plus(PIVOT_RETRACTED_DELTA)
 				.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
-						.in(Degrees);
+				.in(Degrees);
 	}
 
 	// ==================== Control Methods ====================
@@ -142,6 +143,7 @@ public class IntakeSubsystem extends SubsystemBase {
 			pivotProfiler.setConstraints(new TrapezoidProfile.Constraints(
 					PIVOT_EXTEND_MAX_VELOCITY_DEG_PER_S, PIVOT_EXTEND_MAX_ACCEL_DEG_PER_S2));
 			setPivotAngle(extendedPivotAngle);
+			wantToExtend = true;
 		})
 				.andThen(idle().until(() -> isPivotStalled() || isPivotAtPosition()))
 				.andThen(runOnce(() -> setPivotAngle(Degrees.of(pivotEncoder.getPosition()))))
@@ -151,7 +153,10 @@ public class IntakeSubsystem extends SubsystemBase {
 	}
 
 	public Command retractCommand() {
-		return runOnce(() -> setPivotAngle(extendedPivotAngle.plus(PIVOT_RETRACTED_DELTA)))
+		return runOnce(() -> {
+			setPivotAngle(extendedPivotAngle.plus(PIVOT_RETRACTED_DELTA));
+			wantToExtend = false;
+		})
 				.andThen(idle().until(() -> isPivotStalled() || isPivotAtPosition()))
 				.andThen(runOnce(() -> setPivotAngle(Degrees.of(pivotEncoder.getPosition()))))
 				.withName("Intake Retract");
@@ -186,7 +191,7 @@ public class IntakeSubsystem extends SubsystemBase {
 	 * Extends or stows depending on current position.
 	 */
 	public Command stowToggleCommand() {
-		return Commands.either(stowCommand(), extendCommand(), this::isExtended)
+		return Commands.either(stowCommand(), extendCommand(), () -> wantToExtend)
 				.withName("Intake Stow Toggle");
 	}
 
@@ -219,8 +224,8 @@ public class IntakeSubsystem extends SubsystemBase {
 
 	public Command testPivotCommand() {
 		return Commands.run(() -> {
-			setPivotAngle(Degrees.of(testPivotDeg.get()));
-		}, this)
+					setPivotAngle(Degrees.of(testPivotDeg.get()));
+				}, this)
 				.finallyDo(pivotMotor::stopMotor)
 				.withName("Test Intake Pivot");
 	}
