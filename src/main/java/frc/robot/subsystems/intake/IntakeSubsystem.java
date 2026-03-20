@@ -81,8 +81,18 @@ public class IntakeSubsystem extends SubsystemBase {
 		pivotMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
 	}
 
+	private boolean wasEnabled = false;
+
 	@Override
 	public void periodic() {
+		boolean enabled = edu.wpi.first.wpilibj.DriverStation.isEnabled();
+		if (enabled && !wasEnabled) {
+			double pos = pivotEncoder.getPosition();
+			pivotProfiler.reset(pos);
+			setPivotAngle(Degrees.of(pos));
+		}
+		wasEnabled = enabled;
+
 		telemetry.log();
 		updatePivotPIDIfChanged();
 		double profiledSetpoint = pivotProfiler.calculate(pivotEncoder.getPosition());
