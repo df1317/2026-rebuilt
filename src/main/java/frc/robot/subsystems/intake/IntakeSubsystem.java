@@ -34,7 +34,7 @@ public class IntakeSubsystem extends SubsystemBase {
 	final RelativeEncoder pivotEncoder;
 	private final SparkClosedLoopController pivotController;
 	private final Debouncer atPositionDebouncer;
-	private final Debouncer stallDebouncer = new Debouncer(0.1, DebounceType.kBoth);
+	private final Debouncer stallDebouncer = new Debouncer(1.5, DebounceType.kBoth);
 	private final DoubleSubscriber testPivotDeg = DogLog.tunable("Intake/Pivot/Degrees",
 			PIVOT_EXTENDED_ANGLE.in(Degrees), Degrees);
 	private final IntakeTelemetry telemetry;
@@ -235,7 +235,7 @@ public class IntakeSubsystem extends SubsystemBase {
 	public boolean isPivotStalled() {
 		double pivotMotorCurrent = pivotMotor.getOutputCurrent();
 		double pivotMotorRPM = pivotMotor.getEncoder().getVelocity();
-		boolean isPivotStalled = Math.abs(pivotMotorRPM) < 2.0 && pivotMotorCurrent > PIVOT_CURRENT_LIMIT * 0.5;
+		boolean isPivotStalled = Math.abs(pivotMotorRPM) < 2.0 && pivotMotorCurrent > PIVOT_CURRENT_LIMIT * 0.75;
 		return stallDebouncer.calculate(isPivotStalled);
 	}
 }
