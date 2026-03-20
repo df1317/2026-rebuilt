@@ -150,18 +150,16 @@ public class IntakeSubsystem extends SubsystemBase {
 
 	public Command extendCommand() {
 		return runOnce(() -> {
-			// Brief voltage kick to push through the panel
-			pivotMotor.setVoltage(-PIVOT_KICK_VOLTAGE);
+			// Start with aggressive constraints to push through the panel
+			pivotProfiler.setConstraints(new TrapezoidProfile.Constraints(
+					PIVOT_MAX_VELOCITY_DEG_PER_S, PIVOT_MAX_ACCEL_DEG_PER_S2));
+			setPivotAngle(extendedPivotAngle);
+			wantToExtend = true;
 		})
-				.andThen(Commands.waitSeconds(PIVOT_KICK_DURATION_S))
-				.andThen(runOnce(() -> {
-					double pos = pivotEncoder.getPosition();
-					pivotProfiler.reset(pos);
-					pivotProfiler.setConstraints(new TrapezoidProfile.Constraints(
-							PIVOT_EXTEND_MAX_VELOCITY_DEG_PER_S, PIVOT_EXTEND_MAX_ACCEL_DEG_PER_S2));
-					setPivotAngle(extendedPivotAngle);
-					wantToExtend = true;
-				}))
+				// After 0.5s (past the panel), switch to gentle constraints
+				.andThen(Commands.waitSeconds(0.5))
+				.andThen(runOnce(() -> pivotProfiler.setConstraints(new TrapezoidProfile.Constraints(
+						PIVOT_EXTEND_MAX_VELOCITY_DEG_PER_S, PIVOT_EXTEND_MAX_ACCEL_DEG_PER_S2))))
 				.andThen(idle().until(() -> isPivotStalled() || isPivotAtPosition()))
 				.andThen(runOnce(() -> setPivotAngle(Degrees.of(pivotEncoder.getPosition()))))
 				.finallyDo(() -> pivotProfiler.setConstraints(new TrapezoidProfile.Constraints(
