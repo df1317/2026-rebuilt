@@ -101,10 +101,8 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 		swerveDrive.setModuleEncoderAutoSynchronize(false, 1);
 		Arrays.stream(swerveDrive.getModules()).forEach(m -> m.setAntiJitter(true));
 
-		if (visionEnabled.get()) {
-			setupPhotonVision();
-			swerveDrive.stopOdometryThread();
-		}
+		setupPhotonVision();
+		swerveDrive.stopOdometryThread();
 		repulsorOmegaPID.enableContinuousInput(-Math.PI, Math.PI);
 		setupAutopilot();
 	}
@@ -141,7 +139,7 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 	@Override
 	public void periodic() {
 		swerveDrive.updateOdometry();
-		if (visionEnabled.get() && vision != null) {
+		if (vision != null && (visionEnabled.get() || DriverStation.isAutonomous())) {
 			vision.updatePoseEstimation(swerveDrive);
 		}
 
