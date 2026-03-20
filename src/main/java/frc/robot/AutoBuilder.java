@@ -198,7 +198,7 @@ public final class AutoBuilder {
 			double collectY = fromTop
 					? fieldCenterY + COLLECT_Y_OFFSET
 					: fieldCenterY - COLLECT_Y_OFFSET;
-			double collectDeg = fromTop ? 150.0 : -150.0;
+			double collectDeg = fromTop ? -120.0 : -60.0;
 			ref.set(new Pose2d(fieldCenterX + COLLECT_X_OFFSET, collectY, Rotation2d.fromDegrees(collectDeg)));
 		});
 		steps.add(() -> repulsor.navigateTo(ref::get)
