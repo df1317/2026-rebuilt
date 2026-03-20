@@ -74,9 +74,9 @@ public final class Constants {
 		public static final int PIVOT_CURRENT_LIMIT = 35;
 		public static final int ROLLER_CURRENT_LIMIT = 40;
 
-		public static final Angle PIVOT_EXTENDED_ANGLE = Degrees.of(21);
+		public static final Angle PIVOT_EXTENDED_ANGLE = Degrees.of(7);
 		public static final Angle PIVOT_RETRACTED_DELTA = Degrees.of(90);
-		public static final Angle PIVOT_ANGLE_TOLERANCE = Degrees.of(3);
+		public static final Angle PIVOT_ANGLE_TOLERANCE = Degrees.of(8);
 		public static final double PIVOT_GEAR_RATIO = (48.0 * 22.0) / 14.0;
 		public static final Distance PIVOT_ARM_LENGTH = Inches.of(12);
 
