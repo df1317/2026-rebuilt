@@ -95,8 +95,8 @@ public final class Constants {
 		public static final double PIVOT_KICK_VOLTAGE = 4.0;
 		public static final double PIVOT_KICK_DURATION_S = 0.15;
 
-		public static final AngularVelocity ROLLER_INTAKE_VELOCITY = RPM.of(3500);
-		public static final double ROLLER_SPEED_SCALE_MAX_RPM = 4500;
+		public static final AngularVelocity ROLLER_INTAKE_VELOCITY = RPM.of(2500);
+		public static final double ROLLER_SPEED_SCALE_MAX_RPM = 3500;
 		public static final double ROLLER_SPEED_SCALE_MAX_ROBOT_MPS = 3.0;
 		public static final AngularVelocity ROLLER_EJECT_VELOCITY = RPM.of(-1500);
 		public static final AngularVelocity ROLLER_VELOCITY_TOLERANCE = RPM.of(100);
