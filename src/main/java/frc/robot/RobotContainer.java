@@ -46,8 +46,8 @@ public class RobotContainer {
 	private final RollerSubsystem roller = Constants.ENABLE_INTAKE ? new RollerSubsystem() : null;
 	private final IntakeSubsystem intake = Constants.ENABLE_INTAKE ? new IntakeSubsystem(roller) : null;
 	private final HopperSubsystem hopper = Constants.ENABLE_HOPPER ? new HopperSubsystem() : null;
-	private final BooleanSubscriber obstacleClampEnabled = DogLog.tunable("Drive/ObstacleClampEnabled", false);
-	private final BooleanSubscriber repulsorRumbleEnabled = DogLog.tunable("Drive/RepulsorRumbleEnabled", false);
+	private final BooleanSubscriber obstacleClampEnabled = DogLog.tunable("Drive/ObstacleClampEnabled", true);
+	private final BooleanSubscriber repulsorRumbleEnabled = DogLog.tunable("Drive/RepulsorRumbleEnabled", true);
 	private final SendableChooser<Command> autoChooser;
 	private final AutoChain autoChain;
 	// Repulsor
