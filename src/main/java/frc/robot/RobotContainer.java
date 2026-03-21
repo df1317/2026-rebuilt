@@ -125,15 +125,18 @@ public class RobotContainer {
 			autoChooser.addOption("Just Shoot",
 					Commands.defer(() -> teleopAutomation.shootCommand().withTimeout(4), Set.of(drivebase)));
 			if (intake != null) {
+				Supplier<Command> collectCommand = () -> Commands.parallel(
+						intake.extendCommand().andThen(intake.holdExtendedCommand()),
+						roller.intakeCommand());
 				autoChooser.addOption("Collect + Shoot x1",
 						Commands.defer(() -> AutoPositions.collectAndShoot1(repulsor,
 								() -> teleopAutomation.shootCommand().withTimeout(4),
-								intake::extendCommand, () -> Commands.parallel(roller.intakeCommand(), intake.holdExtendedCommand())),
+								collectCommand),
 								Set.of(drivebase)));
 				autoChooser.addOption("Collect + Shoot x2",
 						Commands.defer(() -> AutoPositions.collectAndShoot2(repulsor,
 								() -> teleopAutomation.shootCommand().withTimeout(4),
-								intake::extendCommand, () -> Commands.parallel(roller.intakeCommand(), intake.holdExtendedCommand())),
+								collectCommand),
 								Set.of(drivebase)));
 			}
 			if (Constants.ENABLE_CLIMBER && climber != null) {

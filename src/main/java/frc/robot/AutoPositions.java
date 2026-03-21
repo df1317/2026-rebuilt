@@ -107,12 +107,11 @@ public final class AutoPositions {
 	 * composing the same command instance twice.
 	 */
 	public static Command collectAndShoot1(Repulsor repulsor, Supplier<Command> shootCommand,
-			Supplier<Command> extendIntake, Supplier<Command> runRollerCommand) {
+			Supplier<Command> collectCommand) {
 		return new AutoBuilder(repulsor)
 				.run(shootCommand)
 				.driveToCollect()
-				.alongside(extendIntake)
-				.alongside(runRollerCommand)
+				.alongside(collectCommand)
 				.driveToStart()
 				.run(shootCommand)
 				.build();
@@ -123,17 +122,15 @@ public final class AutoPositions {
 	 * prohibits composing the same command instance twice.
 	 */
 	public static Command collectAndShoot2(Repulsor repulsor, Supplier<Command> shootCommand,
-			Supplier<Command> extendIntake, Supplier<Command> runRollerCommand) {
+			Supplier<Command> collectCommand) {
 		return new AutoBuilder(repulsor)
 				.run(shootCommand)
 				.driveToCollect()
-				.alongside(extendIntake)
-				.alongside(runRollerCommand)
+				.alongside(collectCommand)
 				.driveToStart()
 				.run(shootCommand)
 				.driveToCollect()
-				.alongside(extendIntake)
-				.alongside(runRollerCommand)
+				.alongside(collectCommand)
 				.driveToStart()
 				.run(shootCommand)
 				.build();
