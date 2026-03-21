@@ -90,6 +90,9 @@ public class IntakeSubsystem extends SubsystemBase {
 			double pos = pivotEncoder.getPosition();
 			pivotProfiler.reset(pos);
 			setPivotAngle(Degrees.of(pos));
+			double distToExtended = Math.abs(pos - extendedPivotAngle.in(Degrees));
+			double distToRetracted = Math.abs(pos - extendedPivotAngle.plus(PIVOT_RETRACTED_DELTA).in(Degrees));
+			wantToExtend = distToExtended < distToRetracted;
 		}
 		wasEnabled = enabled;
 
