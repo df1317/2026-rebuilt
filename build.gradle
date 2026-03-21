@@ -116,6 +116,9 @@ deployArtifact.jarTask = jar
 wpi.java.configureExecutableTasks(jar)
 wpi.java.configureTestTasks(test)
 
+// Run command composition safety tests before deploying
+tasks.named('deploy').configure { dependsOn test }
+
 // Configure string concat to always inline compile
 tasks.withType(JavaCompile) {
     options.compilerArgs.add '-XDstringConcat=inline'

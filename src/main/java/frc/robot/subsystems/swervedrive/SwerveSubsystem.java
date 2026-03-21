@@ -17,6 +17,7 @@ import edu.wpi.first.networktables.BooleanSubscriber;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -101,10 +102,9 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 		swerveDrive.setModuleEncoderAutoSynchronize(false, 1);
 		Arrays.stream(swerveDrive.getModules()).forEach(m -> m.setAntiJitter(true));
 
-		if (visionEnabled.get()) {
-			setupPhotonVision();
-			swerveDrive.stopOdometryThread();
-		}
+		setupPhotonVision();
+		swerveDrive.stopOdometryThread();
+		SmartDashboard.putData("Field", swerveDrive.field);
 		repulsorOmegaPID.enableContinuousInput(-Math.PI, Math.PI);
 		setupAutopilot();
 	}
@@ -127,14 +127,21 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 		vision = new Vision(swerveDrive::getPose, swerveDrive.field);
 	}
 
+	private static final double VISION_STALE_TIMEOUT_S = 30.0;
+
 	public boolean hasVision() {
 		return visionEnabled.get() && vision != null && vision.hasVision();
+	}
+
+	/** True if vision is enabled but no measurement has been received in 30 seconds. */
+	public boolean isVisionStale() {
+		return vision == null || !visionEnabled.get() || !vision.hasRecentVision(VISION_STALE_TIMEOUT_S);
 	}
 
 	@Override
 	public void periodic() {
 		swerveDrive.updateOdometry();
-		if (visionEnabled.get() && vision != null) {
+		if (vision != null && (visionEnabled.get() || DriverStation.isAutonomous())) {
 			vision.updatePoseEstimation(swerveDrive);
 		}
 
@@ -147,7 +154,8 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 			DogLog.log("Autopilot/Jerk", autopilotController.getJerk());
 		}
 
-		DogLog.log("currentPose", swerveDrive.getPose());
+		swerveDrive.field.setRobotPose(swerveDrive.getPose());
+		DogLog.forceNt.log("currentPose", swerveDrive.getPose());
 
 		if (targetDistanceSupplier != null) {
 			DogLog.log("DistanceToTarget", targetDistanceSupplier.get().in(Meters));
@@ -184,7 +192,8 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 			isAimed = !hasVision() || Math.abs(error) <= AIM_TOLERANCE;
 
 			ChassisSpeeds speeds = SwerveInputStream.of(getSwerveDrive(),
-					() -> -translateY.getAsDouble(), () -> -translateX.getAsDouble()).get();
+					() -> -translateY.getAsDouble(), () -> -translateX.getAsDouble())
+					.withControllerRotationAxis(() -> 0).get();
 			speeds.omegaRadiansPerSecond = omega;
 			swerveDrive.driveFieldOrientedAndRobotOriented(speeds, new ChassisSpeeds());
 
@@ -205,7 +214,8 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 						getSwerveDrive().getRobotVelocity().omegaRadiansPerSecond),
 				() -> {
 					ChassisSpeeds speeds = SwerveInputStream.of(getSwerveDrive(),
-							() -> -translateY.getAsDouble(), () -> -translateX.getAsDouble()).get();
+							() -> -translateY.getAsDouble(), () -> -translateX.getAsDouble())
+							.withControllerRotationAxis(() -> 0).get();
 
 					if (vision != null && vision.hasVision()) {
 						Pose2d currentPose = getPose();

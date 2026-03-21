@@ -3,11 +3,15 @@ package frc.robot;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.repulsor.Repulsor;
 import frc.robot.repulsor.RepulsorConstants;
 import frc.robot.repulsor.Setpoints.Specific._Rebuilt2026;
 import frc.robot.subsystems.climber.ClimberSubsystem;
+
+import java.util.function.Supplier;
 
 /**
  * Auto target positions and pre-built routines.
@@ -62,23 +66,29 @@ public final class AutoPositions {
 	}
 
 	/** Drive to hub front, hold position, and shoot. */
-	public static Command frontHubAndShoot(Repulsor repulsor, Command shootCommand) {
+	public static Command frontHubAndShoot(Repulsor repulsor, Supplier<Command> shootCommand) {
 		return new AutoBuilder(repulsor)
 				.driveTo(HUB_FRONT_SHOOT)
 				.run(shootCommand)
 				.build();
 	}
 
-	public static Command leftCornerHideAndShoot(Repulsor repulsor, Command shootCommand) {
+	public static Command leftCornerHideAndShoot(Repulsor repulsor, Supplier<Command> shootCommand) {
+		// Swap positions on red so "left" always means driver's left
+		boolean red = DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red;
+		Pose2d pose = red ? CORNER_HIDE : CORNER_HIDE_NEAR_BALLS;
 		return new AutoBuilder(repulsor)
-				.driveToFacing(CORNER_HIDE_NEAR_BALLS, HUB_CENTER)
+				.driveToFacing(pose, HUB_CENTER, 180)
 				.run(shootCommand)
 				.build();
 	}
 
-	public static Command rightCornerHideAndShoot(Repulsor repulsor, Command shootCommand) {
+	public static Command rightCornerHideAndShoot(Repulsor repulsor, Supplier<Command> shootCommand) {
+		// Swap positions on red so "right" always means driver's right
+		boolean red = DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red;
+		Pose2d pose = red ? CORNER_HIDE_NEAR_BALLS : CORNER_HIDE;
 		return new AutoBuilder(repulsor)
-				.driveToFacing(CORNER_HIDE, HUB_CENTER)
+				.driveToFacing(pose, HUB_CENTER, 180)
 				.run(shootCommand)
 				.build();
 	}
@@ -92,24 +102,35 @@ public final class AutoPositions {
 
 	// ===== Collect & Shoot Autos =====
 
-	/** Shoot to clear, collect from closest side, return to start, shoot. */
-	public static Command collectAndShoot1(Repulsor repulsor, Command shootCommand) {
+	/**
+	 * Shoot to clear, collect from closest side, return to start, shoot. All commands are Suppliers — WPILib prohibits
+	 * composing the same command instance twice.
+	 */
+	public static Command collectAndShoot1(Repulsor repulsor, Supplier<Command> shootCommand,
+			Supplier<Command> collectCommand) {
 		return new AutoBuilder(repulsor)
 				.run(shootCommand)
 				.driveToCollect()
+				.alongside(collectCommand)
 				.driveToStart()
 				.run(shootCommand)
 				.build();
 	}
 
-	/** Shoot to clear, collect from closest side, return and shoot, repeat once more. */
-	public static Command collectAndShoot2(Repulsor repulsor, Command shootCommand) {
+	/**
+	 * Shoot to clear, collect from closest side, return and shoot, repeat once more. All commands are Suppliers — WPILib
+	 * prohibits composing the same command instance twice.
+	 */
+	public static Command collectAndShoot2(Repulsor repulsor, Supplier<Command> shootCommand,
+			Supplier<Command> collectCommand) {
 		return new AutoBuilder(repulsor)
 				.run(shootCommand)
 				.driveToCollect()
+				.alongside(collectCommand)
 				.driveToStart()
 				.run(shootCommand)
 				.driveToCollect()
+				.alongside(collectCommand)
 				.driveToStart()
 				.run(shootCommand)
 				.build();
@@ -129,10 +150,10 @@ public final class AutoPositions {
 			Pose2d climbPose, Pose2d engagePose) {
 		return new AutoBuilder(repulsor)
 				.driveTo(climbPose)
-				.run(climber.climbBottomCommand())
+				.run(climber::climbBottomCommand)
 				.driveTo(engagePose)
-				.run(climber.climbTopCommand())
-				.run(climber.climbHangCommand())
+				.run(climber::climbTopCommand)
+				.run(climber::climbHangCommand)
 				.build();
 	}
 

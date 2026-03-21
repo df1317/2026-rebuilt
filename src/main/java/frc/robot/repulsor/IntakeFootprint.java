@@ -24,21 +24,35 @@ import edu.wpi.first.math.geometry.Translation2d;
 import java.util.Objects;
 
 public final class IntakeFootprint {
-	private static IntakeFootprint instance = null;
+	private static IntakeFootprint stowedInstance = null;
+	private static IntakeFootprint extendedInstance = null;
+	private static java.util.function.BooleanSupplier intakeExtendedSupplier = () -> false;
 
+	/** Returns the active footprint based on whether the intake is extended. */
 	public static IntakeFootprint getFootprint() {
-		if (instance == null) {
+		if (stowedInstance == null) {
 			throw new IllegalStateException(
-					"IntakeFootprint instance not initialized. Call one of the factory methods first.");
+					"IntakeFootprint instance not initialized. Call setFootprints first.");
 		}
-		return instance;
+		return intakeExtendedSupplier.getAsBoolean() ? extendedInstance : stowedInstance;
 	}
 
+	/**
+	 * Sets both the stowed and extended footprints, plus a supplier to determine which is active.
+	 */
+	public static void setFootprints(IntakeFootprint stowed, IntakeFootprint extended,
+			java.util.function.BooleanSupplier isExtended) {
+		stowedInstance = Objects.requireNonNull(stowed);
+		extendedInstance = Objects.requireNonNull(extended);
+		intakeExtendedSupplier = Objects.requireNonNull(isExtended);
+	}
+
+	/** @deprecated Use setFootprints instead. */
 	public static void setFootprint(IntakeFootprint footprint) {
-		if (instance != null) {
-			throw new IllegalStateException("IntakeFootprint instance already set.");
+		stowedInstance = Objects.requireNonNull(footprint);
+		if (extendedInstance == null) {
+			extendedInstance = footprint;
 		}
-		instance = Objects.requireNonNull(footprint);
 	}
 
 	public static IntakeFootprint robotSquare(double robotSideMeters) {
@@ -59,6 +73,68 @@ public final class IntakeFootprint {
 		return new IntakeFootprint(new Rect(new Translation2d(cx, 0.0), hx, hy));
 	}
 
+	/**
+	 * Creates a footprint combining the robot body with an intake extension at a given angle.
+	 *
+	 * @param robotSideMeters
+	 *          full side length of the square robot
+	 * @param intakeLengthMeters
+	 *          length the intake extends beyond the robot edge
+	 * @param intakeAngleDeg
+	 *          angle in robot frame where the intake extends (0=front, -90=right, 90=left, 180=rear)
+	 */
+	public static IntakeFootprint robotWithIntake(
+			double robotLengthMeters, double robotWidthMeters,
+			double intakeLengthMeters, double intakeAngleDeg) {
+		double halfX = 0.5 * robotLengthMeters;
+		double halfY = 0.5 * robotWidthMeters;
+		Rect body = new Rect(new Translation2d(0.0, 0.0), halfX, halfY);
+
+		double angleRad = Math.toRadians(intakeAngleDeg);
+		double dirX = Math.cos(angleRad);
+		double dirY = Math.sin(angleRad);
+
+		// Distance from center to robot edge in the intake direction
+		double edgeDist = Math.abs(dirX) * halfX + Math.abs(dirY) * halfY;
+		double intakeHalf = 0.5 * intakeLengthMeters;
+		double cx = dirX * (edgeDist + intakeHalf);
+		double cy = dirY * (edgeDist + intakeHalf);
+
+		double intakeWidth = 0.15;
+		double hAlong = intakeHalf;
+		double hPerp = 0.5 * intakeWidth;
+
+		Rect intake = new Rect(new Translation2d(cx, cy), hAlong, hPerp, angleRad);
+
+		return new IntakeFootprint(new CompoundShape(body, intake));
+	}
+
+	public static IntakeFootprint robotWithIntake(
+			double robotSideMeters, double intakeLengthMeters, double intakeAngleDeg) {
+		double halfRobot = 0.5 * robotSideMeters;
+		Rect body = new Rect(new Translation2d(0.0, 0.0), halfRobot, halfRobot);
+
+		double angleRad = Math.toRadians(intakeAngleDeg);
+		double dirX = Math.cos(angleRad);
+		double dirY = Math.sin(angleRad);
+
+		// Intake center: offset from robot edge by half the intake length in the given direction
+		double intakeHalf = 0.5 * intakeLengthMeters;
+		double cx = dirX * (halfRobot + intakeHalf);
+		double cy = dirY * (halfRobot + intakeHalf);
+
+		// Intake rect: thin along the extension direction, same width as intake length
+		// Use a small fixed width perpendicular to extension direction
+		double intakeWidth = 0.15; // 15cm wide perpendicular to extension
+		double hAlong = intakeHalf;
+		double hPerp = 0.5 * intakeWidth;
+
+		// Build the intake rect aligned to the extension angle
+		Rect intake = new Rect(new Translation2d(cx, cy), hAlong, hPerp, angleRad);
+
+		return new IntakeFootprint(new CompoundShape(body, intake));
+	}
+
 	private final Shape shape;
 
 	private IntakeFootprint(Shape shape) {
@@ -71,6 +147,33 @@ public final class IntakeFootprint {
 
 	public Translation2d supportPointRobotFrame(Translation2d dirRobot) {
 		return shape.support(dirRobot);
+	}
+
+	/** Returns the maximum distance from origin to any point in the footprint (for corridor radius). */
+	public double getMaxRadius() {
+		// Sample support in many directions and take the max distance
+		double max = 0;
+		for (int i = 0; i < 36; i++) {
+			double angle = i * Math.PI / 18.0;
+			Translation2d dir = new Translation2d(Math.cos(angle), Math.sin(angle));
+			Translation2d sp = shape.support(dir);
+			max = Math.max(max, sp.getNorm());
+		}
+		return max;
+	}
+
+	/** Returns the effective half-length (max extent in X from center) for AABB calculations. */
+	public double getEffectiveHalfLength() {
+		double px = shape.support(new Translation2d(1.0, 0.0)).getX();
+		double nx = -shape.support(new Translation2d(-1.0, 0.0)).getX();
+		return Math.max(px, nx);
+	}
+
+	/** Returns the effective half-width (max extent in Y from center) for AABB calculations. */
+	public double getEffectiveHalfWidth() {
+		double py = shape.support(new Translation2d(0.0, 1.0)).getY();
+		double ny = -shape.support(new Translation2d(0.0, -1.0)).getY();
+		return Math.max(py, ny);
 	}
 
 	public Translation2d snapCenterSoFootprintTouchesPoint(
@@ -112,36 +215,96 @@ public final class IntakeFootprint {
 		private final Translation2d c;
 		private final double hx;
 		private final double hy;
+		private final double cosA;
+		private final double sinA;
 
 		Rect(Translation2d center, double halfX, double halfY) {
+			this(center, halfX, halfY, 0.0);
+		}
+
+		Rect(Translation2d center, double halfX, double halfY, double angleRad) {
 			this.c = Objects.requireNonNull(center);
 			this.hx = Math.max(0.0, halfX);
 			this.hy = Math.max(0.0, halfY);
+			this.cosA = Math.cos(angleRad);
+			this.sinA = Math.sin(angleRad);
+		}
+
+		/** Rotate a point from parent frame into this rect's local frame. */
+		private Translation2d toLocal(Translation2d p) {
+			double dx = p.getX() - c.getX();
+			double dy = p.getY() - c.getY();
+			return new Translation2d(dx * cosA + dy * sinA, -dx * sinA + dy * cosA);
+		}
+
+		/** Rotate a point from this rect's local frame back to parent frame. */
+		private Translation2d toParent(Translation2d local) {
+			double lx = local.getX();
+			double ly = local.getY();
+			return new Translation2d(c.getX() + lx * cosA - ly * sinA, c.getY() + lx * sinA + ly * cosA);
 		}
 
 		@Override
 		public boolean contains(Translation2d p) {
-			double dx = p.getX() - c.getX();
-			double dy = p.getY() - c.getY();
-			return Math.abs(dx) <= hx + 1e-9 && Math.abs(dy) <= hy + 1e-9;
+			Translation2d local = toLocal(p);
+			return Math.abs(local.getX()) <= hx + 1e-9 && Math.abs(local.getY()) <= hy + 1e-9;
 		}
 
 		@Override
 		public Translation2d support(Translation2d dir) {
-			double sx = dir.getX() >= 0.0 ? hx : -hx;
-			double sy = dir.getY() >= 0.0 ? hy : -hy;
-			return new Translation2d(c.getX() + sx, c.getY() + sy);
+			Translation2d localDir = new Translation2d(dir.getX() * cosA + dir.getY() * sinA,
+					-dir.getX() * sinA + dir.getY() * cosA);
+			double sx = localDir.getX() >= 0.0 ? hx : -hx;
+			double sy = localDir.getY() >= 0.0 ? hy : -hy;
+			return toParent(new Translation2d(sx, sy));
 		}
 
 		@Override
 		public Translation2d closestPointInside(Translation2d p) {
-			double x = clamp(p.getX(), c.getX() - hx, c.getX() + hx);
-			double y = clamp(p.getY(), c.getY() - hy, c.getY() + hy);
-			return new Translation2d(x, y);
+			Translation2d local = toLocal(p);
+			double x = clamp(local.getX(), -hx, hx);
+			double y = clamp(local.getY(), -hy, hy);
+			return toParent(new Translation2d(x, y));
 		}
 
 		private static double clamp(double v, double lo, double hi) {
 			return Math.max(lo, Math.min(hi, v));
+		}
+	}
+
+	private static final class CompoundShape implements Shape {
+		private final Shape a;
+		private final Shape b;
+
+		CompoundShape(Shape a, Shape b) {
+			this.a = Objects.requireNonNull(a);
+			this.b = Objects.requireNonNull(b);
+		}
+
+		@Override
+		public boolean contains(Translation2d p) {
+			return a.contains(p) || b.contains(p);
+		}
+
+		@Override
+		public Translation2d support(Translation2d dir) {
+			Translation2d sa = a.support(dir);
+			Translation2d sb = b.support(dir);
+			double dotA = sa.getX() * dir.getX() + sa.getY() * dir.getY();
+			double dotB = sb.getX() * dir.getX() + sb.getY() * dir.getY();
+			return dotA >= dotB ? sa : sb;
+		}
+
+		@Override
+		public Translation2d closestPointInside(Translation2d p) {
+			if (a.contains(p) || b.contains(p)) {
+				return p;
+			}
+			Translation2d ca = a.closestPointInside(p);
+			Translation2d cb = b.closestPointInside(p);
+			double da = ca.minus(p).getNorm();
+			double db = cb.minus(p).getNorm();
+			return da <= db ? ca : cb;
 		}
 	}
 }

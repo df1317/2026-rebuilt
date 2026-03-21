@@ -51,8 +51,8 @@ public class Repulsor {
 	private static final int TRAJ_MAX_STEPS = 30;
 	private static final double TRAJ_STEP_SIZE = 0.15; // meters
 
-	private double robot_x;
-	private double robot_y;
+	private final double robot_x_stowed;
+	private final double robot_y_stowed;
 
 	private FieldPlanner m_planner;
 	private DriveRepulsor m_drive;
@@ -68,13 +68,29 @@ public class Repulsor {
 		return err.get().lt(Meters.of(0.1));
 	}
 
+	private double getRobotX() {
+		try {
+			return IntakeFootprint.getFootprint().getEffectiveHalfLength();
+		} catch (IllegalStateException e) {
+			return robot_x_stowed;
+		}
+	}
+
+	private double getRobotY() {
+		try {
+			return IntakeFootprint.getFootprint().getEffectiveHalfWidth();
+		} catch (IllegalStateException e) {
+			return robot_y_stowed;
+		}
+	}
+
 	public Repulsor(
 			DriveRepulsor drive,
 			double robot_x,
 			double robot_y) {
 		this.m_drive = drive;
-		this.robot_x = robot_x;
-		this.robot_y = robot_y;
+		this.robot_x_stowed = robot_x;
+		this.robot_y_stowed = robot_y;
 
 		m_driveTuning = new DriveTuningHeat(() -> m_drive.getPose());
 		m_planner = new FieldPlanner(new Rebuilt2026(), m_driveTuning);
@@ -140,7 +156,7 @@ public class Repulsor {
 
 					// Reject if target is inside an obstacle
 					if (ExtraPathing.robotIntersects(
-							goalPose.getTranslation(), robot_x, robot_y,
+							goalPose.getTranslation(), getRobotX(), getRobotY(),
 							m_planner.getObstacles())) {
 						return;
 					}
@@ -151,8 +167,8 @@ public class Repulsor {
 					RepulsorSample sample = m_planner.calculate(
 							robotPose,
 							Collections.emptyList(),
-							robot_x,
-							robot_y,
+							getRobotX(),
+							getRobotY(),
 							CategorySpec.kScore,
 							false);
 

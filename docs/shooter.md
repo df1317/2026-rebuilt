@@ -50,18 +50,66 @@ Use this when auto-homing doesn't reach the stops cleanly:
 | `Button 8` | Test feeder                   | Tunable: `Test/FeederRPM`     |
 | `Button 9` | Jog hood (hold + joystick)    | Holds position on release      |
 
-## Distance Lookup Table
+## Distance-to-RPM / Hood Curves
 
-Both flywheel RPM and hood position are interpolated from distance. Values are in `populateLookupTable()` and need tuning on the real robot.
+Flywheel RPM and hood position are computed from distance using polynomial curve fits derived from calibration data. This replaces the old linear-interpolation lookup table, enabling extrapolation beyond the tested range (4.6m).
+
+### Calibration Data
 
 | Distance (m) | Flywheel (RPM) | Hood (%) |
 |--------------|----------------|----------|
-| 1.0          | 2500           | 100      |
-| 2.0          | 3000           | 83       |
-| 3.0          | 3500           | 70       |
-| 4.0          | 4000           | 58       |
-| 5.0          | 4500           | 50       |
-| 6.0          | 5000           | 42       |
+| 1.00         | 3000           | 0.00     |
+| 1.60         | 2600           | 0.00     |
+| 2.30         | 2700           | 0.00     |
+| 2.54         | 2750           | 0.00     |
+| 2.80         | 2750           | 0.17     |
+| 3.50         | 2950           | 0.17     |
+| 4.00         | 3100           | 0.36     |
+| 4.60         | 3250           | 0.53     |
+
+### Curve Fitting
+
+We fitted several polynomial orders (quadratic, cubic, quartic) to the RPM data using least-squares regression. The RPM data has a characteristic dip at close range (1-2m) because the hood is flat and we're lobbing the ball nearly straight up, requiring less flywheel speed. As distance increases, the shot flattens and RPM climbs.
+
+- **Quadratic** — smooth extrapolation beyond 4.6m but misses the close-range dip
+- **Cubic** — captures the dip well but diverges wildly beyond 5m (drops to 1400 RPM at 7m)
+- **Quartic** — nails the close-range dip but explodes upward beyond 5m
+
+The solution: **blend the quartic into the quadratic**. The quartic handles 1.0–2.3m (the dip), a linear blend transitions from 2.3–2.8m, and the quadratic takes over from 2.8m onward for smooth extrapolation.
+
+**RPM (blended):**
+- Below 2.3m: `34.381d⁴ - 447.749d³ + 2134.640d² - 4165.446d + 5436.875`
+- 2.3–2.8m: linear blend between quartic and quadratic
+- Above 2.8m: `109.602d² - 496.440d + 3279.834`
+
+**Hood % (quadratic, clamped to [0, 1]):**
+- `0.05706d² - 0.17218d + 0.11705`
+
+### Curve Fit Graph
+
+![Shooter curve fits](https://cdn.hackclub.com/019d081d-e1b3-7bdc-81bb-dcdb1be85623/image.png)
+
+Gray dashed line is the old LUT (linear interpolation, stopped at 4.6m). Blue solid line is the new polynomial curve fit that extends beyond the tested range.
+
+### LUT Values (sampled at 0.5m, linearly interpolated at runtime)
+
+These are the values stored in the `InterpolatingDoubleTreeMap` — the robot lerps between them at runtime.
+
+| Distance (m) | RPM  | Hood % |
+|--------------|------|--------|
+| 1.0          | 2993 | 0.00   |
+| 1.5          | 2655 | 0.00   |
+| 2.0          | 2613 | 0.00   |
+| 2.5          | 2717 | 0.04   |
+| 3.0          | 2777 | 0.11   |
+| 3.5          | 2885 | 0.21   |
+| 4.0          | 3048 | 0.34   |
+| 4.5          | 3265 | 0.50   |
+| 5.0          | 3538 | 0.68   |
+| 5.5          | 3865 | 0.90   |
+| 6.0          | 4247 | 1.00   |
+| 6.5          | 4684 | 1.00   |
+| 7.0          | 5175 | 1.00   |
 
 ## Key Constants (`ShooterConstants`)
 

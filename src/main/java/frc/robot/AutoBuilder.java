@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 /**
  * Fluent builder for autonomous command sequences using Repulsor path planning.
@@ -39,7 +40,17 @@ public final class AutoBuilder {
 
 	private static final Distance DEFAULT_TOLERANCE = Meters.of(0.15);
 	/** Y offset from field center for collect positions (meters). */
-	private static final double COLLECT_Y_OFFSET = 1.5;
+	private static final double COLLECT_Y_OFFSET = 1.8;
+	/** X offset (negative = toward blue alliance wall) for collect positions. */
+	private static final double COLLECT_X_OFFSET = -0.5;
+
+	/** Global preamble command run before every auto (e.g. hood homing). */
+	private static Supplier<Command> preamble;
+
+	/** Set a command to run at the start of every auto (before any steps). Use Commands.sequence() to chain multiple. */
+	public static void setPreamble(Supplier<Command> command) {
+		preamble = command;
+	}
 
 	private final Repulsor repulsor;
 	private final List<Step> steps = new ArrayList<>();
@@ -68,9 +79,21 @@ public final class AutoBuilder {
 		return this;
 	}
 
-	/** Navigate to pose, facing the aim target on arrival. Finishes when within 15cm. */
+	/** Navigate to pose, facing the aim target on arrival (front faces target). Finishes when within 15cm. */
 	public AutoBuilder driveToFacing(Pose2d bluePose, Translation2d blueAimTarget) {
-		return driveToFacing(bluePose, blueAimTarget, DEFAULT_TOLERANCE, null);
+		return driveToFacing(bluePose, blueAimTarget, 0.0);
+	}
+
+	/**
+	 * Navigate to pose, facing the aim target on arrival with a rotation offset.
+	 *
+	 * @param rotationOffsetDeg
+	 *          offset from facing angle (0 = front faces target, 180 = back faces target)
+	 */
+	public AutoBuilder driveToFacing(Pose2d bluePose, Translation2d blueAimTarget, double rotationOffsetDeg) {
+		return driveToFacing(
+				new Pose2d(bluePose.getTranslation(), Rotation2d.fromDegrees(rotationOffsetDeg)),
+				blueAimTarget, DEFAULT_TOLERANCE, null);
 	}
 
 	/** Navigate to pose, facing the aim target on arrival. Custom tolerance. */
@@ -171,19 +194,24 @@ public final class AutoBuilder {
 			Pose2d startPose = repulsor.getDrive().getPose();
 			double fieldCenterX = RepulsorConstants.FIELD_LENGTH / 2.0;
 			double fieldCenterY = RepulsorConstants.FIELD_WIDTH / 2.0;
-			double collectY = startPose.getY() > fieldCenterY
+			boolean fromTop = startPose.getY() > fieldCenterY;
+			double collectY = fromTop
 					? fieldCenterY + COLLECT_Y_OFFSET
 					: fieldCenterY - COLLECT_Y_OFFSET;
-			ref.set(new Pose2d(fieldCenterX, collectY, Rotation2d.kZero));
+			double collectDeg = fromTop ? -120.0 : -60.0;
+			ref.set(new Pose2d(fieldCenterX + COLLECT_X_OFFSET, collectY, Rotation2d.fromDegrees(collectDeg)));
 		});
 		steps.add(() -> repulsor.navigateTo(ref::get)
 				.until(repulsor.within(tolerance)));
 		return this;
 	}
 
-	/** Insert any WPILib command into the sequence. */
-	public AutoBuilder run(Command command) {
-		steps.add(() -> command);
+	/**
+	 * Insert a command into the sequence.
+	 * Takes a Supplier so each scheduling creates a fresh instance — WPILib prohibits composing the same command twice.
+	 */
+	public AutoBuilder run(Supplier<Command> commandSupplier) {
+		steps.add(commandSupplier::get);
 		return this;
 	}
 
@@ -192,24 +220,24 @@ public final class AutoBuilder {
 	 * deadline &mdash; when it finishes the alongside command is interrupted.
 	 *
 	 * <p>
-	 * Typical use: deploy the intake while driving to a collect position.
+	 * Takes a Supplier so each scheduling creates a fresh instance — WPILib prohibits composing the same command twice.
 	 *
 	 * <pre>{@code
 	 * new AutoBuilder(repulsor)
 	 * 		.driveTo(COLLECT_POSE)
-	 * 		.alongside(intake.extendCommand())
+	 * 		.alongside(intake::extendCommand)
 	 * 		.build();
 	 * }</pre>
 	 *
 	 * @throws IllegalStateException
 	 *           if there is no previous step to attach to
 	 */
-	public AutoBuilder alongside(Command command) {
+	public AutoBuilder alongside(Supplier<Command> commandSupplier) {
 		if (steps.isEmpty()) {
 			throw new IllegalStateException("alongside() requires a preceding step");
 		}
 		Step previous = steps.remove(steps.size() - 1);
-		steps.add(() -> previous.create().deadlineFor(command));
+		steps.add(() -> previous.create().deadlineFor(commandSupplier.get()));
 		return this;
 	}
 
@@ -227,11 +255,14 @@ public final class AutoBuilder {
 
 			repulsor.setAutoSpeedScale(capturedScale);
 
-			Command[] commands = new Command[capturedSteps.size()];
-			for (int i = 0; i < capturedSteps.size(); i++) {
-				commands[i] = capturedSteps.get(i).create();
+			List<Command> commands = new ArrayList<>();
+			if (preamble != null) {
+				commands.add(preamble.get());
 			}
-			return Commands.sequence(commands)
+			for (var step : capturedSteps) {
+				commands.add(step.create());
+			}
+			return Commands.sequence(commands.toArray(Command[]::new))
 					.finallyDo(interrupted -> repulsor.resetSpeedScale());
 		}, Set.of(repulsor.getDrive().asSubsystem()));
 	}
@@ -262,7 +293,7 @@ public final class AutoBuilder {
 					? SetpointUtil.flipToRed(blueAimTarget)
 					: blueAimTarget;
 			Rotation2d towardTarget = target.minus(flipped.getTranslation()).getAngle();
-			Rotation2d facing = towardTarget.rotateBy(flipped.getRotation());
+			Rotation2d facing = towardTarget.rotateBy(bluePose.getRotation());
 			ref.set(new Pose2d(flipped.getTranslation(), facing));
 		});
 		return ref;

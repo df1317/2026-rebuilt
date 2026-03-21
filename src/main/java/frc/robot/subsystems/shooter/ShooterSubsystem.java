@@ -40,8 +40,8 @@ import static frc.robot.Constants.ShooterConstants.*;
 public class ShooterSubsystem extends SubsystemBase {
 
 	private static final double DISTANCE_STEP_M = 0.5;
-	private static final double DISTANCE_MIN_M = 1.0;
-	private static final double DISTANCE_MAX_M = 5.0;
+	private static final double DISTANCE_MIN_M = 0.5;
+	private static final double DISTANCE_MAX_M = 9.0;
 	// ==================== Hardware (package-private for telemetry) ====================
 	final TalonFX motor;
 	final SparkMax feeder;
@@ -161,15 +161,35 @@ public class ShooterSubsystem extends SubsystemBase {
 	// ==================== State Queries ====================
 
 	private void populateLookupTable() {
-		// Distance (m) -> Flywheel RPM
-		distanceToRPM.put(1.00, 3000.0);
-		distanceToRPM.put(1.60, 2600.0);
-		distanceToRPM.put(2.30, 2700.0);
-		distanceToRPM.put(2.54, 2750.0);
-		distanceToRPM.put(2.80, 2750.0);
-		distanceToRPM.put(3.50, 2950.0);
-		distanceToRPM.put(4.00, 3100.0);
-		distanceToRPM.put(4.60, 3250.0);
+		// Distance (m) -> Flywheel RPM (derived from quartic→quadratic blend, sampled at 0.5m)
+		distanceToRPM.put(1.0, 2993.0);
+		distanceToRPM.put(1.5, 2655.0);
+		distanceToRPM.put(2.0, 2613.0);
+		distanceToRPM.put(2.5, 2717.0);
+		distanceToRPM.put(3.0, 2777.0);
+		distanceToRPM.put(3.5, 2885.0);
+		distanceToRPM.put(4.0, 3048.0);
+		distanceToRPM.put(4.5, 3265.0);
+		distanceToRPM.put(5.0, 3538.0);
+		distanceToRPM.put(5.5, 3865.0);
+		distanceToRPM.put(6.0, 4247.0);
+		distanceToRPM.put(6.5, 4684.0);
+		distanceToRPM.put(7.0, 5175.0);
+
+		// Distance (m) -> Hood position (derived from quadratic fit, sampled at 0.5m, clamped 0-1)
+		distanceToHoodPercent.put(1.0, 0.00);
+		distanceToHoodPercent.put(1.5, 0.00);
+		distanceToHoodPercent.put(2.0, 0.00);
+		distanceToHoodPercent.put(2.5, 0.04);
+		distanceToHoodPercent.put(3.0, 0.11);
+		distanceToHoodPercent.put(3.5, 0.21);
+		distanceToHoodPercent.put(4.0, 0.34);
+		distanceToHoodPercent.put(4.5, 0.50);
+		distanceToHoodPercent.put(5.0, 0.68);
+		distanceToHoodPercent.put(5.5, 0.90);
+		distanceToHoodPercent.put(6.0, 1.00);
+		distanceToHoodPercent.put(6.5, 1.00);
+		distanceToHoodPercent.put(7.0, 1.00);
 
 		// Flywheel RPM -> Ball exit speed (m/s)
 		rpmToBallSpeed.put(2555.0, BALL_SPEED_LOW_M_S);
@@ -180,16 +200,6 @@ public class ShooterSubsystem extends SubsystemBase {
 		hoodPercentToLaunchAngle.put(0.17, 25.0);
 		hoodPercentToLaunchAngle.put(0.36, 32.0);
 		hoodPercentToLaunchAngle.put(0.51, 38.0);
-
-		// Distance (m) -> Hood position (0.0 = min stop, 1.0 = max stop)
-		distanceToHoodPercent.put(1.00, 0.00);
-		distanceToHoodPercent.put(1.60, 0.00);
-		distanceToHoodPercent.put(2.30, 0.00);
-		distanceToHoodPercent.put(2.54, 0.00);
-		distanceToHoodPercent.put(2.80, 0.17);
-		distanceToHoodPercent.put(3.50, 0.17);
-		distanceToHoodPercent.put(4.00, 0.36);
-		distanceToHoodPercent.put(4.60, 0.53);
 	}
 
 	public Command tune(DoubleSupplier shooterRPM, DoubleSupplier feederRPM, DoubleSupplier hoodPercent) {
@@ -290,8 +300,8 @@ public class ShooterSubsystem extends SubsystemBase {
 
 	public AngularVelocity getRPMForDistance(Distance distance) {
 		double distanceMeters = distance.in(Meters);
-		double clampedDistance = Math.max(1.0, Math.min(6.0, distanceMeters));
-		return RPM.of(distanceToRPM.get(clampedDistance));
+		double d = Math.max(1.0, Math.min(7.0, distanceMeters));
+		return RPM.of(distanceToRPM.get(d));
 	}
 
 	public AngularVelocity getTargetVelocity() {
@@ -303,8 +313,8 @@ public class ShooterSubsystem extends SubsystemBase {
 	}
 
 	public double getHoodPercentForDistance(Distance distance) {
-		double clampedDistance = Math.max(1.0, Math.min(6.0, distance.in(Meters)));
-		return distanceToHoodPercent.get(clampedDistance);
+		double d = Math.max(1.0, Math.min(7.0, distance.in(Meters)));
+		return distanceToHoodPercent.get(d);
 	}
 
 	public void setForDistance(Supplier<Distance> distance) {
@@ -429,7 +439,7 @@ public class ShooterSubsystem extends SubsystemBase {
 
 	/** Steps distance up 0.5 m and activates manual override. */
 	public Command advanceDistanceCommand() {
-		return Commands.runOnce(() -> {
+		return runOnce(() -> {
 			manualDistanceM = Math.min(manualDistanceM + DISTANCE_STEP_M, DISTANCE_MAX_M);
 			manualDistanceEnabled = true;
 		}).withName("Advance Distance");
@@ -437,7 +447,7 @@ public class ShooterSubsystem extends SubsystemBase {
 
 	/** Steps distance down 0.5 m and activates manual override. */
 	public Command reduceDistanceCommand() {
-		return Commands.runOnce(() -> {
+		return runOnce(() -> {
 			manualDistanceM = Math.max(manualDistanceM - DISTANCE_STEP_M, DISTANCE_MIN_M);
 			manualDistanceEnabled = true;
 		}).withName("Reduce Distance");
@@ -508,7 +518,7 @@ public class ShooterSubsystem extends SubsystemBase {
 	}
 
 	public Command zeroHood() {
-		return Commands.runOnce(() -> {
+		return runOnce(() -> {
 			setHoodPercent(0);
 		}).andThen(Commands.waitUntil(this::isHoodAtPosition));
 	}
@@ -529,18 +539,17 @@ public class ShooterSubsystem extends SubsystemBase {
 					stallDebouncer.calculate(false); // reset stale debouncer state
 					hood.setVoltage(-ShooterConstants.HOOD_HOMING_VOLTAGE);
 				}),
-				Commands.waitUntil(this::isHoodStalled).withTimeout(5.0),
+				Commands.waitUntil(this::isHoodStalled).withTimeout(2.0),
 				Commands.runOnce(() -> {
 					hood.stopMotor();
 					hoodEncoder.setPosition(0.0);
+					stallDebouncer.calculate(false); // reset debouncer between phases
 				}),
-				Commands.waitSeconds(0.25),
 				// Drive hood toward max stop
 				Commands.runOnce(() -> {
-					stallDebouncer.calculate(false); // reset debouncer between phases
 					hood.setVoltage(ShooterConstants.HOOD_HOMING_VOLTAGE);
 				}),
-				Commands.waitUntil(this::isHoodStalled).withTimeout(5.0),
+				Commands.waitUntil(this::isHoodStalled).withTimeout(2.0),
 				Commands.runOnce(() -> {
 					hood.stopMotor();
 					hoodMaxDeg = hoodEncoder.getPosition();

@@ -34,7 +34,7 @@ public class IntakeSubsystem extends SubsystemBase {
 	final RelativeEncoder pivotEncoder;
 	private final SparkClosedLoopController pivotController;
 	private final Debouncer atPositionDebouncer;
-	private final Debouncer stallDebouncer = new Debouncer(0.1, DebounceType.kBoth);
+	private final Debouncer stallDebouncer = new Debouncer(1.5, DebounceType.kBoth);
 	private final DoubleSubscriber testPivotDeg = DogLog.tunable("Intake/Pivot/Degrees",
 			PIVOT_EXTENDED_ANGLE.in(Degrees), Degrees);
 	private final IntakeTelemetry telemetry;
@@ -46,8 +46,10 @@ public class IntakeSubsystem extends SubsystemBase {
 	private final ProfiledPIDController pivotProfiler = new ProfiledPIDController(0, 0, 0,
 			new TrapezoidProfile.Constraints(PIVOT_MAX_VELOCITY_DEG_PER_S, PIVOT_MAX_ACCEL_DEG_PER_S2));
 	private final RollerSubsystem roller;
-	Angle targetPivotAngle = PIVOT_RETRACTED_ANGLE;
 	boolean homed = false;
+	private boolean wantToExtend = false;
+	private Angle extendedPivotAngle = PIVOT_EXTENDED_ANGLE;
+	Angle targetPivotAngle = extendedPivotAngle.plus(PIVOT_RETRACTED_DELTA);
 	private double prevPivotKP = PIVOT_KP, prevPivotKI = PIVOT_KI, prevPivotKD = PIVOT_KD, prevPivotKV = 0.0;
 
 	public IntakeSubsystem(RollerSubsystem roller) {
@@ -64,7 +66,7 @@ public class IntakeSubsystem extends SubsystemBase {
 
 		double initialAngle = pivotEncoder.getPosition();
 		pivotProfiler.reset(initialAngle);
-		setPivotAngle(PIVOT_RETRACTED_ANGLE);
+		setPivotAngle(Degrees.of(initialAngle));
 	}
 
 	private void configurePivotMotor() {
@@ -79,8 +81,21 @@ public class IntakeSubsystem extends SubsystemBase {
 		pivotMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
 	}
 
+	private boolean wasEnabled = false;
+
 	@Override
 	public void periodic() {
+		boolean enabled = edu.wpi.first.wpilibj.DriverStation.isEnabled();
+		if (enabled && !wasEnabled) {
+			double pos = pivotEncoder.getPosition();
+			pivotProfiler.reset(pos);
+			setPivotAngle(Degrees.of(pos));
+			double distToExtended = Math.abs(pos - extendedPivotAngle.in(Degrees));
+			double distToRetracted = Math.abs(pos - extendedPivotAngle.plus(PIVOT_RETRACTED_DELTA).in(Degrees));
+			wantToExtend = distToExtended < distToRetracted;
+		}
+		wasEnabled = enabled;
+
 		telemetry.log();
 		updatePivotPIDIfChanged();
 		double profiledSetpoint = pivotProfiler.calculate(pivotEncoder.getPosition());
@@ -112,15 +127,18 @@ public class IntakeSubsystem extends SubsystemBase {
 		return atPositionDebouncer.calculate(atPositionRaw);
 	}
 
+	public boolean wantsToExtend() {
+		return wantToExtend;
+	}
+
 	public boolean isExtended() {
-		return isPivotAtPosition()
-				&& Math.abs(targetPivotAngle.in(Degrees) - PIVOT_EXTENDED_ANGLE.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
-						.in(Degrees);
+		return Math.abs(pivotEncoder.getPosition() - extendedPivotAngle.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
+				.in(Degrees);
 	}
 
 	public boolean isRetracted() {
-		return isPivotAtPosition()
-				&& Math.abs(targetPivotAngle.in(Degrees) - PIVOT_RETRACTED_ANGLE.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
+		return Math.abs(pivotEncoder.getPosition() - extendedPivotAngle.plus(PIVOT_RETRACTED_DELTA)
+				.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
 						.in(Degrees);
 	}
 
@@ -139,10 +157,16 @@ public class IntakeSubsystem extends SubsystemBase {
 
 	public Command extendCommand() {
 		return runOnce(() -> {
+			// Start with aggressive constraints to push through the panel
 			pivotProfiler.setConstraints(new TrapezoidProfile.Constraints(
-					PIVOT_EXTEND_MAX_VELOCITY_DEG_PER_S, PIVOT_EXTEND_MAX_ACCEL_DEG_PER_S2));
-			setPivotAngle(PIVOT_EXTENDED_ANGLE);
+					PIVOT_MAX_VELOCITY_DEG_PER_S, PIVOT_MAX_ACCEL_DEG_PER_S2));
+			setPivotAngle(extendedPivotAngle);
+			wantToExtend = true;
 		})
+				// After 0.5s (past the panel), switch to gentle constraints
+				.andThen(Commands.waitSeconds(0.5))
+				.andThen(runOnce(() -> pivotProfiler.setConstraints(new TrapezoidProfile.Constraints(
+						PIVOT_EXTEND_MAX_VELOCITY_DEG_PER_S, PIVOT_EXTEND_MAX_ACCEL_DEG_PER_S2))))
 				.andThen(idle().until(() -> isPivotStalled() || isPivotAtPosition()))
 				.andThen(runOnce(() -> setPivotAngle(Degrees.of(pivotEncoder.getPosition()))))
 				.finallyDo(() -> pivotProfiler.setConstraints(new TrapezoidProfile.Constraints(
@@ -151,7 +175,10 @@ public class IntakeSubsystem extends SubsystemBase {
 	}
 
 	public Command retractCommand() {
-		return runOnce(() -> setPivotAngle(PIVOT_RETRACTED_ANGLE))
+		return runOnce(() -> {
+			setPivotAngle(extendedPivotAngle.plus(PIVOT_RETRACTED_DELTA));
+			wantToExtend = false;
+		})
 				.andThen(idle().until(() -> isPivotStalled() || isPivotAtPosition()))
 				.andThen(runOnce(() -> setPivotAngle(Degrees.of(pivotEncoder.getPosition()))))
 				.withName("Intake Retract");
@@ -161,16 +188,39 @@ public class IntakeSubsystem extends SubsystemBase {
 		return retractCommand().withName("Intake Stow");
 	}
 
-	/** Extends or stows depending on current position. */
+	public Command jogDownCommand() {
+		return run(() -> {
+			pivotMotor.set(-0.1);
+		}).finallyDo(() -> {
+			pivotMotor.stopMotor();
+			double pos = pivotEncoder.getPosition();
+			pivotProfiler.reset(pos);
+			setPivotAngle(Degrees.of(pos));
+		});
+	}
+
+	public Command zeroIntakeCommand() {
+		return runOnce(() -> {
+			double currentAngle = pivotEncoder.getPosition();
+			extendedPivotAngle = Degrees.of(currentAngle);
+			pivotProfiler.reset(currentAngle);
+			setPivotAngle(extendedPivotAngle);
+			homed = true;
+		});
+	}
+
+	/**
+	 * Extends or stows depending on current position.
+	 */
 	public Command stowToggleCommand() {
-		return Commands.either(stowCommand(), extendCommand(), this::isExtended)
+		return Commands.either(stowCommand(), extendCommand(), () -> wantToExtend)
 				.withName("Intake Stow Toggle");
 	}
 
 	public Command holdExtendedCommand() {
 		return run(() -> {
 			if (!isRetracted()) {
-				setPivotAngle(PIVOT_EXTENDED_ANGLE);
+				setPivotAngle(extendedPivotAngle);
 			}
 		}).withName("Hold Extended");
 	}
@@ -194,14 +244,6 @@ public class IntakeSubsystem extends SubsystemBase {
 				.withName("Home Intake");
 	}
 
-	public Command zeroCommand() {
-		return runOnce(() -> {
-			pivotEncoder.setPosition(0);
-			pivotProfiler.reset(0);
-			setPivotAngle(Degrees.of(0));
-		}).withName("Intake Zero");
-	}
-
 	public Command testPivotCommand() {
 		return Commands.run(() -> {
 			setPivotAngle(Degrees.of(testPivotDeg.get()));
@@ -215,7 +257,7 @@ public class IntakeSubsystem extends SubsystemBase {
 	public boolean isPivotStalled() {
 		double pivotMotorCurrent = pivotMotor.getOutputCurrent();
 		double pivotMotorRPM = pivotMotor.getEncoder().getVelocity();
-		boolean isPivotStalled = Math.abs(pivotMotorRPM) < 2.0 && pivotMotorCurrent > PIVOT_CURRENT_LIMIT * 0.5;
+		boolean isPivotStalled = Math.abs(pivotMotorRPM) < 2.0 && pivotMotorCurrent > PIVOT_CURRENT_LIMIT * 0.75;
 		return stallDebouncer.calculate(isPivotStalled);
 	}
 }

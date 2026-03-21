@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Predicate;
+import frc.robot.repulsor.IntakeFootprint;
 import frc.robot.repulsor.FieldPlanner.Obstacle;
 import frc.robot.repulsor.FieldPlanner.Obstacles.HorizontalObstacle;
 import frc.robot.repulsor.FieldPlanner.Obstacles.PointObstacle;
@@ -53,9 +54,14 @@ public final class ExtraPathingClearPath {
 			return false;
 		}
 
-		final double robotHalfDiag = Math.hypot(robotLengthMeters, robotWidthMeters) * 0.5;
+		double maxRadius;
+		try {
+			maxRadius = IntakeFootprint.getFootprint().getMaxRadius();
+		} catch (IllegalStateException e) {
+			maxRadius = Math.hypot(robotLengthMeters, robotWidthMeters) * 0.5;
+		}
 		final double buffer = 0.2;
-		final double corridorR = robotHalfDiag + buffer;
+		final double corridorR = maxRadius + buffer;
 
 		final double GOAL_CAPTURE_RADIUS = 0.20;
 		final double PUSH_MARGIN = 0.05;

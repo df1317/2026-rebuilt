@@ -2,8 +2,8 @@ package frc.robot;
 
 import dev.doglog.DogLog;
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.networktables.BooleanSubscriber;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.networktables.BooleanSubscriber;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.GenericHID.RumbleType;
@@ -15,6 +15,7 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Constants.DrivebaseConstants;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.commands.TeleopZoneAutomation;
+import frc.robot.repulsor.IntakeFootprint;
 import frc.robot.repulsor.Repulsor;
 import frc.robot.subsystems.climber.ClimberSubsystem;
 import frc.robot.subsystems.hopper.HopperSubsystem;
@@ -45,8 +46,8 @@ public class RobotContainer {
 	private final RollerSubsystem roller = Constants.ENABLE_INTAKE ? new RollerSubsystem() : null;
 	private final IntakeSubsystem intake = Constants.ENABLE_INTAKE ? new IntakeSubsystem(roller) : null;
 	private final HopperSubsystem hopper = Constants.ENABLE_HOPPER ? new HopperSubsystem() : null;
-	private final BooleanSubscriber obstacleClampEnabled = DogLog.tunable("Drive/ObstacleClampEnabled", false);
-	private final BooleanSubscriber repulsorRumbleEnabled = DogLog.tunable("Drive/RepulsorRumbleEnabled", false);
+	private final BooleanSubscriber obstacleClampEnabled = DogLog.tunable("Drive/ObstacleClampEnabled", true);
+	private final BooleanSubscriber repulsorRumbleEnabled = DogLog.tunable("Drive/RepulsorRumbleEnabled", true);
 	private final SendableChooser<Command> autoChooser;
 	private final AutoChain autoChain;
 	// Repulsor
@@ -58,9 +59,20 @@ public class RobotContainer {
 
 	public RobotContainer() {
 		if (Constants.ENABLE_SWERVE) {
-			// Initialize Repulsor path planner
+			// Initialize Repulsor path planner with intake footprint
+			IntakeFootprint stowedFootprint = IntakeFootprint.robotRect(
+					DrivebaseConstants.ROBOT_HALF_LENGTH * 2.0,
+					DrivebaseConstants.ROBOT_HALF_WIDTH * 2.0);
+			IntakeFootprint extendedFootprint = IntakeFootprint.robotWithIntake(
+					DrivebaseConstants.ROBOT_HALF_LENGTH * 2.0,
+					DrivebaseConstants.ROBOT_HALF_WIDTH * 2.0,
+					DrivebaseConstants.INTAKE_LENGTH_METERS,
+					DrivebaseConstants.INTAKE_ANGLE_DEG);
+			IntakeFootprint.setFootprints(stowedFootprint, extendedFootprint,
+					() -> intake != null && intake.isExtended());
 			repulsor = new Repulsor(drivebase,
-					DrivebaseConstants.ROBOT_HALF_LENGTH, DrivebaseConstants.ROBOT_HALF_WIDTH);
+					stowedFootprint.getEffectiveHalfLength(),
+					stowedFootprint.getEffectiveHalfWidth());
 
 			// Setup teleop automation
 			teleopAutomation = new TeleopZoneAutomation(
@@ -86,29 +98,47 @@ public class RobotContainer {
 					.deadband(OperatorConstants.DEADBAND)
 					.scaleTranslation(DrivebaseConstants.TRANSLATION_SCALE).allianceRelativeControl(true);
 
+			// Register auto preamble (run before every auto)
+			if (shooter != null) {
+				AutoBuilder.setPreamble(shooter::homeHoodCommand);
+			}
+
 			// Build auto chooser
 			autoChooser = new SendableChooser<>();
 			autoChooser.setDefaultOption("Score Front",
-					Commands.defer(() -> AutoPositions.frontHubAndShoot(repulsor, teleopAutomation.shootCommand().repeatedly()),
+					Commands.defer(
+							() -> AutoPositions.frontHubAndShoot(repulsor,
+									() -> teleopAutomation.shootCommand().withTimeout(4)),
 							Set.of(drivebase)));
 			autoChooser.addOption("Left Hide + Shoot",
 					Commands.defer(
-							() -> AutoPositions.leftCornerHideAndShoot(repulsor, teleopAutomation.shootCommand().repeatedly()),
+							() -> AutoPositions.leftCornerHideAndShoot(repulsor,
+									() -> teleopAutomation.shootCommand().withTimeout(4)),
 							Set.of(drivebase)));
 			autoChooser.addOption("Right Hide + Shoot",
 					Commands.defer(
-							() -> AutoPositions.rightCornerHideAndShoot(repulsor, teleopAutomation.shootCommand().repeatedly()),
+							() -> AutoPositions.rightCornerHideAndShoot(repulsor,
+									() -> teleopAutomation.shootCommand().withTimeout(4)),
 							Set.of(drivebase)));
 			autoChooser.addOption("Go to center",
 					Commands.defer(() -> AutoPositions.centerFieldAuto(repulsor), Set.of(drivebase)));
 			autoChooser.addOption("Just Shoot",
-					Commands.defer(() -> teleopAutomation.shootCommand().repeatedly(), Set.of(drivebase)));
-			autoChooser.addOption("Collect + Shoot x1",
-					Commands.defer(() -> AutoPositions.collectAndShoot1(repulsor, teleopAutomation.shootCommand()),
-							Set.of(drivebase)));
-			autoChooser.addOption("Collect + Shoot x2",
-					Commands.defer(() -> AutoPositions.collectAndShoot2(repulsor, teleopAutomation.shootCommand()),
-							Set.of(drivebase)));
+					Commands.defer(() -> teleopAutomation.shootCommand().withTimeout(4), Set.of(drivebase)));
+			if (intake != null) {
+				Supplier<Command> collectCommand = () -> Commands.parallel(
+						intake.extendCommand().andThen(intake.holdExtendedCommand()),
+						roller.intakeCommand());
+				autoChooser.addOption("Collect + Shoot x1",
+						Commands.defer(() -> AutoPositions.collectAndShoot1(repulsor,
+								() -> teleopAutomation.shootCommand().withTimeout(4),
+								collectCommand),
+								Set.of(drivebase)));
+				autoChooser.addOption("Collect + Shoot x2",
+						Commands.defer(() -> AutoPositions.collectAndShoot2(repulsor,
+								() -> teleopAutomation.shootCommand().withTimeout(4),
+								collectCommand),
+								Set.of(drivebase)));
+			}
 			if (Constants.ENABLE_CLIMBER && climber != null) {
 				autoChooser.addOption("Climb Left",
 						Commands.defer(() -> AutoPositions.climbAuto(repulsor, climber, AutoPositions.CLIMB_LEFT,
@@ -157,27 +187,39 @@ public class RobotContainer {
 		}
 		if (Constants.ENABLE_SHOOTER && shooter != null) {
 			driverXbox.rightTrigger().whileTrue(Commands.runOnce(() -> {
-				if (Constants.ENABLE_SWERVE && drivebase != null && drivebase.hasVision()) {
+				// If vision is healthy, reset to auto distance
+				if (Constants.ENABLE_SWERVE && drivebase != null
+						&& drivebase.hasVision() && !drivebase.isVisionStale()) {
 					shooter.clearManualDistanceOverride();
 				}
 			}).andThen(Constants.ENABLE_SWERVE && drivebase != null
-					? Commands.parallel(
-							teleopAutomation.shootCommand(drivebase::isAimed),
-							drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY,
-									teleopAutomation::getShootingPose))
+					? Commands.either(
+							// Vision healthy: aim + auto distance
+							Commands.parallel(
+									teleopAutomation.shootCommand(drivebase::isAimed),
+									drivebase.aimAt(driverXbox::getLeftX, driverXbox::getLeftY,
+											teleopAutomation::getShootingPose)),
+							// Vision stale/disabled: manual distance, no aim
+							teleopAutomation.shootCommand(),
+							() -> drivebase.hasVision() && !drivebase.isVisionStale())
 					: teleopAutomation.shootCommand()));
 		}
 		if (Constants.ENABLE_INTAKE && intake != null) {
 			driverXbox.x().onTrue(intake.stowToggleCommand());
+			panel.key(1, 2).and(inTeleop).onTrue(intake.stowToggleCommand());
 			driverXbox.leftTrigger().and(inTeleop).whileTrue(roller.intakeCommand());
 			driverXbox.leftTrigger().and(inTeleop).whileTrue(intake.holdExtendedCommand());
+			panel.key(1, 3).and(inTeleop).whileTrue(roller.intakeCommand());
+			panel.key(1, 3).and(inTeleop).whileTrue(intake.holdExtendedCommand());
 		}
 
 		// ===== Teleop Panel Controls (Maypad — see docs for layout) =====
 		// Row 2 — Feed / Intake
-		if (Constants.ENABLE_INTAKE && roller != null) {
+		if (Constants.ENABLE_INTAKE && roller != null && intake != null) {
 			panel.key(2, 1).and(inTeleop).whileTrue(roller.runRollerCommand()); // intakeForward
 			panel.key(3, 1).and(inTeleop).whileTrue(roller.ejectCommand()); // intakeReverse
+			panel.key(0, 1).and(inTeleop).onTrue(intake.zeroIntakeCommand());
+			panel.key(0, 2).and(inTeleop).whileTrue(intake.jogDownCommand());
 		}
 		if (Constants.ENABLE_HOPPER && hopper != null) {
 			panel.key(2, 2).and(inTeleop).whileTrue(hopper.feedCommand()); // hopperForward
@@ -187,7 +229,8 @@ public class RobotContainer {
 			panel.key(2, 3).and(inTeleop).whileTrue(teleopAutomation.shootCommand()); // shoot+feed (no aim)
 			panel.key(3, 3).and(inTeleop).whileTrue(shooter.reverseFeederCommand()); // feederReverse
 			panel.key(1, 0).and(inTeleop).onTrue(Commands.runOnce(() -> { // autoDistance
-				if (Constants.ENABLE_SWERVE && drivebase != null && drivebase.hasVision()) {
+				if (Constants.ENABLE_SWERVE && drivebase != null
+						&& drivebase.hasVision() && !drivebase.isVisionStale()) {
 					shooter.clearManualDistanceOverride();
 				}
 			}));
@@ -206,6 +249,8 @@ public class RobotContainer {
 		// Row 0 — Climber / Intake
 		if (Constants.ENABLE_INTAKE && intake != null) {
 			panel.key(0, 0).onTrue(intake.homeCommand()); // intakeHome
+			panel.key(2, 1).and(inTest).onTrue(intake.zeroIntakeCommand());
+			panel.key(2, 2).and(inTest).whileTrue(intake.jogDownCommand());
 		}
 		if (Constants.ENABLE_CLIMBER && climber != null) {
 			panel.key(0, 1).and(inTest).onTrue(climber.zeroCommand());

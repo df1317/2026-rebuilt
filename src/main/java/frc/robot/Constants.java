@@ -12,7 +12,7 @@ public final class Constants {
 
 	// Subsystem enable flags
 	public static final boolean ENABLE_SWERVE = true;
-	public static final boolean ENABLE_CLIMBER = true;
+	public static final boolean ENABLE_CLIMBER = false;
 	public static final boolean ENABLE_INTAKE = true;
 	public static final boolean ENABLE_SHOOTER = true;
 	public static final boolean ENABLE_HOPPER = true;
@@ -27,13 +27,14 @@ public final class Constants {
 	public static final double MAX_ANGULAR_ACCELERATION = Math.toRadians(540.0);
 
 	// HIGH in dev mode, LOW at competition to reduce NT traffic
-	public static final TelemetryVerbosity SwerveTelemetryVerbosity = DevMode.isEnabled() ? TelemetryVerbosity.HIGH
+	public static final TelemetryVerbosity SwerveTelemetryVerbosity = DevMode.isEnabled()
+			? TelemetryVerbosity.HIGH
 			: TelemetryVerbosity.LOW;
 
 	public static final AprilTagFields FIELD_LAYOUT = AprilTagFields.k2026RebuiltWelded;
 
 	public static final class AutoConstants {
-		public static final double SPEED_SCALE = 0.05;
+		public static final double SPEED_SCALE = 0.4;
 	}
 
 	public static final class DrivebaseConstants {
@@ -44,8 +45,14 @@ public final class Constants {
 		public static final double TRANSLATION_SCALE = 0.8;
 
 		// Robot half-dimensions for Repulsor obstacle avoidance (meters)
-		public static final double ROBOT_HALF_LENGTH = 0.4;
-		public static final double ROBOT_HALF_WIDTH = 0.4;
+		// 27 inches square (frame only, excludes bumpers so repulsion doesn't kick in too early)
+		public static final double ROBOT_HALF_LENGTH = Units.inchesToMeters(27) / 2.0;
+		public static final double ROBOT_HALF_WIDTH = Units.inchesToMeters(27) / 2.0;
+
+		// Intake extension for repulsor footprint
+		// Angle in degrees relative to robot frame (-90 = right side)
+		public static final double INTAKE_ANGLE_DEG = -90.0;
+		public static final double INTAKE_LENGTH_METERS = Units.inchesToMeters(4);
 	}
 
 	public static final class VisionConstants {
@@ -55,8 +62,8 @@ public final class Constants {
 		public static final double HIGH_LATENCY_THRESHOLD_MS = 100.0;
 
 		public static final class CameraStdDevs {
-			public static final double[] SINGLE_TAG = { 4.0, 4.0, 8.0 };
-			public static final double[] MULTI_TAG = { 0.5, 0.5, 1.0 };
+			public static final double[] SINGLE_TAG = { 4.0, 4.0, 6.0 };
+			public static final double[] MULTI_TAG = { 0.5, 0.5, 4.0 };
 		}
 	}
 
@@ -73,9 +80,9 @@ public final class Constants {
 		public static final int PIVOT_CURRENT_LIMIT = 35;
 		public static final int ROLLER_CURRENT_LIMIT = 40;
 
-		public static final Angle PIVOT_EXTENDED_ANGLE = Degrees.of(0);
-		public static final Angle PIVOT_RETRACTED_ANGLE = Degrees.of(90); // TODO: verify physical travel
-		public static final Angle PIVOT_ANGLE_TOLERANCE = Degrees.of(3);
+		public static final Angle PIVOT_EXTENDED_ANGLE = Degrees.of(-10);
+		public static final Angle PIVOT_RETRACTED_DELTA = Degrees.of(90);
+		public static final Angle PIVOT_ANGLE_TOLERANCE = Degrees.of(8);
 		public static final double PIVOT_GEAR_RATIO = (48.0 * 22.0) / 14.0;
 		public static final Distance PIVOT_ARM_LENGTH = Inches.of(12);
 
@@ -87,13 +94,15 @@ public final class Constants {
 		public static final double PIVOT_KD = 0.0;
 
 		// Motion profile constraints for the pivot (degrees/s and degrees/s²)
-		public static final double PIVOT_MAX_VELOCITY_DEG_PER_S = 120.0;
+		public static final double PIVOT_MAX_VELOCITY_DEG_PER_S = 240.0;
 		public static final double PIVOT_MAX_ACCEL_DEG_PER_S2 = 240.0;
 		public static final double PIVOT_EXTEND_MAX_VELOCITY_DEG_PER_S = 60.0;
-		public static final double PIVOT_EXTEND_MAX_ACCEL_DEG_PER_S2 = 60.0;
+		public static final double PIVOT_EXTEND_MAX_ACCEL_DEG_PER_S2 = 180.0;
+		public static final double PIVOT_KICK_VOLTAGE = 4.0;
+		public static final double PIVOT_KICK_DURATION_S = 0.15;
 
-		public static final AngularVelocity ROLLER_INTAKE_VELOCITY = RPM.of(2800);
-		public static final double ROLLER_SPEED_SCALE_MAX_RPM = 4000;
+		public static final AngularVelocity ROLLER_INTAKE_VELOCITY = RPM.of(2500);
+		public static final double ROLLER_SPEED_SCALE_MAX_RPM = 3500;
 		public static final double ROLLER_SPEED_SCALE_MAX_ROBOT_MPS = 3.0;
 		public static final AngularVelocity ROLLER_EJECT_VELOCITY = RPM.of(-1500);
 		public static final AngularVelocity ROLLER_VELOCITY_TOLERANCE = RPM.of(100);
@@ -151,7 +160,7 @@ public final class Constants {
 		public static final double BALL_SPEED_LOW_M_S = 4.97; // ball speed at min RPM (2555)
 		public static final double BALL_SPEED_HIGH_M_S = 6.15; // ball speed at max RPM (3250)
 		public static final double CURRENT_DEBOUNCE_TIME = 0.1;
-		public static final double HOOD_HOMING_VOLTAGE = 2.0;
+		public static final double HOOD_HOMING_VOLTAGE = 5.0;
 	}
 
 	public static class ClimberConstants {
@@ -167,8 +176,8 @@ public final class Constants {
 		public static final double ROTATIONS_PER_METER = 42.4;
 		public static final Distance POSITION_TOLERANCE = Centimeters.of(2);
 
-		public static final LinearVelocity MAX_VELOCITY = MetersPerSecond.of(0.25);
-		public static final LinearAcceleration MAX_ACCELERATION = MetersPerSecondPerSecond.of(0.5);
+		public static final LinearVelocity MAX_VELOCITY = MetersPerSecond.of(1.5);
+		public static final LinearAcceleration MAX_ACCELERATION = MetersPerSecondPerSecond.of(3.0);
 
 		public static final double KP = 0.0; // 0.00065
 		public static final double KI = 0.0;
