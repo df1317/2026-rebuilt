@@ -69,7 +69,7 @@ public class RobotContainer {
 					DrivebaseConstants.INTAKE_LENGTH_METERS,
 					DrivebaseConstants.INTAKE_ANGLE_DEG);
 			IntakeFootprint.setFootprints(stowedFootprint, extendedFootprint,
-					() -> intake != null && (intake.isExtended() || intake.wantsToExtend()));
+					() -> intake != null && intake.isExtended());
 			repulsor = new Repulsor(drivebase,
 					stowedFootprint.getEffectiveHalfLength(),
 					stowedFootprint.getEffectiveHalfWidth());
