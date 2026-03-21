@@ -439,7 +439,7 @@ public class ShooterSubsystem extends SubsystemBase {
 
 	/** Steps distance up 0.5 m and activates manual override. */
 	public Command advanceDistanceCommand() {
-		return Commands.runOnce(() -> {
+		return runOnce(() -> {
 			manualDistanceM = Math.min(manualDistanceM + DISTANCE_STEP_M, DISTANCE_MAX_M);
 			manualDistanceEnabled = true;
 		}).withName("Advance Distance");
@@ -447,7 +447,7 @@ public class ShooterSubsystem extends SubsystemBase {
 
 	/** Steps distance down 0.5 m and activates manual override. */
 	public Command reduceDistanceCommand() {
-		return Commands.runOnce(() -> {
+		return runOnce(() -> {
 			manualDistanceM = Math.max(manualDistanceM - DISTANCE_STEP_M, DISTANCE_MIN_M);
 			manualDistanceEnabled = true;
 		}).withName("Reduce Distance");
@@ -518,7 +518,7 @@ public class ShooterSubsystem extends SubsystemBase {
 	}
 
 	public Command zeroHood() {
-		return Commands.runOnce(() -> {
+		return runOnce(() -> {
 			setHoodPercent(0);
 		}).andThen(Commands.waitUntil(this::isHoodAtPosition));
 	}
