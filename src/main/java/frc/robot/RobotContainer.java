@@ -15,6 +15,7 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Constants.DrivebaseConstants;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.commands.TeleopZoneAutomation;
+import frc.robot.repulsor.IntakeFootprint;
 import frc.robot.repulsor.Repulsor;
 import frc.robot.subsystems.climber.ClimberSubsystem;
 import frc.robot.subsystems.hopper.HopperSubsystem;
@@ -58,9 +59,20 @@ public class RobotContainer {
 
 	public RobotContainer() {
 		if (Constants.ENABLE_SWERVE) {
-			// Initialize Repulsor path planner
+			// Initialize Repulsor path planner with intake footprint
+			IntakeFootprint stowedFootprint = IntakeFootprint.robotRect(
+					DrivebaseConstants.ROBOT_HALF_LENGTH * 2.0,
+					DrivebaseConstants.ROBOT_HALF_WIDTH * 2.0);
+			IntakeFootprint extendedFootprint = IntakeFootprint.robotWithIntake(
+					DrivebaseConstants.ROBOT_HALF_LENGTH * 2.0,
+					DrivebaseConstants.ROBOT_HALF_WIDTH * 2.0,
+					DrivebaseConstants.INTAKE_LENGTH_METERS,
+					DrivebaseConstants.INTAKE_ANGLE_DEG);
+			IntakeFootprint.setFootprints(stowedFootprint, extendedFootprint,
+					() -> intake != null && (intake.isExtended() || intake.wantsToExtend()));
 			repulsor = new Repulsor(drivebase,
-					DrivebaseConstants.ROBOT_HALF_LENGTH, DrivebaseConstants.ROBOT_HALF_WIDTH);
+					stowedFootprint.getEffectiveHalfLength(),
+					stowedFootprint.getEffectiveHalfWidth());
 
 			// Setup teleop automation
 			teleopAutomation = new TeleopZoneAutomation(

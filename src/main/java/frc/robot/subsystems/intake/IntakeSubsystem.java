@@ -124,6 +124,10 @@ public class IntakeSubsystem extends SubsystemBase {
 		return atPositionDebouncer.calculate(atPositionRaw);
 	}
 
+	public boolean wantsToExtend() {
+		return wantToExtend;
+	}
+
 	public boolean isExtended() {
 		return Math.abs(pivotEncoder.getPosition() - extendedPivotAngle.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
 				.in(Degrees);

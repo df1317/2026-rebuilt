@@ -45,8 +45,14 @@ public final class Constants {
 		public static final double TRANSLATION_SCALE = 0.8;
 
 		// Robot half-dimensions for Repulsor obstacle avoidance (meters)
-		public static final double ROBOT_HALF_LENGTH = 0.4;
-		public static final double ROBOT_HALF_WIDTH = 0.4;
+		// 33.5 inches square
+		public static final double ROBOT_HALF_LENGTH = Units.inchesToMeters(34) / 2.0;
+		public static final double ROBOT_HALF_WIDTH = Units.inchesToMeters(34) / 2.0;
+
+		// Intake extension for repulsor footprint
+		// Angle in degrees relative to robot frame (-90 = right side)
+		public static final double INTAKE_ANGLE_DEG = -90.0;
+		public static final double INTAKE_LENGTH_METERS = Units.inchesToMeters(8);
 	}
 
 	public static final class VisionConstants {
