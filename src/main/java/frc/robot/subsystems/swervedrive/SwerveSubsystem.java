@@ -17,6 +17,7 @@ import edu.wpi.first.networktables.BooleanSubscriber;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -103,6 +104,7 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 
 		setupPhotonVision();
 		swerveDrive.stopOdometryThread();
+		SmartDashboard.putData("Field", swerveDrive.field);
 		repulsorOmegaPID.enableContinuousInput(-Math.PI, Math.PI);
 		setupAutopilot();
 	}
@@ -152,7 +154,8 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 			DogLog.log("Autopilot/Jerk", autopilotController.getJerk());
 		}
 
-		DogLog.log("currentPose", swerveDrive.getPose());
+		swerveDrive.field.setRobotPose(swerveDrive.getPose());
+		DogLog.forceNt.log("currentPose", swerveDrive.getPose());
 
 		if (targetDistanceSupplier != null) {
 			DogLog.log("DistanceToTarget", targetDistanceSupplier.get().in(Meters));

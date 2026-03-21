@@ -96,7 +96,7 @@ public class Vision {
 			}
 		}
 
-		DogLog.log("Vision/ConnectedCameras", connectedCameras);
+		DogLog.forceNt.log("Vision/ConnectedCameras", connectedCameras);
 
 		measurements.sort(Comparator.comparingDouble(m -> m.pose.timestampSeconds));
 
@@ -107,8 +107,8 @@ public class Vision {
 					m.stdDevs);
 		}
 
-		DogLog.log("Vision/AcceptedMeasurements", measurements.size());
-		DogLog.log("Vision/HasVision", hasVision());
+		DogLog.forceNt.log("Vision/AcceptedMeasurements", measurements.size());
+		DogLog.forceNt.log("Vision/HasVision", hasVision());
 	}
 
 	public boolean hasVision() {
