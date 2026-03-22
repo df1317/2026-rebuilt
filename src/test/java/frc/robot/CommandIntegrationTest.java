@@ -135,8 +135,10 @@ class CommandIntegrationTest {
 			try {
 				Command cmd = (Command) method.invoke(subsystem);
 				if (cmd != null && !cmd.getRequirements().contains(subsystem)) {
-					errors.add(name + "." + method.getName()
-							+ "() returns a Command that doesn't require its own subsystem");
+					errors.add(String.format(
+							"  %s.%s() — returns Command \"%s\" but doesn't require %s\n"
+									+ "    Fix: use runOnce()/run() instead of Commands.runOnce()/Commands.run()",
+							name, method.getName(), cmd.getName(), name));
 				}
 			} catch (Exception e) {
 				// Some commands may throw in sim — skip
@@ -246,14 +248,25 @@ class CommandIntegrationTest {
 			for (int j = i + 1; j < allCommands.size(); j++) {
 				for (NamedCommand a : allCommands.get(i)) {
 					for (NamedCommand b : allCommands.get(j)) {
+						Command cmdA = null;
+						Command cmdB = null;
 						try {
-							Command cmdA = a.supplier.get();
-							Command cmdB = b.supplier.get();
+							cmdA = a.supplier.get();
+							cmdB = b.supplier.get();
 							if (cmdA == null || cmdB == null)
 								continue;
 							Commands.parallel(cmdA, cmdB);
 						} catch (IllegalArgumentException e) {
-							errors.add(a.name + " + " + b.name + ": " + e.getMessage());
+							Set<String> shared = new HashSet<>();
+							if (cmdA != null && cmdB != null) {
+								for (var req : cmdA.getRequirements()) {
+									if (cmdB.getRequirements().contains(req)) {
+										shared.add(req.getClass().getSimpleName());
+									}
+								}
+							}
+							errors.add(String.format("  %s + %s — both require: %s",
+									a.name, b.name, shared));
 						} catch (Exception e) {
 							// Skip commands that can't be constructed in sim
 						}
@@ -279,6 +292,19 @@ class CommandIntegrationTest {
 			fail("Expected IllegalArgumentException — two intake commands in parallel should conflict");
 		} catch (IllegalArgumentException e) {
 			// Expected
+		}
+	}
+
+	/** Proves the tree walker catches a conflict buried inside a DeferredCommand. */
+	@Test
+	void selfTestCatchesDeferredConflict() {
+		Command bad = Commands.defer(
+				() -> Commands.parallel(intake.extendCommand(), intake.holdExtendedCommand()),
+				Set.of());
+		List<String> errors = new ArrayList<>();
+		validateCommandTree("selfTest", bad, errors, new HashSet<>());
+		if (errors.isEmpty()) {
+			fail("Expected the tree walker to catch a conflict inside a DeferredCommand");
 		}
 	}
 
@@ -313,10 +339,15 @@ class CommandIntegrationTest {
 					validateCommandTree(path + " → deferred", inner, errors, visited);
 				}
 			} catch (IllegalArgumentException e) {
-				errors.add(path + " → DeferredCommand: " + e.getMessage());
+				errors.add(String.format(
+						"  %s → DeferredCommand threw on construction:\n"
+								+ "    %s\n"
+								+ "    This means a Commands.parallel() or .deadlineFor() inside this deferred\n"
+								+ "    command has two commands requiring the same subsystem.",
+						path, e.getMessage()));
 			} catch (Exception e) {
-				errors.add(path + " → DeferredCommand: " + e.getClass().getSimpleName()
-						+ ": " + e.getMessage());
+				errors.add(String.format("  %s → DeferredCommand: %s: %s",
+						path, e.getClass().getSimpleName(), e.getMessage()));
 			}
 		}
 
@@ -451,10 +482,12 @@ class CommandIntegrationTest {
 			Command cmd = factory.get();
 			cmd.getRequirements();
 		} catch (IllegalArgumentException e) {
-			errors.add(name + ": " + e.getMessage());
+			errors.add(String.format(
+					"  %s\n    %s\n    This parallel group has two commands requiring the same subsystem.",
+					name, e.getMessage()));
 		} catch (Exception e) {
-			errors.add(name + ": unexpected error — " + e.getClass().getSimpleName()
-					+ ": " + e.getMessage());
+			errors.add(String.format("  %s — %s: %s",
+					name, e.getClass().getSimpleName(), e.getMessage()));
 		}
 	}
 }
