@@ -48,6 +48,7 @@ public final class IntakeFootprint {
 	}
 
 	/** @deprecated Use setFootprints instead. */
+	@Deprecated
 	public static void setFootprint(IntakeFootprint footprint) {
 		stowedInstance = Objects.requireNonNull(footprint);
 		if (extendedInstance == null) {
