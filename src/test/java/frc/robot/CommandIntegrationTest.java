@@ -167,9 +167,12 @@ class CommandIntegrationTest {
 		// Build the auto chooser the same way RobotContainer does
 		SendableChooser<Command> autoChooser = new SendableChooser<>();
 		Supplier<Command> shootCommand = () -> teleopAutomation.shootCommand().withTimeout(4);
+		// INTENTIONAL BUG: intake.holdExtendedCommand() in a separate parallel slot
+		// conflicts with intake.extendCommand() — both require IntakeSubsystem
 		Supplier<Command> collectCommand = () -> Commands.parallel(
-				intake.extendCommand().andThen(intake.holdExtendedCommand()),
-				roller.intakeCommand());
+				intake.extendCommand(),
+				roller.intakeCommand(),
+				intake.holdExtendedCommand());
 
 		autoChooser.setDefaultOption("Just Shoot",
 				Commands.defer(

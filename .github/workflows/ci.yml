@@ -90,6 +90,7 @@ jobs:
       - name: Run tests
         run: ./gradlew test --parallel --max-workers=4
 
+
       - name: Cleanup Gradle Cache
         if: always()
         run: |
@@ -121,6 +122,7 @@ jobs:
 
       - name: Check for parallel command subsystem conflicts
         run: ./gradlew test --tests "frc.robot.CommandIntegrationTest" --parallel --max-workers=4
+
 
       - name: Cleanup Gradle Cache
         if: always()
