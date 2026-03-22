@@ -34,6 +34,7 @@ import java.util.Collections;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 import frc.robot.repulsor.Fallback.PlannerFallback;
 import frc.robot.repulsor.FieldPlanner.FieldPlanner;
@@ -50,6 +51,11 @@ public class Repulsor {
 
 	private static final int TRAJ_MAX_STEPS = 30;
 	private static final double TRAJ_STEP_SIZE = 0.15; // meters
+
+	public static final double DEFAULT_VELOCITY = 3.0; // m/s
+	public static final double DEFAULT_DECEL = 4.5; // m/s²
+	public static final double DEFAULT_POS_TOLERANCE = 0.15; // meters
+	public static final double DEFAULT_ANG_TOLERANCE = Math.toRadians(6.0); // radians
 
 	private final double robot_x_stowed;
 	private final double robot_y_stowed;
@@ -133,28 +139,62 @@ public class Repulsor {
 		return m_currentGoal == null ? HeightSetpoint.NONE : m_currentGoal.height();
 	}
 
-	// ===== Navigate To =====
+	// ===== APF Drive =====
 
-	public Command navigateTo(Pose2d target) {
-		return navigateTo(() -> target);
+	/**
+	 * Drives to the goal using P-APF with the default speed profile
+	 * ({@value #DEFAULT_VELOCITY} m/s, {@value #DEFAULT_DECEL} m/s²). This command does not end.
+	 *
+	 * @param goal
+	 *          supplier for the target blue-origin pose
+	 */
+	public Command apfDrive(Supplier<Pose2d> goal) {
+		return apfDrive(goal, () -> DEFAULT_VELOCITY, () -> DEFAULT_DECEL);
 	}
 
-	public Command navigateTo(Supplier<Pose2d> target) {
+	/**
+	 * Drives to the goal using P-APF with the default speed profile. Ends when within the
+	 * specified tolerances.
+	 *
+	 * @param goal
+	 *          supplier for the target blue-origin pose
+	 * @param endTolerance
+	 *          position tolerance in meters
+	 * @param endAngTolerance
+	 *          rotation tolerance in radians
+	 */
+	public Command apfDrive(Supplier<Pose2d> goal, double endTolerance, double endAngTolerance) {
+		return apfDrive(goal, () -> DEFAULT_VELOCITY, () -> DEFAULT_DECEL, () -> endTolerance, () -> endAngTolerance);
+	}
+
+	/**
+	 * Drives to the goal using P-APF with specified speed profile. This command does not end.
+	 *
+	 * @param goal
+	 *          supplier for the target blue-origin pose
+	 * @param maxVelocity
+	 *          cruise velocity in m/s
+	 * @param maxDeceleration
+	 *          deceleration rate in m/s²
+	 */
+	public Command apfDrive(Supplier<Pose2d> goal, DoubleSupplier maxVelocity, DoubleSupplier maxDeceleration) {
 		final AtomicReference<Pose2d> activeRef = new AtomicReference<>();
 		final AtomicBoolean initialized = new AtomicBoolean(false);
 
 		Command cmd = Commands.run(
 				() -> {
 					if (!initialized.get()) {
-						activeRef.set(target.get());
+						activeRef.set(goal.get());
 						initialized.set(true);
 					}
+
+					m_driveTuning.setVelocityOverride(maxVelocity.getAsDouble());
+					m_driveTuning.setDecelOverride(maxDeceleration.getAsDouble());
 
 					Pose2d goalPose = activeRef.get();
 					if (goalPose == null)
 						return;
 
-					// Reject if target is inside an obstacle
 					if (ExtraPathing.robotIntersects(
 							goalPose.getTranslation(), getRobotX(), getRobotY(),
 							m_planner.getObstacles())) {
@@ -175,7 +215,6 @@ public class Repulsor {
 					ChassisSpeeds commanded = sample.asChassisSpeeds(m_drive.getOmegaPID(), robotPose.getRotation());
 					m_drive.runVelocity(commanded);
 
-					// Log target, error, commanded speeds, and trajectory preview
 					DogLog.forceNt.log("Repulsor/Target", goalPose);
 					DogLog.forceNt.log("Repulsor/Trajectory", simulateTrajectory(robotPose, goalPose.getTranslation()));
 					DogLog.log("Repulsor/Error", robotPose.getTranslation().getDistance(goalPose.getTranslation()));
@@ -185,12 +224,41 @@ public class Repulsor {
 				},
 				m_drive.asSubsystem())
 				.finallyDo(interrupted -> {
+					m_driveTuning.clearOverrides();
 					m_drive.lock();
 					DogLog.forceNt.log("Repulsor/Target", new Pose2d());
 					DogLog.forceNt.log("Repulsor/Trajectory", new Pose2d[] {});
 				});
 
 		return cmd;
+	}
+
+	/**
+	 * Drives to the goal using P-APF with specified speed profile. Ends when within tolerances.
+	 *
+	 * @param goal
+	 *          supplier for the target blue-origin pose
+	 * @param maxVelocity
+	 *          cruise velocity in m/s
+	 * @param maxDeceleration
+	 *          deceleration rate in m/s²
+	 * @param endTolerance
+	 *          position tolerance in meters
+	 * @param endAngTolerance
+	 *          rotation tolerance in radians
+	 */
+	public Command apfDrive(Supplier<Pose2d> goal, DoubleSupplier maxVelocity, DoubleSupplier maxDeceleration,
+			DoubleSupplier endTolerance, DoubleSupplier endAngTolerance) {
+		return apfDrive(goal, maxVelocity, maxDeceleration)
+				.until(() -> {
+					Pose2d goalPose = goal.get();
+					Pose2d robotPose = m_drive.getPose();
+					if (goalPose == null || robotPose == null)
+						return false;
+					double posErr = robotPose.getTranslation().getDistance(goalPose.getTranslation());
+					double angErr = Math.abs(robotPose.getRotation().minus(goalPose.getRotation()).getRadians());
+					return posErr <= endTolerance.getAsDouble() && angErr <= endAngTolerance.getAsDouble();
+				});
 	}
 
 	private Pose2d[] simulateTrajectory(Pose2d robotPose, Translation2d goal) {

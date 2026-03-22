@@ -7,9 +7,6 @@ import edu.wpi.first.networktables.BooleanSubscriber;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.GenericHID.RumbleType;
-import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Constants.DrivebaseConstants;
@@ -27,7 +24,6 @@ import frc.robot.util.FieldZones;
 import swervelib.SwerveInputStream;
 
 import java.io.File;
-import java.util.Set;
 import java.util.function.Supplier;
 
 import static edu.wpi.first.units.Units.RPM;
@@ -48,10 +44,9 @@ public class RobotContainer {
 	private final HopperSubsystem hopper = Constants.ENABLE_HOPPER ? new HopperSubsystem() : null;
 	private final BooleanSubscriber obstacleClampEnabled = DogLog.tunable("Drive/ObstacleClampEnabled", true);
 	private final BooleanSubscriber repulsorRumbleEnabled = DogLog.tunable("Drive/RepulsorRumbleEnabled", true);
-	private final SendableChooser<Command> autoChooser;
-	private final AutoChain autoChain;
 	// Repulsor
 	private final Repulsor repulsor;
+	private final Autos autos;
 	private final SwerveInputStream driveAngularVelocity;
 	// Teleop automation
 	private final TeleopZoneAutomation teleopAutomation;
@@ -98,59 +93,7 @@ public class RobotContainer {
 					.deadband(OperatorConstants.DEADBAND)
 					.scaleTranslation(DrivebaseConstants.TRANSLATION_SCALE).allianceRelativeControl(true);
 
-			// Register auto preamble (run before every auto)
-			if (shooter != null) {
-				AutoBuilder.setPreamble(shooter::homeHoodCommand);
-			}
-
-			// Build auto chooser
-			autoChooser = new SendableChooser<>();
-			autoChooser.setDefaultOption("Score Front",
-					Commands.defer(
-							() -> AutoPositions.frontHubAndShoot(repulsor,
-									() -> teleopAutomation.shootCommand().withTimeout(4)),
-							Set.of(drivebase)));
-			autoChooser.addOption("Left Hide + Shoot",
-					Commands.defer(
-							() -> AutoPositions.leftCornerHideAndShoot(repulsor,
-									() -> teleopAutomation.shootCommand().withTimeout(4)),
-							Set.of(drivebase)));
-			autoChooser.addOption("Right Hide + Shoot",
-					Commands.defer(
-							() -> AutoPositions.rightCornerHideAndShoot(repulsor,
-									() -> teleopAutomation.shootCommand().withTimeout(4)),
-							Set.of(drivebase)));
-			autoChooser.addOption("Go to center",
-					Commands.defer(() -> AutoPositions.centerFieldAuto(repulsor), Set.of(drivebase)));
-			autoChooser.addOption("Just Shoot",
-					Commands.defer(() -> teleopAutomation.shootCommand().withTimeout(4), Set.of(drivebase)));
-			if (intake != null) {
-				Supplier<Command> collectCommand = () -> Commands.parallel(
-						intake.extendCommand().andThen(intake.holdExtendedCommand()),
-						roller.intakeCommand());
-				autoChooser.addOption("Collect + Shoot x1",
-						Commands.defer(() -> AutoPositions.collectAndShoot1(repulsor,
-								() -> teleopAutomation.shootCommand().withTimeout(4),
-								collectCommand),
-								Set.of(drivebase)));
-				autoChooser.addOption("Collect + Shoot x2",
-						Commands.defer(() -> AutoPositions.collectAndShoot2(repulsor,
-								() -> teleopAutomation.shootCommand().withTimeout(4),
-								collectCommand),
-								Set.of(drivebase)));
-			}
-			if (Constants.ENABLE_CLIMBER && climber != null) {
-				autoChooser.addOption("Climb Left",
-						Commands.defer(() -> AutoPositions.climbAuto(repulsor, climber, AutoPositions.CLIMB_LEFT,
-								AutoPositions.CLIMB_LEFT_ENGAGE), Set.of(drivebase)));
-				autoChooser.addOption("Climb Right",
-						Commands.defer(() -> AutoPositions.climbAuto(repulsor, climber, AutoPositions.CLIMB_RIGHT,
-								AutoPositions.CLIMB_RIGHT_ENGAGE), Set.of(drivebase)));
-			}
-			autoChain = new AutoChain(repulsor, teleopAutomation, climber);
-			autoChooser.addOption("Custom Chain", Commands.defer(() -> autoChain.asCommand(), Set.of(drivebase)));
-			autoChooser.addOption("Do Nothing", Commands.none());
-			SmartDashboard.putData("misc/Auto Chooser", autoChooser);
+			autos = new Autos(repulsor, drivebase, teleopAutomation, climber, intake, roller);
 		}
 
 		configureBindings();
@@ -293,20 +236,10 @@ public class RobotContainer {
 		}
 	}
 
-	public Command getAutonomousCommand() {
-		if (Constants.ENABLE_SWERVE && autoChooser != null) {
-			return autoChooser.getSelected();
-		}
-		return Commands.none();
-	}
-
 	public void updateRepulsor() {
 		if (repulsor != null) {
 			repulsor.update();
 		}
-	}
-
-	public void autonomousInit() {
 	}
 
 	public void setMotorBrake(boolean brake) {

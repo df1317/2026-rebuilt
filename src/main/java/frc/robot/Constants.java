@@ -33,10 +33,6 @@ public final class Constants {
 
 	public static final AprilTagFields FIELD_LAYOUT = AprilTagFields.k2026RebuiltWelded;
 
-	public static final class AutoConstants {
-		public static final double SPEED_SCALE = 0.4;
-	}
-
 	public static final class DrivebaseConstants {
 		public static final double WHEEL_LOCK_TIME = 10; // seconds
 		public static final double DRIVE_KS = 0.024309;

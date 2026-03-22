@@ -55,6 +55,10 @@ public class FieldPlanner {
 	public static final double GOAL_STRENGTH = 2.2;
 	private static final double DEFAULT_HEADING_BLEND_DIST = 0.75;
 
+	// P-APF predictive lookahead parameters
+	private static final double PAPF_HORIZON = 8.0; // meters
+	private static final double PAPF_RESOLUTION = 0.25; // meters
+
 	private double headingBlendDist = DEFAULT_HEADING_BLEND_DIST;
 	private Rotation2d headingOffset = null;
 
@@ -376,9 +380,56 @@ public class FieldPlanner {
 
 		Pose2d effectiveGoal = goalManager.getGoalPose();
 
-		var obstacleForce = getObstacleForce(curTrans, effectiveGoal.getTranslation(), effectiveDynamicsFinal)
-				.plus(getWallForce(curTrans, effectiveGoal.getTranslation()));
-		var netForce = getGoalForce(curTrans, effectiveGoal.getTranslation()).plus(obstacleForce);
+		// P-APF: Simulate forward along the force field to find an intermediate
+		// setpoint that smooths the path around obstacles. The setpoint is the
+		// point along the predicted path that deviates most from the straight
+		// line to the goal.
+		Translation2d forceTarget = effectiveGoal.getTranslation();
+		{
+			double e_x = forceTarget.getX() - curTrans.getX();
+			double e_y = forceTarget.getY() - curTrans.getY();
+			double error = Math.hypot(e_x, e_y);
+
+			if (error > PAPF_RESOLUTION) {
+				double simX = curTrans.getX();
+				double simY = curTrans.getY();
+				double dMax = 0.0;
+				double seg_c = forceTarget.getX() * curTrans.getY()
+						- forceTarget.getY() * curTrans.getX();
+
+				int maxSteps = (int) Math.ceil(PAPF_HORIZON / PAPF_RESOLUTION);
+				for (int i = 0; i < maxSteps; i++) {
+					Translation2d simPos = new Translation2d(simX, simY);
+					Force force = forceModel.getGoalForce(simPos, forceTarget)
+							.plus(forceModel.getObstacleForce(simPos, forceTarget, effectiveDynamicsFinal))
+							.plus(forceModel.getWallForce(simPos, forceTarget));
+					double norm = force.getNorm();
+					if (norm < 1e-6)
+						break;
+
+					double alpha = PAPF_RESOLUTION / norm;
+					simX += force.getX() * alpha;
+					simY += force.getY() * alpha;
+
+					// Perpendicular distance from simulated point to line(robot -> goal)
+					double d = Math.abs(e_y * simX - e_x * simY + seg_c) / error;
+					if (d > PAPF_RESOLUTION && d >= dMax) {
+						forceTarget = new Translation2d(simX, simY);
+						dMax = d;
+					}
+
+					double remainX = effectiveGoal.getTranslation().getX() - simX;
+					double remainY = effectiveGoal.getTranslation().getY() - simY;
+					if (remainX * remainX + remainY * remainY <= PAPF_RESOLUTION * PAPF_RESOLUTION) {
+						break;
+					}
+				}
+			}
+		}
+
+		var obstacleForce = getObstacleForce(curTrans, forceTarget, effectiveDynamicsFinal)
+				.plus(getWallForce(curTrans, forceTarget));
+		var netForce = getGoalForce(curTrans, forceTarget).plus(obstacleForce);
 		var dist = curTrans.getDistance(effectiveGoal.getTranslation());
 
 		double stepSize_m = driveTuning.stepSizeMeters(
