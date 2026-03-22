@@ -16,7 +16,6 @@ import frc.robot.subsystems.intake.IntakeSubsystem;
 import frc.robot.subsystems.intake.RollerSubsystem;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
 import frc.robot.util.AutoChooser;
-import frc.robot.util.FieldFlip;
 import frc.robot.util.FieldPose;
 import frc.robot.util.FieldTranslation;
 
@@ -43,7 +42,8 @@ public final class Autos {
 			Rotation2d.kZero);
 	private static final FieldPose CLIMB_LEFT = new FieldPose(1.062, 4.922, Rotation2d.kZero);
 	private static final FieldPose CLIMB_RIGHT = new FieldPose(1.062, 2.629, Rotation2d.k180deg);
-	private static final FieldPose CORNER_HIDE = new FieldPose(0.645, 0.645, Rotation2d.fromDegrees(0));
+	private static final FieldPose CORNER_HIDE_LEFT = new FieldPose(0.749, 7.324, Rotation2d.fromDegrees(0));
+	private static final FieldPose CORNER_HIDE_RIGHT = new FieldPose(0.645, 0.645, Rotation2d.fromDegrees(0));
 	private static final double CLIMB_ENGAGE_OFFSET = 0.2;
 	private static final FieldPose CLIMB_LEFT_ENGAGE = new FieldPose(
 			CLIMB_LEFT.getBlue().getX() - CLIMB_ENGAGE_OFFSET, CLIMB_LEFT.getBlue().getY(),
@@ -73,8 +73,8 @@ public final class Autos {
 
 		AutoChooser chooser = new AutoChooser("misc/Auto Chooser");
 		chooser.add("Score Front", this::frontHubAndShoot);
-		chooser.add("Left Hide + Shoot", () -> cornerHideAndShoot(true));
-		chooser.add("Right Hide + Shoot", () -> cornerHideAndShoot(false));
+		chooser.add("Left Hide + Shoot", this::leftCornerHideAndShoot);
+		chooser.add("Right Hide + Shoot", this::rightCornerHideAndShoot);
 		chooser.add("Go to center", this::centerFieldAuto);
 		chooser.add("Just Shoot", this::shoot);
 		if (intake != null && roller != null) {
@@ -96,16 +96,15 @@ public final class Autos {
 				shoot());
 	}
 
-	/**
-	 * Drives to a corner while facing the hub, then shoots.
-	 *
-	 * @param left true for the left corner (from the driver's perspective),
-	 *             false for the right corner. Uses {@link FieldPose#get(boolean)}
-	 *             to flip across the field width.
-	 */
-	private Command cornerHideAndShoot(boolean left) {
+	private Command leftCornerHideAndShoot() {
 		return sequence(
-				apfDefaultsFacing(() -> CORNER_HIDE.get(left), HUB_CENTER, 180),
+				apfDefaultsFacing(CORNER_HIDE_LEFT, HUB_CENTER, 180),
+				shoot());
+	}
+
+	private Command rightCornerHideAndShoot() {
+		return sequence(
+				apfDefaultsFacing(CORNER_HIDE_RIGHT, HUB_CENTER, 180),
 				shoot());
 	}
 
