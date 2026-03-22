@@ -9,12 +9,12 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
-import dev.doglog.DogLog;
-import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.util.TunableDouble;
+import frc.robot.util.TunableTable;
 
 import java.util.function.Supplier;
 
@@ -33,21 +33,12 @@ public class HopperSubsystem extends SubsystemBase {
 	private final SparkClosedLoopController hopperController;
 	// ==================== Visualization & Telemetry ====================
 	private final HopperTelemetry telemetry;
-	// ==================== Test Mode ====================
-	private final DoubleSubscriber testHopperRPM = DogLog.tunable("Hopper/RPM", FEED_SPEED);
-	private final DoubleSubscriber KP = DogLog.tunable("Hopper/kP", HOPPER_KP);
-	private final DoubleSubscriber KI = DogLog.tunable("Hopper/kI", HOPPER_KI);
-	private final DoubleSubscriber KD = DogLog.tunable("Hopper/kD", HOPPER_KD);
-	private final DoubleSubscriber KV = DogLog.tunable("Hopper/kV", HOPPER_KV);
-	private final DoubleSubscriber KS = DogLog.tunable("Hopper/kS", HOPPER_KS);
+	// ==================== Tunables ====================
+	private static final TunableTable tunables = new TunableTable("Hopper");
+	private final TunableDouble testHopperRPM = tunables.value("RPM", FEED_SPEED.in(RPM), RPM);
 	// ==================== Control State (package-private for telemetry/visualization)
 	// ====================
 	AngularVelocity targetHopperVelocity = RPM.of(0);
-	double prevKP = KP.getAsDouble();
-	double prevKI = KI.getAsDouble();
-	double prevKD = KD.getAsDouble();
-	double prevKV = KV.getAsDouble();
-	double prevKS = KS.getAsDouble();
 
 	public HopperSubsystem() {
 		hopperMotor = new SparkMax(HOPPER_MOTOR_ID, MotorType.kBrushless);
@@ -55,6 +46,8 @@ public class HopperSubsystem extends SubsystemBase {
 		hopperEncoder = hopperMotor.getEncoder();
 
 		configureHopperMotor();
+
+		tunables.pidSpark("Motor", hopperMotor, HOPPER_KP, HOPPER_KI, HOPPER_KD, HOPPER_KV);
 
 		telemetry = new HopperTelemetry(this);
 	}
@@ -75,22 +68,6 @@ public class HopperSubsystem extends SubsystemBase {
 	@Override
 	public void periodic() {
 		telemetry.log();
-		if (prevKP != KP.getAsDouble() || prevKI != KI.getAsDouble() || prevKD != KD.getAsDouble()
-				|| prevKV != KV.getAsDouble()) {
-
-			prevKP = KP.getAsDouble();
-			prevKI = KI.getAsDouble();
-			prevKD = KD.getAsDouble();
-			prevKV = KV.getAsDouble();
-
-			SparkMaxConfig config = new SparkMaxConfig();
-			config.idleMode(IdleMode.kCoast).smartCurrentLimit(HOPPER_CURRENT_LIMIT)
-					.inverted(INVERTED);
-			config.closedLoop.pid(KP.getAsDouble(), KI.getAsDouble(), KD.getAsDouble()).iZone(HOPPER_I_ZONE);
-			config.closedLoop.feedForward.kV(KV.getAsDouble());
-
-			hopperMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
-		}
 	}
 
 	// ==================== State Query Methods ====================

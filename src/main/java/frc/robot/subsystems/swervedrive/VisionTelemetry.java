@@ -2,10 +2,11 @@ package frc.robot.subsystems.swervedrive;
 
 import dev.doglog.DogLog;
 import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.networktables.BooleanSubscriber;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import frc.robot.subsystems.swervedrive.Vision.Cameras;
 import frc.robot.util.DevMode;
+import frc.robot.util.TunableBoolean;
+import frc.robot.util.TunableTable;
 import org.photonvision.targeting.PhotonPipelineResult;
 import org.photonvision.targeting.PhotonTrackedTarget;
 
@@ -29,8 +30,10 @@ import java.util.Optional;
  */
 public class VisionTelemetry {
 
+	private static final TunableTable tunables = new TunableTable("Vision");
+
 	private final Field2d field2d;
-	private final BooleanSubscriber showTrackedTargetsToggle;
+	private final TunableBoolean showTrackedTargetsToggle = tunables.value("ShowTrackedTargets", false);
 
 	/**
 	 * Constructs a new VisionTelemetry instance for debug visualization.
@@ -40,8 +43,6 @@ public class VisionTelemetry {
 	 */
 	public VisionTelemetry(Field2d field) {
 		this.field2d = field;
-
-		showTrackedTargetsToggle = DogLog.tunable("Vision/ShowTrackedTargets", false);
 	}
 
 	/**

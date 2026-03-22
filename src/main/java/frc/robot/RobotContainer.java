@@ -1,9 +1,7 @@
 package frc.robot;
 
-import dev.doglog.DogLog;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.networktables.BooleanSubscriber;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.GenericHID.RumbleType;
@@ -21,6 +19,8 @@ import frc.robot.subsystems.intake.RollerSubsystem;
 import frc.robot.subsystems.shooter.ShooterSubsystem;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
 import frc.robot.util.FieldZones;
+import frc.robot.util.TunableBoolean;
+import frc.robot.util.TunableTable;
 import swervelib.SwerveInputStream;
 
 import java.io.File;
@@ -42,8 +42,9 @@ public class RobotContainer {
 	private final RollerSubsystem roller = Constants.ENABLE_INTAKE ? new RollerSubsystem() : null;
 	private final IntakeSubsystem intake = Constants.ENABLE_INTAKE ? new IntakeSubsystem(roller) : null;
 	private final HopperSubsystem hopper = Constants.ENABLE_HOPPER ? new HopperSubsystem() : null;
-	private final BooleanSubscriber obstacleClampEnabled = DogLog.tunable("Drive/ObstacleClampEnabled", true);
-	private final BooleanSubscriber repulsorRumbleEnabled = DogLog.tunable("Drive/RepulsorRumbleEnabled", true);
+	private static final TunableTable driveTunables = new TunableTable("Drive");
+	private final TunableBoolean obstacleClampEnabled = driveTunables.value("ObstacleClampEnabled", true);
+	private final TunableBoolean repulsorRumbleEnabled = driveTunables.value("RepulsorRumbleEnabled", true);
 	// Repulsor
 	private final Repulsor repulsor;
 	private final Autos autos;

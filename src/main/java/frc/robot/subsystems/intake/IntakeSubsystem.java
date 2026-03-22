@@ -15,11 +15,12 @@ import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
-import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.util.TunableDouble;
+import frc.robot.util.TunableTable;
 
 import static edu.wpi.first.units.Units.Degrees;
 import static frc.robot.Constants.IntakeConstants.*;
@@ -35,14 +36,11 @@ public class IntakeSubsystem extends SubsystemBase {
 	private final SparkClosedLoopController pivotController;
 	private final Debouncer atPositionDebouncer;
 	private final Debouncer stallDebouncer = new Debouncer(1.5, DebounceType.kBoth);
-	private final DoubleSubscriber testPivotDeg = DogLog.tunable("Intake/Pivot/Degrees",
+	// ==================== Tunables ====================
+	private static final TunableTable tunables = new TunableTable("Intake");
+	private final TunableDouble testPivotDeg = tunables.getNested("Pivot").value("Degrees",
 			PIVOT_EXTENDED_ANGLE.in(Degrees), Degrees);
 	private final IntakeTelemetry telemetry;
-	// Pivot PID tunables
-	private final DoubleSubscriber tunePivotKP = DogLog.tunable("Intake/Pivot/kP", PIVOT_KP);
-	private final DoubleSubscriber tunePivotKI = DogLog.tunable("Intake/Pivot/kI", PIVOT_KI);
-	private final DoubleSubscriber tunePivotKD = DogLog.tunable("Intake/Pivot/kD", PIVOT_KD);
-	private final DoubleSubscriber tunePivotKV = DogLog.tunable("Intake/Pivot/kV", 0.0);
 	private final ProfiledPIDController pivotProfiler = new ProfiledPIDController(0, 0, 0,
 			new TrapezoidProfile.Constraints(PIVOT_MAX_VELOCITY_DEG_PER_S, PIVOT_MAX_ACCEL_DEG_PER_S2));
 	private final RollerSubsystem roller;
@@ -50,7 +48,6 @@ public class IntakeSubsystem extends SubsystemBase {
 	private boolean wantToExtend = false;
 	private Angle extendedPivotAngle = PIVOT_EXTENDED_ANGLE;
 	Angle targetPivotAngle = extendedPivotAngle.plus(PIVOT_RETRACTED_DELTA);
-	private double prevPivotKP = PIVOT_KP, prevPivotKI = PIVOT_KI, prevPivotKD = PIVOT_KD, prevPivotKV = 0.0;
 
 	public IntakeSubsystem(RollerSubsystem roller) {
 		this.roller = roller;
@@ -63,6 +60,9 @@ public class IntakeSubsystem extends SubsystemBase {
 		atPositionDebouncer = new Debouncer(AT_POSITION_DEBOUNCE_TIME, DebounceType.kRising);
 
 		telemetry = new IntakeTelemetry(this, roller);
+
+		// Auto-tuning: creates NT tunables and auto-applies PID on change
+		tunables.pidSpark("Pivot", pivotMotor, PIVOT_KP, PIVOT_KI, PIVOT_KD, 0.0);
 
 		double initialAngle = pivotEncoder.getPosition();
 		pivotProfiler.reset(initialAngle);
@@ -97,26 +97,10 @@ public class IntakeSubsystem extends SubsystemBase {
 		wasEnabled = enabled;
 
 		telemetry.log();
-		updatePivotPIDIfChanged();
 		double profiledSetpoint = pivotProfiler.calculate(pivotEncoder.getPosition());
 		pivotController.setSetpoint(pivotProfiler.getSetpoint().position, ControlType.kPosition);
 		DogLog.log("Intake/Pivot/ProfiledSetpoint", profiledSetpoint);
 		DogLog.log("Intake/Pivot/ProfiledVelocity", pivotProfiler.getSetpoint().velocity);
-	}
-
-	private void updatePivotPIDIfChanged() {
-		double kP = tunePivotKP.getAsDouble(), kI = tunePivotKI.getAsDouble(),
-				kD = tunePivotKD.getAsDouble(), kV = tunePivotKV.getAsDouble();
-		if (kP == prevPivotKP && kI == prevPivotKI && kD == prevPivotKD && kV == prevPivotKV)
-			return;
-		prevPivotKP = kP;
-		prevPivotKI = kI;
-		prevPivotKD = kD;
-		prevPivotKV = kV;
-		SparkMaxConfig config = new SparkMaxConfig();
-		config.closedLoop.pid(kP, kI, kD);
-		config.closedLoop.feedForward.kV(kV);
-		pivotMotor.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
 	}
 
 	// ==================== State Query Methods ====================

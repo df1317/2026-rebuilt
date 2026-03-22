@@ -18,7 +18,6 @@ import dev.doglog.DogLog;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
-import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Distance;
@@ -27,6 +26,8 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Constants.ShooterConstants;
+import frc.robot.util.TunableDouble;
+import frc.robot.util.TunableTable;
 
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
@@ -59,24 +60,11 @@ public class ShooterSubsystem extends SubsystemBase {
 	private final InterpolatingDoubleTreeMap hoodPercentToLaunchAngle = new InterpolatingDoubleTreeMap();
 	private final SysIdRoutine sysIdRoutine;
 	private final VelocityVoltage velocityVoltageRequest = new VelocityVoltage(0);
-	private final DoubleSubscriber testShooterRPM = DogLog.tunable("Shooter/RPM", 3000.0, RPM);
-	private final DoubleSubscriber testFeederRPM = DogLog.tunable("Shooter/Feeder/RPM", 3000.0, RPM);
-	private final DoubleSubscriber testHoodPercent = DogLog.tunable("Shooter/Hood/Percent", 0.5);
-	// Shooter PID tunables (TalonFX)
-	private final DoubleSubscriber tuneShooterKP = DogLog.tunable("Shooter/Shooter/kP", SHOOTER_KP);
-	private final DoubleSubscriber tuneShooterKI = DogLog.tunable("Shooter/Shooter/kI", SHOOTER_KI);
-	private final DoubleSubscriber tuneShooterKD = DogLog.tunable("Shooter/Shooter/kD", SHOOTER_KD);
-	private final DoubleSubscriber tuneShooterKV = DogLog.tunable("Shooter/Shooter/kV", SHOOTER_KV);
-	private final DoubleSubscriber tuneShooterKS = DogLog.tunable("Shooter/Shooter/kS", SHOOTER_KS);
-	// Feeder PID tunables (SparkMax)
-	private final DoubleSubscriber tuneFeederKP = DogLog.tunable("Shooter/Feeder/kP", FEEDER_KP);
-	private final DoubleSubscriber tuneFeederKI = DogLog.tunable("Shooter/Feeder/kI", FEEDER_KI);
-	private final DoubleSubscriber tuneFeederKD = DogLog.tunable("Shooter/Feeder/kD", FEEDER_KD);
-	private final DoubleSubscriber tuneFeederKV = DogLog.tunable("Shooter/Feeder/kV", FEEDER_KV);
-	// Hood PID tunables (SparkMax)
-	private final DoubleSubscriber tuneHoodKP = DogLog.tunable("Shooter/Hood/kP", HOOD_KP);
-	private final DoubleSubscriber tuneHoodKI = DogLog.tunable("Shooter/Hood/kI", HOOD_KI);
-	private final DoubleSubscriber tuneHoodKD = DogLog.tunable("Shooter/Hood/kD", HOOD_KD);
+	// ==================== Tunables ====================
+	private static final TunableTable tunables = new TunableTable("Shooter");
+	private final TunableDouble testShooterRPM = tunables.value("RPM", 3000.0, RPM);
+	private final TunableDouble testFeederRPM = tunables.getNested("Feeder").value("RPM", 3000.0, RPM);
+	private final TunableDouble testHoodPercent = tunables.getNested("Hood").value("Percent", 0.5);
 	// ==================== Telemetry ====================
 	private final ShooterTelemetry telemetry;
 	// ==================== Control State (package-private for telemetry) ====================
@@ -85,11 +73,6 @@ public class ShooterSubsystem extends SubsystemBase {
 	Angle targetHoodAngle = Degrees.of(0);
 	double hoodMaxDeg = Double.NaN;
 	boolean manualDistanceEnabled = false;
-	private double prevShooterKP = SHOOTER_KP, prevShooterKI = SHOOTER_KI, prevShooterKD = SHOOTER_KD,
-			prevShooterKV = SHOOTER_KV, prevShooterKS = SHOOTER_KS;
-	private double prevFeederKP = FEEDER_KP, prevFeederKI = FEEDER_KI, prevFeederKD = FEEDER_KD,
-			prevFeederKV = FEEDER_KV;
-	private double prevHoodKP = HOOD_KP, prevHoodKI = HOOD_KI, prevHoodKD = HOOD_KD;
 	private double manualDistanceM = 1.0;
 	private Supplier<Distance> autoDistanceSupplier = () -> Meters.of(0);
 
@@ -112,6 +95,11 @@ public class ShooterSubsystem extends SubsystemBase {
 				new SysIdRoutine.Config(null, ShooterConstants.SYSID_STEP_VOLTAGE, null,
 						state -> DogLog.log("Shooter/SysIdState", state.toString())),
 				new SysIdRoutine.Mechanism(voltage -> motor.setVoltage(voltage.in(Volts)), null, this));
+
+		// Auto-tuning: creates NT tunables and auto-applies PID on change
+		tunables.pidTalonFX("Shooter", motor, SHOOTER_KP, SHOOTER_KI, SHOOTER_KD, SHOOTER_KV, SHOOTER_KS);
+		tunables.pidSpark("Feeder", feeder, FEEDER_KP, FEEDER_KI, FEEDER_KD, FEEDER_KV);
+		tunables.pidSpark("Hood", hood, HOOD_KP, HOOD_KI, HOOD_KD);
 
 		telemetry = new ShooterTelemetry(this);
 	}
@@ -213,57 +201,6 @@ public class ShooterSubsystem extends SubsystemBase {
 	@Override
 	public void periodic() {
 		telemetry.log();
-		updateShooterPIDIfChanged();
-		updateFeederPIDIfChanged();
-		updateHoodPIDIfChanged();
-	}
-
-	private void updateShooterPIDIfChanged() {
-		double kP = tuneShooterKP.getAsDouble(), kI = tuneShooterKI.getAsDouble(),
-				kD = tuneShooterKD.getAsDouble(), kV = tuneShooterKV.getAsDouble(),
-				kS = tuneShooterKS.getAsDouble();
-		if (kP == prevShooterKP && kI == prevShooterKI && kD == prevShooterKD
-				&& kV == prevShooterKV && kS == prevShooterKS)
-			return;
-		prevShooterKP = kP;
-		prevShooterKI = kI;
-		prevShooterKD = kD;
-		prevShooterKV = kV;
-		prevShooterKS = kS;
-		var configs = new com.ctre.phoenix6.configs.Slot0Configs();
-		configs.kP = kP;
-		configs.kI = kI;
-		configs.kD = kD;
-		configs.kV = kV;
-		configs.kS = kS;
-		motor.getConfigurator().apply(configs);
-	}
-
-	private void updateFeederPIDIfChanged() {
-		double kP = tuneFeederKP.getAsDouble(), kI = tuneFeederKI.getAsDouble(),
-				kD = tuneFeederKD.getAsDouble(), kV = tuneFeederKV.getAsDouble();
-		if (kP == prevFeederKP && kI == prevFeederKI && kD == prevFeederKD && kV == prevFeederKV)
-			return;
-		prevFeederKP = kP;
-		prevFeederKI = kI;
-		prevFeederKD = kD;
-		prevFeederKV = kV;
-		SparkMaxConfig config = new SparkMaxConfig();
-		config.closedLoop.pid(kP, kI, kD);
-		config.closedLoop.feedForward.kV(kV);
-		feeder.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
-	}
-
-	private void updateHoodPIDIfChanged() {
-		double kP = tuneHoodKP.getAsDouble(), kI = tuneHoodKI.getAsDouble(), kD = tuneHoodKD.getAsDouble();
-		if (kP == prevHoodKP && kI == prevHoodKI && kD == prevHoodKD)
-			return;
-		prevHoodKP = kP;
-		prevHoodKI = kI;
-		prevHoodKD = kD;
-		SparkMaxConfig config = new SparkMaxConfig();
-		config.closedLoop.pid(kP, kI, kD);
-		hood.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
 	}
 
 	public boolean isAtSpeed() {
@@ -361,7 +298,6 @@ public class ShooterSubsystem extends SubsystemBase {
 
 	public void setTestHoodPercent() {
 		setHoodAngle(Degrees.of(testHoodPercent.get() * hoodMaxDeg));
-
 	}
 
 	/** Returns the current target hood position as a fraction of its full range (0.0–1.0). */

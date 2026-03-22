@@ -13,7 +13,6 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
-import edu.wpi.first.networktables.BooleanSubscriber;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -57,7 +56,8 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 
 	private final SwerveDrive swerveDrive;
 	private final PIDController repulsorOmegaPID = new PIDController(5.0, 0.0, 0.0);
-	private final BooleanSubscriber visionEnabled = DogLog.tunable("Swerve/VisionEnabled", true);
+	private final frc.robot.util.TunableBoolean visionEnabled = new frc.robot.util.TunableTable("Swerve")
+			.value("VisionEnabled", true);
 	private final double AIM_SPEED_FAST = 5.0;
 	private final double AIM_SPEED_MID = 1.0;
 	private final double AIM_SPEED_SLOW = 2.0;

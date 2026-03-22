@@ -9,13 +9,13 @@ import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
-import dev.doglog.DogLog;
 import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.util.TunableDouble;
+import frc.robot.util.TunableTable;
 
 import java.util.function.DoubleSupplier;
 
@@ -27,16 +27,11 @@ public class RollerSubsystem extends SubsystemBase {
 	final SparkFlex rollerMotor;
 	final RelativeEncoder rollerEncoder;
 	private final SparkClosedLoopController rollerController;
-	// Roller PID tunables
-	private final DoubleSubscriber tuneRollerKP = DogLog.tunable("Intake/Roller/kP", ROLLER_KP);
-	private final DoubleSubscriber tuneRollerKI = DogLog.tunable("Intake/Roller/kI", ROLLER_KI);
-	private final DoubleSubscriber tuneRollerKD = DogLog.tunable("Intake/Roller/kD", ROLLER_KD);
-	private final DoubleSubscriber tuneRollerKV = DogLog.tunable("Intake/Roller/kV", ROLLER_KV);
-	private final DoubleSubscriber testRollerRPM = DogLog.tunable("Intake/Roller/RPM",
+	// ==================== Tunables ====================
+	private static final TunableTable tunables = new TunableTable("Intake");
+	private final TunableDouble testRollerRPM = tunables.getNested("Roller").value("RPM",
 			ROLLER_INTAKE_VELOCITY.in(RPM), RPM);
 	AngularVelocity targetRollerVelocity = RPM.of(0);
-	private double prevRollerKP = ROLLER_KP, prevRollerKI = ROLLER_KI, prevRollerKD = ROLLER_KD,
-			prevRollerKV = ROLLER_KV;
 	private DoubleSupplier robotSpeedSupplier = () -> 0.0;
 
 	public RollerSubsystem() {
@@ -44,6 +39,8 @@ public class RollerSubsystem extends SubsystemBase {
 		rollerController = rollerMotor.getClosedLoopController();
 		rollerEncoder = rollerMotor.getEncoder();
 		configureRollerMotor();
+
+		tunables.pidSpark("Roller", rollerMotor, ROLLER_KP, ROLLER_KI, ROLLER_KD, ROLLER_KV);
 	}
 
 	private void configureRollerMotor() {
@@ -57,22 +54,6 @@ public class RollerSubsystem extends SubsystemBase {
 
 	@Override
 	public void periodic() {
-		updateRollerPIDIfChanged();
-	}
-
-	private void updateRollerPIDIfChanged() {
-		double kP = tuneRollerKP.getAsDouble(), kI = tuneRollerKI.getAsDouble(),
-				kD = tuneRollerKD.getAsDouble(), kV = tuneRollerKV.getAsDouble();
-		if (kP == prevRollerKP && kI == prevRollerKI && kD == prevRollerKD && kV == prevRollerKV)
-			return;
-		prevRollerKP = kP;
-		prevRollerKI = kI;
-		prevRollerKD = kD;
-		prevRollerKV = kV;
-		SparkMaxConfig config = new SparkMaxConfig();
-		config.closedLoop.pid(kP, kI, kD);
-		config.closedLoop.feedForward.kV(kV);
-		rollerMotor.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
 	}
 
 	public void setRollerVelocity(AngularVelocity velocity) {

@@ -8,7 +8,6 @@ import dev.doglog.DogLog;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ElevatorFeedforward;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
-import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.units.measure.MutDistance;
 import edu.wpi.first.units.measure.MutLinearVelocity;
 import edu.wpi.first.units.measure.MutVoltage;
@@ -20,8 +19,9 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
-
 import frc.robot.util.RobotLog;
+import frc.robot.util.TunableDouble;
+import frc.robot.util.TunableTable;
 
 import java.util.function.DoubleSupplier;
 
@@ -38,25 +38,13 @@ public class ClimberSubsystem extends SubsystemBase {
 	private final MutDistance distance = Meters.mutable(0);
 	private final MutLinearVelocity velocity = MetersPerSecond.mutable(0);
 	private final SysIdRoutine sysIdRoutine;
-	private final DoubleSubscriber SUB_KP = DogLog.tunable("Climber/kP", KP);
-	private final DoubleSubscriber SUB_KI = DogLog.tunable("Climber/kI", KI);
-	private final DoubleSubscriber SUB_KD = DogLog.tunable("Climber/kD", KD);
-	private final DoubleSubscriber SUB_KV = DogLog.tunable("Climber/kV", KV);
-	private final DoubleSubscriber SUB_KS = DogLog.tunable("Climber/kS", KS);
-	private final DoubleSubscriber SUB_KG = DogLog.tunable("Climber/kG", KG);
-	private final DoubleSubscriber testClimberHeight = DogLog.tunable("Climber/Height",
-			MAX_HEIGHT.in(Meters), Meters);
-	private final DoubleSubscriber SUB_JOG_CURRENT_LIMIT = DogLog.tunable("Climber/JogCurrentLimit",
-			JOG_CURRENT_LIMIT);
+	// ==================== Tunables ====================
+	private static final TunableTable tunables = new TunableTable("Climber");
+	private final TunableDouble testClimberHeight = tunables.value("Height", MAX_HEIGHT.in(Meters), Meters);
+	private final TunableDouble jogCurrentLimit = tunables.value("JogCurrentLimit", JOG_CURRENT_LIMIT);
 	private final ClimberTelemetry telemetry;
 	TrapezoidProfile.State currentState = new TrapezoidProfile.State();
 	TrapezoidProfile.State goalState = new TrapezoidProfile.State();
-	double prevKP = SUB_KP.getAsDouble();
-	double prevKI = SUB_KI.getAsDouble();
-	double prevKD = SUB_KD.getAsDouble();
-	double prevKV = SUB_KV.getAsDouble();
-	double prevKS = SUB_KS.getAsDouble();
-	double prevKG = SUB_KG.getAsDouble();
 	boolean prevEnabled = false;
 	private double lastUpdateTimestamp;
 
@@ -96,6 +84,8 @@ public class ClimberSubsystem extends SubsystemBase {
 										velocity.mut_replace(getVelocityMetersPerSecond(), MetersPerSecond)),
 						this));
 
+		tunables.pidTalonFX("Motor", motorLeft, KP, KI, KD, KV, KS, KG);
+
 		telemetry = new ClimberTelemetry(this);
 
 		goalState.position = getHeightMeters();
@@ -117,26 +107,6 @@ public class ClimberSubsystem extends SubsystemBase {
 			onEnabled();
 		}
 		prevEnabled = DriverStation.isEnabled();
-
-		if (prevKP != SUB_KP.getAsDouble() || prevKI != SUB_KI.getAsDouble() || prevKD != SUB_KD.getAsDouble()
-				|| prevKS != SUB_KS.getAsDouble() || prevKG != SUB_KG.getAsDouble() || prevKV != SUB_KV.getAsDouble()) {
-			prevKP = SUB_KP.getAsDouble();
-			prevKI = SUB_KI.getAsDouble();
-			prevKD = SUB_KD.getAsDouble();
-			prevKV = SUB_KV.getAsDouble();
-			prevKS = SUB_KS.getAsDouble();
-			prevKG = SUB_KG.getAsDouble();
-
-			TalonFXConfiguration configs = baseConfig();
-			configs.Slot0.kP = SUB_KP.getAsDouble();
-			configs.Slot0.kI = SUB_KI.getAsDouble();
-			configs.Slot0.kD = SUB_KD.getAsDouble();
-			configs.Slot0.kV = SUB_KV.getAsDouble();
-			configs.Slot0.kG = SUB_KG.getAsDouble();
-			configs.Slot0.kS = SUB_KS.getAsDouble();
-
-			motorLeft.getConfigurator().apply(configs);
-		}
 
 		double now = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
 		double dt = now - lastUpdateTimestamp;
@@ -250,7 +220,7 @@ public class ClimberSubsystem extends SubsystemBase {
 
 	private void applyJogConfig() {
 		TalonFXConfiguration config = baseConfig();
-		config.CurrentLimits.SupplyCurrentLimit = SUB_JOG_CURRENT_LIMIT.getAsDouble();
+		config.CurrentLimits.SupplyCurrentLimit = jogCurrentLimit.get();
 		config.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
 		config.SoftwareLimitSwitch.ForwardSoftLimitThreshold = JOG_SOFT_LIMIT_ROTATIONS;
 		config.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
