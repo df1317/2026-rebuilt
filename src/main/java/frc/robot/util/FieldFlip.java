@@ -11,7 +11,8 @@ import frc.robot.Constants;
  * Utility class for flipping field locations across lines of symmetry.
  * Field dimensions and symmetry type are derived from the AprilTag field layout.
  *
- * <p>Adapted from Team 340 (GRR) — licensed under GPLv3.
+ * <p>
+ * Adapted from Team 340 (GRR) — licensed under GPLv3.
  */
 public final class FieldFlip {
 
@@ -42,7 +43,8 @@ public final class FieldFlip {
 		return switch (field) {
 			case k2026RebuiltWelded, k2026RebuiltAndymark,
 					k2025ReefscapeWelded, k2025ReefscapeAndyMark,
-					k2022RapidReact -> SymmetryType.ROTATE;
+					k2022RapidReact ->
+				SymmetryType.ROTATE;
 			case k2024Crescendo, k2023ChargedUp -> SymmetryType.MIRROR;
 		};
 	}

@@ -10,7 +10,8 @@ import java.util.function.Supplier;
  * pre-computes all flipped variants at construction time. Call {@link #get()} to retrieve
  * the correct variant for the current alliance.
  *
- * <p>Adapted from Team 340 (GRR) — licensed under GPLv3.
+ * <p>
+ * Adapted from Team 340 (GRR) — licensed under GPLv3.
  */
 public final class FieldTranslation implements Supplier<Translation2d> {
 
