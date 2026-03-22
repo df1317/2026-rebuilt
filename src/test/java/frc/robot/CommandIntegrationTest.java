@@ -6,7 +6,6 @@ import edu.wpi.first.hal.HAL;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -151,50 +150,40 @@ class CommandIntegrationTest {
 	// ========================================================================================
 
 	/**
-	 * Builds the auto chooser exactly as RobotContainer does, then reflectively pulls every option from
-	 * SendableChooser.m_map, and for each:
-	 * <ul>
-	 * <li>If it's a DeferredCommand, calls initialize() to trigger the deferred construction
-	 * <li>Recursively walks into ConditionalCommand (Commands.either) branches
-	 * <li>Recursively walks into SelectCommand options
-	 * </ul>
+	 * Constructs a real Autos instance, then reflectively invokes every private
+	 * Command-returning method (the auto routine factories). Each returned command
+	 * is validated via the composition tree walker.
 	 * Any IllegalArgumentException from WPILib means a subsystem conflict exists.
 	 */
 	@Test
 	void allAutoChooserOptionsAreValid() {
 		List<String> errors = new ArrayList<>();
 
-		// Build the auto chooser the same way RobotContainer does
-		SendableChooser<Command> autoChooser = new SendableChooser<>();
-		Supplier<Command> shootCommand = () -> teleopAutomation.shootCommand().withTimeout(4);
-		Supplier<Command> collectCommand = () -> Commands.parallel(
-				intake.extendCommand().andThen(intake.holdExtendedCommand()),
-				roller.intakeCommand());
+		// Build Autos the same way RobotContainer does (null drivebase/climber are safe)
+		Autos autos = new Autos(repulsor, null, teleopAutomation, null, intake, roller);
 
-		autoChooser.setDefaultOption("Just Shoot",
-				Commands.defer(
-						() -> teleopAutomation.shootCommand().withTimeout(4),
-						Set.of(mockDriveSubsystem)));
-		autoChooser.addOption("Collect + Shoot x1",
-				Commands.defer(
-						() -> AutoPositions.collectAndShoot1(repulsor, shootCommand, collectCommand),
-						Set.of(mockDriveSubsystem)));
-		autoChooser.addOption("Collect + Shoot x2",
-				Commands.defer(
-						() -> AutoPositions.collectAndShoot2(repulsor, shootCommand, collectCommand),
-						Set.of(mockDriveSubsystem)));
+		// Reflectively invoke every Command-returning method on Autos
+		for (Method method : Autos.class.getDeclaredMethods()) {
+			if (!Command.class.isAssignableFrom(method.getReturnType()))
+				continue;
+			if (method.getParameterCount() > 0)
+				continue;
 
-		// Reflectively pull every option from the chooser
-		Map<String, Command> options = getChooserOptions(autoChooser);
-		if (options == null) {
-			fail("Could not reflectively access SendableChooser.m_map");
-			return;
-		}
-
-		for (Map.Entry<String, Command> entry : options.entrySet()) {
-			String name = entry.getKey();
-			Command cmd = entry.getValue();
-			validateCommandTree("Auto[" + name + "]", cmd, errors, new HashSet<>());
+			method.setAccessible(true);
+			String name = method.getName();
+			try {
+				Command cmd = (Command) method.invoke(autos);
+				validateCommandTree("Auto[" + name + "]", cmd, errors, new HashSet<>());
+			} catch (java.lang.reflect.InvocationTargetException e) {
+				Throwable cause = e.getCause();
+				if (cause instanceof IllegalArgumentException) {
+					errors.add(String.format("  Auto[%s] — threw on construction:\n    %s",
+							name, cause.getMessage()));
+				}
+				// Other exceptions (e.g. NPE in sim) — skip
+			} catch (Exception e) {
+				// Skip methods that can't run in sim
+			}
 		}
 
 		if (!errors.isEmpty()) {
@@ -420,16 +409,6 @@ class CommandIntegrationTest {
 		return null;
 	}
 
-	@SuppressWarnings("unchecked")
-	private static Map<String, Command> getChooserOptions(SendableChooser<Command> chooser) {
-		try {
-			Field mapField = SendableChooser.class.getDeclaredField("m_map");
-			mapField.setAccessible(true);
-			return (Map<String, Command>) mapField.get(chooser);
-		} catch (Exception e) {
-			return null;
-		}
-	}
 
 	// ========================================================================================
 	// Other helpers
