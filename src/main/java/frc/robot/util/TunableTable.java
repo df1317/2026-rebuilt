@@ -15,6 +15,7 @@ import edu.wpi.first.units.Unit;
  *
  * <p>
  * Usage:
+ *
  * <pre>{@code
  * private static final TunableTable tunables = new TunableTable("Shooter");
  * private final TunableDouble testRPM = tunables.value("RPM", 3000.0, RPM);

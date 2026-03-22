@@ -37,6 +37,7 @@ public class ClimberSubsystem extends SubsystemBase {
 	private final MutVoltage appliedVoltage = Volts.mutable(0);
 	private final MutDistance distance = Meters.mutable(0);
 	private final MutLinearVelocity velocity = MetersPerSecond.mutable(0);
+	private final PositionVoltage positionRequest = new PositionVoltage(0);
 	private final SysIdRoutine sysIdRoutine;
 	// ==================== Tunables ====================
 	private static final TunableTable tunables = new TunableTable("Climber");
@@ -117,7 +118,7 @@ public class ClimberSubsystem extends SubsystemBase {
 			currentState = profile.calculate(dt, currentState, goalState);
 			double ff = feedforward.calculate(currentState.velocity);
 			motorLeft.setControl(
-					new PositionVoltage(currentState.position * ROTATIONS_PER_METER).withFeedForward(ff));
+					positionRequest.withPosition(currentState.position * ROTATIONS_PER_METER).withFeedForward(ff));
 		}
 
 		telemetry.log();
