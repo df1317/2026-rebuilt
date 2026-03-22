@@ -20,48 +20,34 @@
 package frc.robot.repulsor.Setpoints;
 
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
-import frc.robot.repulsor.RepulsorConstants;
+import frc.robot.util.FieldFlip;
 
 public final class SetpointUtil {
 	public static Alliance currentAllianceOrBlue() {
 		return DriverStation.getAlliance().orElse(Alliance.Blue);
 	}
 
-	private static Pose2d flipAcrossField(Pose2d p) {
-		if (p == null)
-			return Pose2d.kZero;
-		double x = p.getX();
-		double y = p.getY();
-		double r = p.getRotation().getRadians();
-		double fx = RepulsorConstants.FIELD_LENGTH - x;
-		double fr = Math.PI - r;
-		return new Pose2d(fx, y, Rotation2d.fromRadians(fr));
-	}
-
-	private static Translation2d flipAcrossField(Translation2d t) {
-		if (t == null)
-			return new Translation2d(0.0, 0.0);
-		return new Translation2d(RepulsorConstants.FIELD_LENGTH - t.getX(), t.getY());
-	}
-
 	public static Pose2d flipToRed(Pose2d bluePose) {
-		return flipAcrossField(bluePose);
+		if (bluePose == null)
+			return Pose2d.kZero;
+		return FieldFlip.toRed(bluePose);
 	}
 
 	public static Translation2d flipToRed(Translation2d blue) {
-		return flipAcrossField(blue);
+		if (blue == null)
+			return new Translation2d(0.0, 0.0);
+		return FieldFlip.toRed(blue);
 	}
 
 	public static Pose2d flipToBlue(Pose2d redPose) {
-		return flipAcrossField(redPose);
+		return flipToRed(redPose); // symmetric operation
 	}
 
 	public static Translation2d flipToBlue(Translation2d red) {
-		return flipAcrossField(red);
+		return flipToRed(red); // symmetric operation
 	}
 
 	public static Pose2d getSetPose(RepulsorSetpoint sp, SetpointContext ctx) {

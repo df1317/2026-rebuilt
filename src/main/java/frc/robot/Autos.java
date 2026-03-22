@@ -5,20 +5,20 @@ import static edu.wpi.first.wpilibj2.command.Commands.*;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.commands.TeleopZoneAutomation;
 import frc.robot.repulsor.Repulsor;
 import frc.robot.repulsor.RepulsorConstants;
-import frc.robot.repulsor.Setpoints.SetpointUtil;
 import frc.robot.repulsor.Setpoints.Specific._Rebuilt2026;
 import frc.robot.subsystems.climber.ClimberSubsystem;
 import frc.robot.subsystems.intake.IntakeSubsystem;
 import frc.robot.subsystems.intake.RollerSubsystem;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
 import frc.robot.util.AutoChooser;
+import frc.robot.util.FieldFlip;
+import frc.robot.util.FieldPose;
+import frc.robot.util.FieldTranslation;
 
 import java.util.function.Supplier;
 
@@ -26,7 +26,8 @@ import java.util.function.Supplier;
  * Declares autonomous modes and adds them to the dashboard.
  *
  * <p>
- * All positions are blue-alliance. Alliance flipping happens inside goal suppliers each cycle.
+ * All positions are blue-alliance. Alliance flipping is handled by
+ * {@link FieldPose} and {@link FieldTranslation} at runtime.
  */
 public final class Autos {
 
@@ -35,25 +36,23 @@ public final class Autos {
 	private static final double SLOW_DECEL = 3.0; // m/s²
 
 	// ===== Field Positions =====
-	static final Translation2d HUB_CENTER = _Rebuilt2026.hubAimpointBlue();
-	private static final Pose2d CENTER_COLLECT = new Pose2d(
+	private static final FieldTranslation HUB_CENTER = new FieldTranslation(_Rebuilt2026.hubAimpointBlue());
+	private static final FieldPose CENTER_COLLECT = new FieldPose(
 			RepulsorConstants.FIELD_LENGTH / 2.0,
 			RepulsorConstants.FIELD_WIDTH / 2.0,
 			Rotation2d.kZero);
-	static final Pose2d CLIMB_LEFT = new Pose2d(1.062, 4.922, Rotation2d.kZero);
-	static final Pose2d CLIMB_RIGHT = new Pose2d(1.062, 2.629, Rotation2d.k180deg);
-	private static final Pose2d CORNER_HIDE_NEAR_BALLS = new Pose2d(
-			new Translation2d(0.749, 7.324), Rotation2d.fromDegrees(0));
-	private static final Pose2d CORNER_HIDE = new Pose2d(
-			new Translation2d(0.645, 0.645), Rotation2d.fromDegrees(0));
+	private static final FieldPose CLIMB_LEFT = new FieldPose(1.062, 4.922, Rotation2d.kZero);
+	private static final FieldPose CLIMB_RIGHT = new FieldPose(1.062, 2.629, Rotation2d.k180deg);
+	private static final FieldPose CORNER_HIDE = new FieldPose(0.645, 0.645, Rotation2d.fromDegrees(0));
 	private static final double CLIMB_ENGAGE_OFFSET = 0.2;
-	static final Pose2d CLIMB_LEFT_ENGAGE = new Pose2d(
-			CLIMB_LEFT.getX() - CLIMB_ENGAGE_OFFSET, CLIMB_LEFT.getY(), CLIMB_LEFT.getRotation());
-	static final Pose2d CLIMB_RIGHT_ENGAGE = new Pose2d(
-			CLIMB_RIGHT.getX() + CLIMB_ENGAGE_OFFSET, CLIMB_RIGHT.getY(), CLIMB_RIGHT.getRotation());
+	private static final FieldPose CLIMB_LEFT_ENGAGE = new FieldPose(
+			CLIMB_LEFT.getBlue().getX() - CLIMB_ENGAGE_OFFSET, CLIMB_LEFT.getBlue().getY(),
+			CLIMB_LEFT.getBlue().getRotation());
+	private static final FieldPose CLIMB_RIGHT_ENGAGE = new FieldPose(
+			CLIMB_RIGHT.getBlue().getX() + CLIMB_ENGAGE_OFFSET, CLIMB_RIGHT.getBlue().getY(),
+			CLIMB_RIGHT.getBlue().getRotation());
 	private static final double HUB_RADIUS = 0.9;
-	private static final Pose2d HUB_FRONT = hubPose(0);
-	private static final Pose2d HUB_FRONT_SHOOT = hubPoseBack(0, 1.0);
+	private static final FieldPose HUB_FRONT_SHOOT = new FieldPose(hubPoseBack(0, 1.0));
 	private static final double COLLECT_Y_OFFSET = 1.8;
 	private static final double COLLECT_X_OFFSET = -0.5;
 
@@ -74,8 +73,8 @@ public final class Autos {
 
 		AutoChooser chooser = new AutoChooser("misc/Auto Chooser");
 		chooser.add("Score Front", this::frontHubAndShoot);
-		chooser.add("Left Hide + Shoot", this::leftCornerHideAndShoot);
-		chooser.add("Right Hide + Shoot", this::rightCornerHideAndShoot);
+		chooser.add("Left Hide + Shoot", () -> cornerHideAndShoot(true));
+		chooser.add("Right Hide + Shoot", () -> cornerHideAndShoot(false));
 		chooser.add("Go to center", this::centerFieldAuto);
 		chooser.add("Just Shoot", this::shoot);
 		if (intake != null && roller != null) {
@@ -97,21 +96,16 @@ public final class Autos {
 				shoot());
 	}
 
-	private Command leftCornerHideAndShoot() {
+	/**
+	 * Drives to a corner while facing the hub, then shoots.
+	 *
+	 * @param left true for the left corner (from the driver's perspective),
+	 *             false for the right corner. Uses {@link FieldPose#get(boolean)}
+	 *             to flip across the field width.
+	 */
+	private Command cornerHideAndShoot(boolean left) {
 		return sequence(
-				apfDefaultsFacing(() -> {
-					boolean red = DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red;
-					return red ? CORNER_HIDE : CORNER_HIDE_NEAR_BALLS;
-				}, HUB_CENTER, 180),
-				shoot());
-	}
-
-	private Command rightCornerHideAndShoot() {
-		return sequence(
-				apfDefaultsFacing(() -> {
-					boolean red = DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red;
-					return red ? CORNER_HIDE_NEAR_BALLS : CORNER_HIDE;
-				}, HUB_CENTER, 180),
+				apfDefaultsFacing(() -> CORNER_HIDE.get(left), HUB_CENTER, 180),
 				shoot());
 	}
 
@@ -142,7 +136,7 @@ public final class Autos {
 				shoot());
 	}
 
-	private Command climbAuto(Pose2d climbPose, Pose2d engagePose) {
+	private Command climbAuto(FieldPose climbPose, FieldPose engagePose) {
 		return sequence(
 				apfDefaults(climbPose),
 				climber.climbBottomCommand(),
@@ -153,28 +147,37 @@ public final class Autos {
 
 	// ===== APF Drive Helpers =====
 
-	/** Drive to pose with default speed, ends when within default tolerances. */
-	private Command apfDefaults(Pose2d bluePose) {
-		return repulsor.apfDrive(() -> resolveAlliance(bluePose),
-				Repulsor.DEFAULT_POS_TOLERANCE, Repulsor.DEFAULT_ANG_TOLERANCE);
+	/** Drive to a {@link FieldPose} with default speed, ends when within default tolerances. */
+	private Command apfDefaults(FieldPose pose) {
+		return repulsor.apfDrive(pose, Repulsor.DEFAULT_POS_TOLERANCE, Repulsor.DEFAULT_ANG_TOLERANCE);
 	}
 
-	/** Drive to pose with default speed, never ends. */
-	private Command apfForever(Pose2d bluePose) {
-		return repulsor.apfDrive(() -> resolveAlliance(bluePose));
+	/** Drive to a raw pose (already alliance-resolved), ends when within default tolerances. */
+	private Command apfDefaults(Pose2d resolvedPose) {
+		return repulsor.apfDrive(() -> resolvedPose, Repulsor.DEFAULT_POS_TOLERANCE, Repulsor.DEFAULT_ANG_TOLERANCE);
 	}
 
-	/** Drive to pose slowly (precision), ends when within default tolerances. */
-	private Command apfSlow(Pose2d bluePose) {
-		return repulsor.apfDrive(() -> resolveAlliance(bluePose), () -> SLOW_VELOCITY, () -> SLOW_DECEL,
+	/** Drive to a {@link FieldPose} with default speed, never ends. */
+	private Command apfForever(FieldPose pose) {
+		return repulsor.apfDrive(pose);
+	}
+
+	/** Drive to a {@link FieldPose} slowly (precision), ends when within default tolerances. */
+	private Command apfSlow(FieldPose pose) {
+		return repulsor.apfDrive(pose, () -> SLOW_VELOCITY, () -> SLOW_DECEL,
 				() -> Repulsor.DEFAULT_POS_TOLERANCE, () -> Repulsor.DEFAULT_ANG_TOLERANCE);
 	}
 
-	/** Drive to pose while facing a target, ends when within default tolerances. */
-	private Command apfDefaultsFacing(Supplier<Pose2d> bluePoseSupplier, Translation2d blueAimTarget,
+	/** Drive to a pose while facing a target, ends when within default tolerances. */
+	private Command apfDefaultsFacing(Supplier<Pose2d> poseSupplier, FieldTranslation aimTarget,
 			double rotationOffsetDeg) {
-		return repulsor.apfDrive(() -> computeFacingPose(bluePoseSupplier.get(), blueAimTarget, rotationOffsetDeg),
-				Repulsor.DEFAULT_POS_TOLERANCE, Repulsor.DEFAULT_ANG_TOLERANCE);
+		return repulsor.apfDrive(() -> {
+			Pose2d pose = poseSupplier.get();
+			Translation2d target = aimTarget.get();
+			Rotation2d towardTarget = target.minus(pose.getTranslation()).getAngle();
+			Rotation2d facing = towardTarget.rotateBy(Rotation2d.fromDegrees(rotationOffsetDeg));
+			return new Pose2d(pose.getTranslation(), facing);
+		}, Repulsor.DEFAULT_POS_TOLERANCE, Repulsor.DEFAULT_ANG_TOLERANCE);
 	}
 
 	// ===== Subsystem Helpers =====
@@ -201,33 +204,12 @@ public final class Autos {
 		return new Pose2d(fieldCenterX + COLLECT_X_OFFSET, collectY, Rotation2d.fromDegrees(collectDeg));
 	}
 
-	private static Pose2d resolveAlliance(Pose2d bluePose) {
-		Alliance alliance = DriverStation.getAlliance().orElse(Alliance.Blue);
-		return alliance == Alliance.Red ? SetpointUtil.flipToRed(bluePose) : bluePose;
-	}
-
-	private static Pose2d computeFacingPose(Pose2d bluePose, Translation2d blueAimTarget, double rotationOffsetDeg) {
-		Alliance alliance = DriverStation.getAlliance().orElse(Alliance.Blue);
-		Pose2d flipped = alliance == Alliance.Red ? SetpointUtil.flipToRed(bluePose) : bluePose;
-		Translation2d target = alliance == Alliance.Red ? SetpointUtil.flipToRed(blueAimTarget) : blueAimTarget;
-		Rotation2d towardTarget = target.minus(flipped.getTranslation()).getAngle();
-		Rotation2d facing = towardTarget.rotateBy(Rotation2d.fromDegrees(rotationOffsetDeg));
-		return new Pose2d(flipped.getTranslation(), facing);
-	}
-
-	private static Pose2d hubPose(double angleDeg) {
-		Rotation2d angle = Rotation2d.fromDegrees(angleDeg);
-		double standoff = HUB_RADIUS + Constants.DrivebaseConstants.ROBOT_HALF_LENGTH;
-		Translation2d pos = HUB_CENTER.minus(new Translation2d(standoff, angle));
-		Rotation2d faceHub = HUB_CENTER.minus(pos).getAngle();
-		return new Pose2d(pos, faceHub);
-	}
-
 	private static Pose2d hubPoseBack(double angleDeg, double extraStandoffM) {
+		Translation2d hubCenter = _Rebuilt2026.hubAimpointBlue();
 		Rotation2d angle = Rotation2d.fromDegrees(angleDeg);
 		double standoff = HUB_RADIUS + Constants.DrivebaseConstants.ROBOT_HALF_LENGTH + extraStandoffM;
-		Translation2d pos = HUB_CENTER.minus(new Translation2d(standoff, angle));
-		Rotation2d awayFromHub = HUB_CENTER.minus(pos).getAngle().rotateBy(Rotation2d.k180deg);
+		Translation2d pos = hubCenter.minus(new Translation2d(standoff, angle));
+		Rotation2d awayFromHub = hubCenter.minus(pos).getAngle().rotateBy(Rotation2d.k180deg);
 		return new Pose2d(pos, awayFromHub);
 	}
 }

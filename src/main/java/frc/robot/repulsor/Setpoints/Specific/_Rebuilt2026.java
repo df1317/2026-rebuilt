@@ -30,7 +30,7 @@ import frc.robot.repulsor.Setpoints.SetpointType;
 
 import java.util.Optional;
 
-import static frc.robot.repulsor.RepulsorConstants.aprilTagLayout;
+import frc.robot.util.FieldFlip;
 
 public class _Rebuilt2026 {
 	public static final double HUB_FACE_TO_AIMPOINT_METERS = 0.60;
@@ -99,7 +99,7 @@ public class _Rebuilt2026 {
 	}
 
 	private static Translation2d hubAimpointFromAnchorTagBlue(int anchorTagId) {
-		Optional<Pose3d> pose3d = aprilTagLayout.getTagPose(anchorTagId);
+		Optional<Pose3d> pose3d = FieldFlip.aprilTagLayout().getTagPose(anchorTagId);
 		if (pose3d.isEmpty()) {
 			return new Translation2d(RepulsorConstants.FIELD_LENGTH / 2.0, RepulsorConstants.FIELD_WIDTH / 2.0);
 		}
@@ -136,7 +136,7 @@ public class _Rebuilt2026 {
 
 		@Override
 		public Pose2d bluePose(SetpointContext ctx) {
-			Optional<Pose3d> pose3d = aprilTagLayout.getTagPose(tagId);
+			Optional<Pose3d> pose3d = FieldFlip.aprilTagLayout().getTagPose(tagId);
 			if (pose3d.isEmpty())
 				return Pose2d.kZero;
 
