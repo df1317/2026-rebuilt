@@ -20,9 +20,16 @@ import frc.robot.util.TunableTable;
 import java.util.function.DoubleSupplier;
 
 import static edu.wpi.first.units.Units.RPM;
-import static frc.robot.Constants.IntakeConstants.*;
 
 public class RollerSubsystem extends SubsystemBase {
+
+	// ==================== Hardware Config ====================
+	private static final int MOTOR_ID = 30;
+	private static final int CURRENT_LIMIT = 40;
+	private static final boolean INVERTED = true;
+	private static final double SPEED_SCALE_MAX_RPM = 3500;
+	private static final double SPEED_SCALE_MAX_ROBOT_MPS = 3.0;
+	static final AngularVelocity VELOCITY_TOLERANCE = RPM.of(100);
 
 	// ==================== State Enum ====================
 
@@ -48,12 +55,12 @@ public class RollerSubsystem extends SubsystemBase {
 	private DoubleSupplier robotSpeedSupplier = () -> 0.0;
 
 	public RollerSubsystem() {
-		rollerMotor = new SparkFlex(ROLLER_MOTOR_ID, MotorType.kBrushless);
+		rollerMotor = new SparkFlex(MOTOR_ID, MotorType.kBrushless);
 		rollerController = rollerMotor.getClosedLoopController();
 		rollerEncoder = rollerMotor.getEncoder();
 		configureRollerMotor();
 
-		tunables.pidSpark("Motor", rollerMotor, ROLLER_KP, ROLLER_KI, ROLLER_KD, ROLLER_KV);
+		tunables.pidSpark("Motor", rollerMotor, 2E-4, 1.3E-4, 0.0, 1.5E-4);
 
 		// Enum warmup
 		State.INTAKE.rpm.get();
@@ -61,10 +68,10 @@ public class RollerSubsystem extends SubsystemBase {
 
 	private void configureRollerMotor() {
 		SparkMaxConfig config = new SparkMaxConfig();
-		config.idleMode(IdleMode.kCoast).smartCurrentLimit(ROLLER_CURRENT_LIMIT)
-				.inverted(ROLLER_INVERTED);
-		config.closedLoop.pid(ROLLER_KP, ROLLER_KI, ROLLER_KD).iZone(ROLLER_I_ZONE);
-		config.closedLoop.feedForward.kV(ROLLER_KV);
+		config.idleMode(IdleMode.kCoast).smartCurrentLimit(CURRENT_LIMIT)
+				.inverted(INVERTED);
+		config.closedLoop.pid(2E-4, 1.3E-4, 0.0).iZone(1E-3);
+		config.closedLoop.feedForward.kV(1.5E-4);
 		rollerMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
 	}
 
@@ -84,14 +91,14 @@ public class RollerSubsystem extends SubsystemBase {
 	}
 
 	public AngularVelocity getSpeedScaledRollerVelocity() {
-		double t = MathUtil.clamp(robotSpeedSupplier.getAsDouble() / ROLLER_SPEED_SCALE_MAX_ROBOT_MPS, 0.0, 1.0);
-		double rpm = MathUtil.interpolate(State.INTAKE.rpm.get(), ROLLER_SPEED_SCALE_MAX_RPM, t);
+		double t = MathUtil.clamp(robotSpeedSupplier.getAsDouble() / SPEED_SCALE_MAX_ROBOT_MPS, 0.0, 1.0);
+		double rpm = MathUtil.interpolate(State.INTAKE.rpm.get(), SPEED_SCALE_MAX_RPM, t);
 		return RPM.of(rpm);
 	}
 
 	public boolean isRollerAtSpeed() {
 		return Math.abs(rollerEncoder.getVelocity()
-				- targetRollerVelocity.in(RPM)) < ROLLER_VELOCITY_TOLERANCE.in(RPM);
+				- targetRollerVelocity.in(RPM)) < VELOCITY_TOLERANCE.in(RPM);
 	}
 
 	public void stopRoller() {

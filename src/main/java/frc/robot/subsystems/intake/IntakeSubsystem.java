@@ -26,13 +26,19 @@ import frc.robot.util.TunableDouble;
 import frc.robot.util.TunableTable;
 
 import static edu.wpi.first.units.Units.Degrees;
-import static frc.robot.Constants.IntakeConstants.*;
 
 /**
  * Intake pivot subsystem. The roller is a separate {@link RollerSubsystem} so they can run commands independently (e.g.
  * roller keeps spinning while the pivot retracts).
  */
 public class IntakeSubsystem extends SubsystemBase {
+
+	// ==================== Hardware Config ====================
+	private static final int PIVOT_MOTOR_ID = 25;
+	private static final int PIVOT_CURRENT_LIMIT = 35;
+	private static final boolean PIVOT_INVERTED = false;
+	private static final double PIVOT_GEAR_RATIO = (48.0 * 22.0) / 14.0;
+	private static final Angle PIVOT_ANGLE_TOLERANCE = Degrees.of(8);
 
 	// ==================== Hardware ====================
 	final SparkMax pivotMotor;
@@ -44,27 +50,26 @@ public class IntakeSubsystem extends SubsystemBase {
 	// ==================== Tunables ====================
 	private static final TunableTable tunables = new TunableTable("Intake");
 	private static final TunableTable pivotTunables = tunables.getNested("Pivot");
-	private final TunableDouble testPivotDeg = pivotTunables.value("Degrees", PIVOT_EXTENDED_ANGLE.in(Degrees), Degrees);
-	private final TunableDouble retractDelta = pivotTunables.value("RetractDelta", PIVOT_RETRACTED_DELTA.in(Degrees),
-			Degrees);
-	private final TunableDouble fastVelocity = pivotTunables.value("FastVelDegPerS", PIVOT_MAX_VELOCITY_DEG_PER_S);
-	private final TunableDouble fastAccel = pivotTunables.value("FastAccelDegPerS2", PIVOT_MAX_ACCEL_DEG_PER_S2);
-	private final TunableDouble slowVelocity = pivotTunables.value("SlowVelDegPerS", PIVOT_EXTEND_MAX_VELOCITY_DEG_PER_S);
-	private final TunableDouble slowAccel = pivotTunables.value("SlowAccelDegPerS2", PIVOT_EXTEND_MAX_ACCEL_DEG_PER_S2);
+	private final TunableDouble testPivotDeg = pivotTunables.value("Degrees", -10.0, Degrees);
+	private final TunableDouble retractDelta = pivotTunables.value("RetractDelta", 90.0, Degrees);
+	private final TunableDouble fastVelocity = pivotTunables.value("FastVelDegPerS", 240.0);
+	private final TunableDouble fastAccel = pivotTunables.value("FastAccelDegPerS2", 240.0);
+	private final TunableDouble slowVelocity = pivotTunables.value("SlowVelDegPerS", 60.0);
+	private final TunableDouble slowAccel = pivotTunables.value("SlowAccelDegPerS2", 180.0);
 	private final TunableDouble kickDurationS = pivotTunables.value("KickDurationS", 0.5);
-	private final TunableDouble homingOffset = pivotTunables.value("HomingOffsetDeg", PIVOT_HOMING_OFFSET_DEG);
+	private final TunableDouble homingOffset = pivotTunables.value("HomingOffsetDeg", -20.0);
 
 	// ==================== Telemetry ====================
 	private final IntakeTelemetry telemetry;
 
 	// ==================== Control State ====================
 	private final ProfiledPIDController pivotProfiler = new ProfiledPIDController(0, 0, 0,
-			new TrapezoidProfile.Constraints(PIVOT_MAX_VELOCITY_DEG_PER_S, PIVOT_MAX_ACCEL_DEG_PER_S2));
+			new TrapezoidProfile.Constraints(240.0, 240.0));
 	private final RollerSubsystem roller;
 	boolean homed = false;
 	private boolean wantToExtend = false;
-	private Angle extendedPivotAngle = PIVOT_EXTENDED_ANGLE;
-	Angle targetPivotAngle = extendedPivotAngle.plus(PIVOT_RETRACTED_DELTA);
+	private Angle extendedPivotAngle = Degrees.of(-10);
+	Angle targetPivotAngle = extendedPivotAngle.plus(Degrees.of(90));
 
 	public IntakeSubsystem(RollerSubsystem roller) {
 		this.roller = roller;
@@ -74,11 +79,11 @@ public class IntakeSubsystem extends SubsystemBase {
 
 		configurePivotMotor();
 
-		atPositionDebouncer = new Debouncer(AT_POSITION_DEBOUNCE_TIME, DebounceType.kRising);
+		atPositionDebouncer = new Debouncer(0.1, DebounceType.kRising);
 
 		telemetry = new IntakeTelemetry(this, roller);
 
-		tunables.pidSpark("Pivot", pivotMotor, PIVOT_KP, PIVOT_KI, PIVOT_KD, 0.0);
+		tunables.pidSpark("Pivot", pivotMotor, 0.05, 0.0, 0.0, 0.0);
 
 		double initialAngle = pivotEncoder.getPosition();
 		pivotProfiler.reset(initialAngle);
@@ -91,7 +96,7 @@ public class IntakeSubsystem extends SubsystemBase {
 				.inverted(PIVOT_INVERTED);
 		config.encoder
 				.positionConversionFactor(360.0 / PIVOT_GEAR_RATIO);
-		config.closedLoop.pid(PIVOT_KP, PIVOT_KI, PIVOT_KD)
+		config.closedLoop.pid(0.05, 0.0, 0.0)
 				.allowedClosedLoopError(PIVOT_ANGLE_TOLERANCE.in(Degrees), ClosedLoopSlot.kSlot0);
 
 		pivotMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);

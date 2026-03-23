@@ -20,12 +20,18 @@ import frc.robot.util.TunableTable;
 import java.util.function.Supplier;
 
 import static edu.wpi.first.units.Units.RPM;
-import static frc.robot.Constants.HopperConstants.*;
 
 /**
  * Hopper subsystem using enum-as-config state pattern.
  */
 public class HopperSubsystem extends SubsystemBase {
+
+	// ==================== Hardware Config ====================
+	private static final int MOTOR_ID = 26;
+	private static final int CURRENT_LIMIT = 20;
+	private static final boolean INVERTED = true;
+	private static final double GEAR_RATIO = 24.0;
+	static final AngularVelocity VELOCITY_TOLERANCE = RPM.of(100);
 
 	// ==================== State Enum ====================
 
@@ -46,7 +52,7 @@ public class HopperSubsystem extends SubsystemBase {
 
 	// ==================== Tunables ====================
 	private static final TunableTable tunables = new TunableTable("Hopper");
-	private final TunableDouble testHopperRPM = tunables.value("RPM", FEED_SPEED.in(RPM), RPM);
+	private final TunableDouble testHopperRPM = tunables.value("RPM", 2000.0, RPM);
 
 	// ==================== Telemetry ====================
 	private final HopperTelemetry telemetry;
@@ -55,13 +61,13 @@ public class HopperSubsystem extends SubsystemBase {
 	AngularVelocity targetHopperVelocity = RPM.of(0);
 
 	public HopperSubsystem() {
-		hopperMotor = new SparkMax(HOPPER_MOTOR_ID, MotorType.kBrushless);
+		hopperMotor = new SparkMax(MOTOR_ID, MotorType.kBrushless);
 		hopperController = hopperMotor.getClosedLoopController();
 		hopperEncoder = hopperMotor.getEncoder();
 
 		configureHopperMotor();
 
-		tunables.pidSpark("Motor", hopperMotor, HOPPER_KP, HOPPER_KI, HOPPER_KD, HOPPER_KV);
+		tunables.pidSpark("Motor", hopperMotor, 2E-4, 1E-5, 0.0, 1.8E-4);
 
 		telemetry = new HopperTelemetry(this);
 
@@ -71,12 +77,12 @@ public class HopperSubsystem extends SubsystemBase {
 
 	private void configureHopperMotor() {
 		SparkMaxConfig config = new SparkMaxConfig();
-		config.idleMode(IdleMode.kCoast).smartCurrentLimit(HOPPER_CURRENT_LIMIT)
+		config.idleMode(IdleMode.kCoast).smartCurrentLimit(CURRENT_LIMIT)
 				.inverted(INVERTED);
 		config.encoder
 				.positionConversionFactor(360.0 / GEAR_RATIO);
-		config.closedLoop.pid(HOPPER_KP, HOPPER_KI, HOPPER_KD).iZone(HOPPER_I_ZONE);
-		config.closedLoop.feedForward.kV(HOPPER_KV);
+		config.closedLoop.pid(2E-4, 1E-5, 0.0).iZone(1E-3);
+		config.closedLoop.feedForward.kV(1.8E-4);
 
 		hopperMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
 	}
@@ -90,7 +96,7 @@ public class HopperSubsystem extends SubsystemBase {
 
 	public boolean isHopperAtSpeed() {
 		return Math.abs(hopperEncoder.getVelocity()
-				- targetHopperVelocity.in(RPM)) < HOPPER_VELOCITY_TOLERANCE.in(RPM);
+				- targetHopperVelocity.in(RPM)) < VELOCITY_TOLERANCE.in(RPM);
 	}
 
 	// ==================== Control Methods ====================

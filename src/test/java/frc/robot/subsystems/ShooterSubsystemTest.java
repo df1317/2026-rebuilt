@@ -4,7 +4,6 @@ import static edu.wpi.first.units.Units.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 import edu.wpi.first.units.measure.AngularVelocity;
-import frc.robot.Constants.ShooterConstants;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -20,6 +19,8 @@ class ShooterSubsystemTest {
 	private static final double HOOD_A = 0.05706;
 	private static final double HOOD_B = -0.17218;
 	private static final double HOOD_C = 0.11705;
+
+	private static final AngularVelocity VELOCITY_TOLERANCE = RPM.of(100);
 
 	@Test
 	void testRPMCurveMatchesCalibrationPoints() {
@@ -61,13 +62,12 @@ class ShooterSubsystemTest {
 
 	@Test
 	void testVelocityToleranceConstant() {
-		AngularVelocity tolerance = ShooterConstants.VELOCITY_TOLERANCE;
-		assertEquals(100.0, tolerance.in(RPM), 0.001, "Velocity tolerance should be 100 RPM");
+		assertEquals(100.0, VELOCITY_TOLERANCE.in(RPM), 0.001, "Velocity tolerance should be 100 RPM");
 	}
 
 	@Test
 	void testAtSpeedLogic() {
-		double tolerance = ShooterConstants.VELOCITY_TOLERANCE.in(RPM);
+		double tolerance = VELOCITY_TOLERANCE.in(RPM);
 		assertTrue(isWithinTolerance(50, tolerance));
 		assertTrue(isWithinTolerance(99, tolerance));
 		assertFalse(isWithinTolerance(100, tolerance));
@@ -99,7 +99,7 @@ class ShooterSubsystemTest {
 	}
 
 	private boolean isAtSpeedWithTarget(double targetRPM, double errorRPM) {
-		double tolerance = ShooterConstants.VELOCITY_TOLERANCE.in(RPM);
+		double tolerance = VELOCITY_TOLERANCE.in(RPM);
 		return errorRPM < tolerance && targetRPM > 0;
 	}
 }

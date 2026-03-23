@@ -20,9 +20,18 @@ import frc.robot.util.TunableTable;
 import java.util.function.DoubleSupplier;
 
 import static edu.wpi.first.units.Units.*;
-import static frc.robot.Constants.ClimberConstants.*;
 
 public class ClimberSubsystem extends SubsystemBase {
+
+	// ==================== Hardware Config ====================
+	private static final int MOTOR_LEFT_ID = 29;
+	private static final boolean INVERTED = true;
+	private static final int CURRENT_LIMIT = 20;
+	private static final double ROTATIONS_PER_METER = 42.4;
+	private static final double POSITION_TOLERANCE_M = 0.02;
+	private static final double JOG_SPEED_METERS_PER_SECOND = 0.3;
+	private static final double JOG_SOFT_LIMIT_ROTATIONS = 9999.0;
+	private static final double GO_TO_HEIGHT_TIMEOUT_SECONDS = 5.0;
 
 	// ==================== Position Enum ====================
 
@@ -37,7 +46,6 @@ public class ClimberSubsystem extends SubsystemBase {
 	}
 
 	// ==================== Hardware ====================
-	private static final double GO_TO_HEIGHT_TIMEOUT_SECONDS = 5.0;
 	final TalonFX motorLeft;
 	private final TrapezoidProfile profile;
 	private final ElevatorFeedforward feedforward;
@@ -45,7 +53,7 @@ public class ClimberSubsystem extends SubsystemBase {
 
 	// ==================== Tunables ====================
 	private static final TunableTable tunables = new TunableTable("Climber");
-	private final TunableDouble jogCurrentLimit = tunables.value("JogCurrentLimit", JOG_CURRENT_LIMIT);
+	private final TunableDouble jogCurrentLimit = tunables.value("JogCurrentLimit", 1.0);
 	private final ClimberTelemetry telemetry;
 
 	// ==================== Profile State ====================
@@ -58,12 +66,12 @@ public class ClimberSubsystem extends SubsystemBase {
 		motorLeft = new TalonFX(MOTOR_LEFT_ID);
 
 		TalonFXConfiguration configs = new TalonFXConfiguration();
-		configs.Slot0.kP = KP;
-		configs.Slot0.kI = KI;
-		configs.Slot0.kD = KD;
-		configs.Slot0.kV = KV;
-		configs.Slot0.kG = KG;
-		configs.Slot0.kS = KS;
+		configs.Slot0.kP = 0.0;
+		configs.Slot0.kI = 0.0;
+		configs.Slot0.kD = 0.0;
+		configs.Slot0.kV = 4.7;
+		configs.Slot0.kG = 0.0;
+		configs.Slot0.kS = 0.31;
 
 		configs.CurrentLimits.SupplyCurrentLimit = CURRENT_LIMIT;
 		configs.CurrentLimits.SupplyCurrentLimitEnable = true;
@@ -73,13 +81,12 @@ public class ClimberSubsystem extends SubsystemBase {
 
 		motorLeft.getConfigurator().apply(configs);
 
-		profile = new TrapezoidProfile(new TrapezoidProfile.Constraints(MAX_VELOCITY.in(MetersPerSecond),
-				MAX_ACCELERATION.in(MetersPerSecondPerSecond)));
-		feedforward = new ElevatorFeedforward(KS, KG, KV);
+		profile = new TrapezoidProfile(new TrapezoidProfile.Constraints(1.5, 3.0));
+		feedforward = new ElevatorFeedforward(0.31, 0.0, 4.7);
 
 		lastUpdateTimestamp = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
 
-		tunables.pidTalonFX("Motor", motorLeft, KP, KI, KD, KV, KS, KG);
+		tunables.pidTalonFX("Motor", motorLeft, 0.0, 0.0, 0.0, 4.7, 0.31, 0.0);
 
 		telemetry = new ClimberTelemetry(this);
 
@@ -126,7 +133,7 @@ public class ClimberSubsystem extends SubsystemBase {
 	}
 
 	public boolean isAtGoal() {
-		return MathUtil.isNear(goalState.position, getHeightMeters(), POSITION_TOLERANCE.in(Meters));
+		return MathUtil.isNear(goalState.position, getHeightMeters(), POSITION_TOLERANCE_M);
 	}
 
 	boolean isAtTop() {
