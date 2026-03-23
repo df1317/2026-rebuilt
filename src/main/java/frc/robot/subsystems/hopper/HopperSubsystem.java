@@ -13,6 +13,7 @@ import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.util.CommandBuilder;
 import frc.robot.util.TunableDouble;
 import frc.robot.util.TunableTable;
 
@@ -22,22 +23,35 @@ import static edu.wpi.first.units.Units.RPM;
 import static frc.robot.Constants.HopperConstants.*;
 
 /**
- * Hopper subsystem
+ * Hopper subsystem using enum-as-config state pattern.
  */
 public class HopperSubsystem extends SubsystemBase {
 
-	// ==================== Hardware (package-private for telemetry/visualization)
-	// ====================
+	// ==================== State Enum ====================
+
+	private enum State {
+		FEED(2000.0), REVERSE(-2000.0);
+
+		public final TunableDouble rpm;
+
+		State(double rpm) {
+			this.rpm = tunables.value("speeds/" + name(), rpm, RPM);
+		}
+	}
+
+	// ==================== Hardware (package-private for telemetry) ====================
 	final SparkMax hopperMotor;
 	final RelativeEncoder hopperEncoder;
 	private final SparkClosedLoopController hopperController;
-	// ==================== Visualization & Telemetry ====================
-	private final HopperTelemetry telemetry;
+
 	// ==================== Tunables ====================
 	private static final TunableTable tunables = new TunableTable("Hopper");
 	private final TunableDouble testHopperRPM = tunables.value("RPM", FEED_SPEED.in(RPM), RPM);
-	// ==================== Control State (package-private for telemetry/visualization)
-	// ====================
+
+	// ==================== Telemetry ====================
+	private final HopperTelemetry telemetry;
+
+	// ==================== Control State (package-private for telemetry) ====================
 	AngularVelocity targetHopperVelocity = RPM.of(0);
 
 	public HopperSubsystem() {
@@ -50,6 +64,9 @@ public class HopperSubsystem extends SubsystemBase {
 		tunables.pidSpark("Motor", hopperMotor, HOPPER_KP, HOPPER_KI, HOPPER_KD, HOPPER_KV);
 
 		telemetry = new HopperTelemetry(this);
+
+		// Enum warmup — forces lazy static enum initialization
+		State.FEED.rpm.get();
 	}
 
 	private void configureHopperMotor() {
@@ -57,7 +74,6 @@ public class HopperSubsystem extends SubsystemBase {
 		config.idleMode(IdleMode.kCoast).smartCurrentLimit(HOPPER_CURRENT_LIMIT)
 				.inverted(INVERTED);
 		config.encoder
-				// Converts encoder rotations to degrees: (360 deg/rot) / gear_ratio
 				.positionConversionFactor(360.0 / GEAR_RATIO);
 		config.closedLoop.pid(HOPPER_KP, HOPPER_KI, HOPPER_KD).iZone(HOPPER_I_ZONE);
 		config.closedLoop.feedForward.kV(HOPPER_KV);
@@ -71,6 +87,7 @@ public class HopperSubsystem extends SubsystemBase {
 	}
 
 	// ==================== State Query Methods ====================
+
 	public boolean isHopperAtSpeed() {
 		return Math.abs(hopperEncoder.getVelocity()
 				- targetHopperVelocity.in(RPM)) < HOPPER_VELOCITY_TOLERANCE.in(RPM);
@@ -89,23 +106,25 @@ public class HopperSubsystem extends SubsystemBase {
 
 	// ==================== Command Factory Methods ====================
 
-	/** Runs the hopper at feed speed while held, stops on release. */
+	/** Runs the hopper at the given state's speed while held, stops on release. */
+	private Command runState(State state) {
+		return new CommandBuilder("Hopper." + state.name().toLowerCase(), this)
+				.onExecute(() -> setHopperVelocity(RPM.of(state.rpm.get())))
+				.onEnd(this::stopHopper);
+	}
+
 	public Command feedCommand() {
-		return Commands.run(() -> setHopperVelocity(FEED_SPEED), this)
-				.finallyDo(this::stopHopper)
-				.withName("Hopper Feed");
+		return runState(State.FEED);
 	}
 
 	public Command reverseCommand() {
-		return Commands.run(() -> setHopperVelocity(REVERSE_SPEED), this)
-				.finallyDo(this::stopHopper)
-				.withName("Hopper Reverse");
+		return runState(State.REVERSE);
 	}
 
 	public Command testHopperCommand() {
-		return Commands.run(() -> {
-			setHopperVelocity(RPM.of(testHopperRPM.get()));
-		}, this).finallyDo(this::stopHopper).withName("Test Hopper");
+		return new CommandBuilder("Hopper.test", this)
+				.onExecute(() -> setHopperVelocity(RPM.of(testHopperRPM.get())))
+				.onEnd(this::stopHopper);
 	}
 
 	public Command setHopperVelocityCommand(Supplier<AngularVelocity> velocity) {

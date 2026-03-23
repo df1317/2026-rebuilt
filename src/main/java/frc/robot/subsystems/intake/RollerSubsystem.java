@@ -12,8 +12,8 @@ import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.util.CommandBuilder;
 import frc.robot.util.TunableDouble;
 import frc.robot.util.TunableTable;
 
@@ -24,13 +24,26 @@ import static frc.robot.Constants.IntakeConstants.*;
 
 public class RollerSubsystem extends SubsystemBase {
 
+	// ==================== State Enum ====================
+
+	private enum State {
+		INTAKE(2500.0), EJECT(-1500.0);
+
+		public final TunableDouble rpm;
+
+		State(double rpm) {
+			this.rpm = tunables.value("speeds/" + name(), rpm, RPM);
+		}
+	}
+
+	// ==================== Hardware ====================
 	final SparkFlex rollerMotor;
 	final RelativeEncoder rollerEncoder;
 	private final SparkClosedLoopController rollerController;
+
 	// ==================== Tunables ====================
-	private static final TunableTable tunables = new TunableTable("Intake");
-	private final TunableDouble testRollerRPM = tunables.getNested("Roller").value("RPM",
-			ROLLER_INTAKE_VELOCITY.in(RPM), RPM);
+	private static final TunableTable tunables = new TunableTable("Intake/Roller");
+	// ==================== Control State ====================
 	AngularVelocity targetRollerVelocity = RPM.of(0);
 	private DoubleSupplier robotSpeedSupplier = () -> 0.0;
 
@@ -40,7 +53,10 @@ public class RollerSubsystem extends SubsystemBase {
 		rollerEncoder = rollerMotor.getEncoder();
 		configureRollerMotor();
 
-		tunables.pidSpark("Roller", rollerMotor, ROLLER_KP, ROLLER_KI, ROLLER_KD, ROLLER_KV);
+		tunables.pidSpark("Motor", rollerMotor, ROLLER_KP, ROLLER_KI, ROLLER_KD, ROLLER_KV);
+
+		// Enum warmup
+		State.INTAKE.rpm.get();
 	}
 
 	private void configureRollerMotor() {
@@ -56,6 +72,8 @@ public class RollerSubsystem extends SubsystemBase {
 	public void periodic() {
 	}
 
+	// ==================== Control Methods ====================
+
 	public void setRollerVelocity(AngularVelocity velocity) {
 		targetRollerVelocity = velocity;
 		rollerController.setSetpoint(velocity.in(RPM), ControlType.kVelocity);
@@ -67,7 +85,7 @@ public class RollerSubsystem extends SubsystemBase {
 
 	public AngularVelocity getSpeedScaledRollerVelocity() {
 		double t = MathUtil.clamp(robotSpeedSupplier.getAsDouble() / ROLLER_SPEED_SCALE_MAX_ROBOT_MPS, 0.0, 1.0);
-		double rpm = MathUtil.interpolate(ROLLER_INTAKE_VELOCITY.in(RPM), ROLLER_SPEED_SCALE_MAX_RPM, t);
+		double rpm = MathUtil.interpolate(State.INTAKE.rpm.get(), ROLLER_SPEED_SCALE_MAX_RPM, t);
 		return RPM.of(rpm);
 	}
 
@@ -82,29 +100,25 @@ public class RollerSubsystem extends SubsystemBase {
 
 	// ==================== Command Factory Methods ====================
 
+	private Command runState(State state) {
+		return new CommandBuilder("Roller." + state.name().toLowerCase(), this)
+				.onExecute(() -> setRollerVelocity(RPM.of(state.rpm.get())))
+				.onEnd(this::stopRoller);
+	}
+
 	public Command runRollerCommand() {
-		return run(() -> setRollerVelocity(ROLLER_INTAKE_VELOCITY))
-				.finallyDo(this::stopRoller).withName("Run Roller");
+		return runState(State.INTAKE);
 	}
 
 	public Command ejectCommand() {
-		return run(() -> setRollerVelocity(ROLLER_EJECT_VELOCITY))
-				.finallyDo(this::stopRoller).withName("Eject Roller");
+		return runState(State.EJECT);
 	}
 
+	/** Intake with speed scaling based on robot velocity. */
 	public Command intakeCommand() {
-		return run(() -> setRollerVelocity(getSpeedScaledRollerVelocity()))
-				.finallyDo(this::stopRoller)
-				.withName("Intake Roller");
+		return new CommandBuilder("Roller.intake", this)
+				.onExecute(() -> setRollerVelocity(getSpeedScaledRollerVelocity()))
+				.onEnd(this::stopRoller);
 	}
 
-	public Command stopRollerCommand() {
-		return runOnce(this::stopRoller).withName("Stop Roller");
-	}
-
-	public Command testRollerCommand() {
-		return Commands.run(() -> setRollerVelocity(RPM.of(testRollerRPM.get())), this)
-				.finallyDo(this::stopRoller)
-				.withName("Test Roller");
-	}
 }

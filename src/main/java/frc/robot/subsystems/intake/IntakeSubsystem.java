@@ -16,9 +16,12 @@ import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.util.CommandBuilder;
+import frc.robot.util.Mutable;
 import frc.robot.util.TunableDouble;
 import frc.robot.util.TunableTable;
 
@@ -31,16 +34,30 @@ import static frc.robot.Constants.IntakeConstants.*;
  */
 public class IntakeSubsystem extends SubsystemBase {
 
+	// ==================== Hardware ====================
 	final SparkMax pivotMotor;
 	final RelativeEncoder pivotEncoder;
 	private final SparkClosedLoopController pivotController;
 	private final Debouncer atPositionDebouncer;
 	private final Debouncer stallDebouncer = new Debouncer(1.5, DebounceType.kBoth);
+
 	// ==================== Tunables ====================
 	private static final TunableTable tunables = new TunableTable("Intake");
-	private final TunableDouble testPivotDeg = tunables.getNested("Pivot").value("Degrees",
-			PIVOT_EXTENDED_ANGLE.in(Degrees), Degrees);
+	private static final TunableTable pivotTunables = tunables.getNested("Pivot");
+	private final TunableDouble testPivotDeg = pivotTunables.value("Degrees", PIVOT_EXTENDED_ANGLE.in(Degrees), Degrees);
+	private final TunableDouble retractDelta = pivotTunables.value("RetractDelta", PIVOT_RETRACTED_DELTA.in(Degrees),
+			Degrees);
+	private final TunableDouble fastVelocity = pivotTunables.value("FastVelDegPerS", PIVOT_MAX_VELOCITY_DEG_PER_S);
+	private final TunableDouble fastAccel = pivotTunables.value("FastAccelDegPerS2", PIVOT_MAX_ACCEL_DEG_PER_S2);
+	private final TunableDouble slowVelocity = pivotTunables.value("SlowVelDegPerS", PIVOT_EXTEND_MAX_VELOCITY_DEG_PER_S);
+	private final TunableDouble slowAccel = pivotTunables.value("SlowAccelDegPerS2", PIVOT_EXTEND_MAX_ACCEL_DEG_PER_S2);
+	private final TunableDouble kickDurationS = pivotTunables.value("KickDurationS", 0.5);
+	private final TunableDouble homingOffset = pivotTunables.value("HomingOffsetDeg", PIVOT_HOMING_OFFSET_DEG);
+
+	// ==================== Telemetry ====================
 	private final IntakeTelemetry telemetry;
+
+	// ==================== Control State ====================
 	private final ProfiledPIDController pivotProfiler = new ProfiledPIDController(0, 0, 0,
 			new TrapezoidProfile.Constraints(PIVOT_MAX_VELOCITY_DEG_PER_S, PIVOT_MAX_ACCEL_DEG_PER_S2));
 	private final RollerSubsystem roller;
@@ -61,7 +78,6 @@ public class IntakeSubsystem extends SubsystemBase {
 
 		telemetry = new IntakeTelemetry(this, roller);
 
-		// Auto-tuning: creates NT tunables and auto-applies PID on change
 		tunables.pidSpark("Pivot", pivotMotor, PIVOT_KP, PIVOT_KI, PIVOT_KD, 0.0);
 
 		double initialAngle = pivotEncoder.getPosition();
@@ -91,7 +107,7 @@ public class IntakeSubsystem extends SubsystemBase {
 			pivotProfiler.reset(pos);
 			setPivotAngle(Degrees.of(pos));
 			double distToExtended = Math.abs(pos - extendedPivotAngle.in(Degrees));
-			double distToRetracted = Math.abs(pos - extendedPivotAngle.plus(PIVOT_RETRACTED_DELTA).in(Degrees));
+			double distToRetracted = Math.abs(pos - retractedAngleDeg());
 			wantToExtend = distToExtended < distToRetracted;
 		}
 		wasEnabled = enabled;
@@ -103,6 +119,20 @@ public class IntakeSubsystem extends SubsystemBase {
 		DogLog.log("Intake/Pivot/ProfiledVelocity", pivotProfiler.getSetpoint().velocity);
 	}
 
+	// ==================== Helpers ====================
+
+	private TrapezoidProfile.Constraints fastConstraints() {
+		return new TrapezoidProfile.Constraints(fastVelocity.get(), fastAccel.get());
+	}
+
+	private TrapezoidProfile.Constraints slowConstraints() {
+		return new TrapezoidProfile.Constraints(slowVelocity.get(), slowAccel.get());
+	}
+
+	private double retractedAngleDeg() {
+		return extendedPivotAngle.in(Degrees) + retractDelta.get();
+	}
+
 	// ==================== State Query Methods ====================
 
 	public boolean isPivotAtPosition() {
@@ -111,19 +141,13 @@ public class IntakeSubsystem extends SubsystemBase {
 		return atPositionDebouncer.calculate(atPositionRaw);
 	}
 
-	public boolean wantsToExtend() {
-		return wantToExtend;
-	}
-
 	public boolean isExtended() {
 		return Math.abs(pivotEncoder.getPosition() - extendedPivotAngle.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
 				.in(Degrees);
 	}
 
 	public boolean isRetracted() {
-		return Math.abs(pivotEncoder.getPosition() - extendedPivotAngle.plus(PIVOT_RETRACTED_DELTA)
-				.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
-						.in(Degrees);
+		return Math.abs(pivotEncoder.getPosition() - retractedAngleDeg()) < PIVOT_ANGLE_TOLERANCE.in(Degrees);
 	}
 
 	// ==================== Control Methods ====================
@@ -133,54 +157,62 @@ public class IntakeSubsystem extends SubsystemBase {
 		pivotProfiler.setGoal(angle.in(Degrees));
 	}
 
-	public void stop() {
-		pivotMotor.stopMotor();
-	}
-
 	// ==================== Command Factory Methods ====================
 
+	/**
+	 * Extends the intake using a two-phase motion profile:
+	 * KICK phase pushes through the panel at full speed, then GENTLE phase
+	 * slows down for a controlled landing.
+	 */
 	public Command extendCommand() {
-		return runOnce(() -> {
-			// Start with aggressive constraints to push through the panel
-			pivotProfiler.setConstraints(new TrapezoidProfile.Constraints(
-					PIVOT_MAX_VELOCITY_DEG_PER_S, PIVOT_MAX_ACCEL_DEG_PER_S2));
-			setPivotAngle(extendedPivotAngle);
-			wantToExtend = true;
-		})
-				// After 0.5s (past the panel), switch to gentle constraints
-				.andThen(Commands.waitSeconds(0.5))
-				.andThen(runOnce(() -> pivotProfiler.setConstraints(new TrapezoidProfile.Constraints(
-						PIVOT_EXTEND_MAX_VELOCITY_DEG_PER_S, PIVOT_EXTEND_MAX_ACCEL_DEG_PER_S2))))
-				.andThen(idle().until(() -> isPivotStalled() || isPivotAtPosition()))
-				.andThen(runOnce(() -> setPivotAngle(Degrees.of(pivotEncoder.getPosition()))))
-				.finallyDo(() -> pivotProfiler.setConstraints(new TrapezoidProfile.Constraints(
-						PIVOT_MAX_VELOCITY_DEG_PER_S, PIVOT_MAX_ACCEL_DEG_PER_S2)))
-				.withName("Intake Extend");
+		enum Phase{KICK,GENTLE}
+		Mutable<Phase> phase = new Mutable<>(Phase.KICK);
+		Timer kickTimer = new Timer();
+
+		return new CommandBuilder("Intake.extend", this)
+				.onInitialize(() -> {
+					phase.value = Phase.KICK;
+					kickTimer.restart();
+					pivotProfiler.setConstraints(fastConstraints());
+					setPivotAngle(extendedPivotAngle);
+					wantToExtend = true;
+				})
+				.onExecute(() -> {
+					if (phase.value == Phase.KICK && kickTimer.hasElapsed(kickDurationS.get())) {
+						pivotProfiler.setConstraints(slowConstraints());
+						phase.value = Phase.GENTLE;
+					}
+				})
+				.isFinished(() -> phase.value == Phase.GENTLE && (isPivotStalled() || isPivotAtPosition()))
+				.onEnd(() -> {
+					setPivotAngle(Degrees.of(pivotEncoder.getPosition()));
+					pivotProfiler.setConstraints(fastConstraints());
+				});
 	}
 
 	public Command retractCommand() {
-		return runOnce(() -> {
-			setPivotAngle(extendedPivotAngle.plus(PIVOT_RETRACTED_DELTA));
-			wantToExtend = false;
-		})
-				.andThen(idle().until(() -> isPivotStalled() || isPivotAtPosition()))
-				.andThen(runOnce(() -> setPivotAngle(Degrees.of(pivotEncoder.getPosition()))))
-				.withName("Intake Retract");
+		return new CommandBuilder("Intake.retract", this)
+				.onInitialize(() -> {
+					setPivotAngle(Degrees.of(retractedAngleDeg()));
+					wantToExtend = false;
+				})
+				.isFinished(() -> isPivotStalled() || isPivotAtPosition())
+				.onEnd(() -> setPivotAngle(Degrees.of(pivotEncoder.getPosition())));
 	}
 
 	public Command stowCommand() {
-		return retractCommand().withName("Intake Stow");
+		return retractCommand().withName("Intake.stow");
 	}
 
 	public Command jogDownCommand() {
-		return run(() -> {
-			pivotMotor.set(-0.1);
-		}).finallyDo(() -> {
-			pivotMotor.stopMotor();
-			double pos = pivotEncoder.getPosition();
-			pivotProfiler.reset(pos);
-			setPivotAngle(Degrees.of(pos));
-		});
+		return new CommandBuilder("Intake.jogDown", this)
+				.onExecute(() -> pivotMotor.set(-0.1))
+				.onEnd(() -> {
+					pivotMotor.stopMotor();
+					double pos = pivotEncoder.getPosition();
+					pivotProfiler.reset(pos);
+					setPivotAngle(Degrees.of(pos));
+				});
 	}
 
 	public Command zeroIntakeCommand() {
@@ -190,50 +222,47 @@ public class IntakeSubsystem extends SubsystemBase {
 			pivotProfiler.reset(currentAngle);
 			setPivotAngle(extendedPivotAngle);
 			homed = true;
-		});
+		}).withName("Intake.zero");
 	}
 
-	/**
-	 * Extends or stows depending on current position.
-	 */
+	/** Extends or stows depending on current position. */
 	public Command stowToggleCommand() {
 		return Commands.either(stowCommand(), extendCommand(), () -> wantToExtend)
-				.withName("Intake Stow Toggle");
+				.withName("Intake.toggle");
 	}
 
 	public Command holdExtendedCommand() {
-		return run(() -> {
-			if (!isRetracted()) {
-				setPivotAngle(extendedPivotAngle);
-			}
-		}).withName("Hold Extended");
+		return new CommandBuilder("Intake.holdExtended", this)
+				.onExecute(() -> {
+					if (!isRetracted()) {
+						setPivotAngle(extendedPivotAngle);
+					}
+				});
 	}
 
-	// ==================== Test Mode ====================
+	// ==================== Homing & Test ====================
 
+	/** Drives toward the hard stop, zeroes on stall. */
 	public Command homeCommand() {
-		return runOnce(() -> {
-			pivotProfiler.setConstraints(new TrapezoidProfile.Constraints(
-					PIVOT_MAX_VELOCITY_DEG_PER_S, PIVOT_MAX_ACCEL_DEG_PER_S2));
-			setPivotAngle(Degrees.of(pivotEncoder.getPosition() + PIVOT_HOMING_OFFSET_DEG));
-		})
-				.andThen(idle().until(this::isPivotStalled).withTimeout(5.0))
-				.finallyDo(() -> {
+		return new CommandBuilder("Intake.home", this)
+				.onInitialize(() -> {
+					pivotProfiler.setConstraints(fastConstraints());
+					setPivotAngle(Degrees.of(pivotEncoder.getPosition() + homingOffset.get()));
+				})
+				.isFinished(this::isPivotStalled)
+				.onEnd(() -> {
 					pivotMotor.stopMotor();
 					pivotEncoder.setPosition(0);
 					pivotProfiler.reset(0);
 					setPivotAngle(Degrees.of(0));
 					homed = true;
-				})
-				.withName("Home Intake");
+				});
 	}
 
 	public Command testPivotCommand() {
-		return Commands.run(() -> {
-			setPivotAngle(Degrees.of(testPivotDeg.get()));
-		}, this)
-				.finallyDo(pivotMotor::stopMotor)
-				.withName("Test Intake Pivot");
+		return new CommandBuilder("Intake.testPivot", this)
+				.onExecute(() -> setPivotAngle(Degrees.of(testPivotDeg.get())))
+				.onEnd(() -> pivotMotor.stopMotor());
 	}
 
 	// ==================== Stall Detection ====================

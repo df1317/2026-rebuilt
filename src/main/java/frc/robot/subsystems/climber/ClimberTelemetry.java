@@ -1,9 +1,7 @@
 package frc.robot.subsystems.climber;
 
 import dev.doglog.DogLog;
-
-import static edu.wpi.first.units.Units.Meters;
-import static frc.robot.Constants.ClimberConstants.*;
+import frc.robot.subsystems.climber.ClimberSubsystem.Position;
 
 /**
  * Handles telemetry logging for the climber subsystem.
@@ -46,14 +44,11 @@ public class ClimberTelemetry {
 
 	private String getNamedPosition(double goalMeters) {
 		double tol = 0.01;
-		if (Math.abs(goalMeters - MIN_HEIGHT.in(Meters)) < tol)
-			return "Bottom";
-		if (Math.abs(goalMeters - MAX_HEIGHT.in(Meters)) < tol)
-			return "Top";
-		if (Math.abs(goalMeters - HANG_HEIGHT.in(Meters)) < tol)
-			return "Hang";
-		if (Math.abs(goalMeters - RELEASE_HEIGHT.in(Meters)) < tol)
-			return "Release";
+		for (Position pos : Position.values()) {
+			if (Math.abs(goalMeters - pos.height.get()) < tol) {
+				return pos.name();
+			}
+		}
 		return "Custom";
 	}
 }
