@@ -16,8 +16,6 @@ public final class Constants {
 
 	public static final double ROBOT_MASS = Units.lbsToKilograms(120.4); // 60lbs * kg per pound
 
-	@Deprecated
-	public static final double LOOP_TIME = 0.13; // s, 20ms + 110ms spark max velocity lag
 	public static final double MAX_SPEED = Units.feetToMeters(14.5);
 	public static final double MAX_ANGULAR_SPEED = Math.toRadians(240.0);
 	public static final double MAX_ACCELERATION = 1.5;
@@ -32,6 +30,7 @@ public final class Constants {
 
 	public static final class DrivebaseConstants {
 		public static final double WHEEL_LOCK_TIME = 10; // seconds
+		public static final double JOYSTICK_DEADBAND = 0.1;
 		public static final double DRIVE_KS = 0.024309;
 		public static final double DRIVE_KV = 2.7435;
 		public static final double DRIVE_KA = 2.0788;
@@ -58,9 +57,5 @@ public final class Constants {
 			public static final double[] SINGLE_TAG = { 4.0, 4.0, 6.0 };
 			public static final double[] MULTI_TAG = { 0.5, 0.5, 4.0 };
 		}
-	}
-
-	public static class OperatorConstants {
-		public static final double DEADBAND = 0.1;
 	}
 }

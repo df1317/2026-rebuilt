@@ -8,7 +8,6 @@ import edu.wpi.first.wpilibj.GenericHID.RumbleType;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Constants.DrivebaseConstants;
-import frc.robot.Constants.OperatorConstants;
 import frc.robot.commands.TeleopZoneAutomation;
 import frc.robot.repulsor.IntakeFootprint;
 import frc.robot.repulsor.Repulsor;
@@ -91,7 +90,7 @@ public class RobotContainer {
 							() -> driverXbox.getLeftX() * -1)
 					.withControllerRotationAxis(() -> driverXbox.getRightX() * -1)
 					.aimWhile(driverXbox.y())
-					.deadband(OperatorConstants.DEADBAND)
+					.deadband(DrivebaseConstants.JOYSTICK_DEADBAND)
 					.scaleTranslation(DrivebaseConstants.TRANSLATION_SCALE).allianceRelativeControl(true);
 
 			autos = new Autos(repulsor, drivebase, teleopAutomation, climber, intake, roller);
