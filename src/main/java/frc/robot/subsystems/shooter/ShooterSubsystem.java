@@ -52,6 +52,43 @@ public class ShooterSubsystem extends SubsystemBase {
 	private static final Angle HOOD_TOLERANCE = Degrees.of(3);
 	private static final AngularVelocity VELOCITY_TOLERANCE = RPM.of(100);
 	private static final double HOOD_STALL_RPM = 2.0;
+	private static final double HOOD_STALL_CURRENT_RATIO = 0.5;
+	private static final double AT_SPEED_DEBOUNCE_S = 0.1;
+	private static final double STALL_DEBOUNCE_S = 0.1;
+	private static final double HOMING_TIMEOUT_S = 2.0;
+
+	// ==================== Flywheel PID ====================
+	private static final double FLYWHEEL_KP = 0.17;
+	private static final double FLYWHEEL_KI = 0.001;
+	private static final double FLYWHEEL_KD = 0.0;
+	private static final double FLYWHEEL_KV = 0.115;
+	private static final double FLYWHEEL_KA = 0.0;
+	private static final double FLYWHEEL_KS = 0.0;
+
+	// ==================== Feeder PID ====================
+	private static final double FEEDER_KP = 0.0002;
+	private static final double FEEDER_KI = 0.0;
+	private static final double FEEDER_KD = 0.0;
+	private static final double FEEDER_KV = 0.000175;
+
+	// ==================== Hood PID ====================
+	private static final double HOOD_KP = 0.013;
+	private static final double HOOD_KI = 0.0;
+	private static final double HOOD_KD = 0.0;
+
+	// ==================== Default Tunable Values ====================
+	private static final double DEFAULT_FEEDER_FEED_RPM = 3000.0;
+	private static final double DEFAULT_HOMING_VOLTAGE = 5.0;
+
+	// ==================== Ball Physics ====================
+	private static final double BALL_SPEED_LOW_M_S = 4.97;
+	private static final double BALL_SPEED_HIGH_M_S = 6.15;
+	private static final double BALL_SPEED_LOW_RPM = 2555.0;
+	private static final double BALL_SPEED_HIGH_RPM = 3250.0;
+
+	// ==================== Distance Bounds ====================
+	private static final double DISTANCE_MIN_M = 0.5;
+	private static final double DISTANCE_MAX_M = 9.0;
 
 	// ==================== Hardware (package-private for telemetry) ====================
 	final TalonFX motor;
@@ -77,8 +114,10 @@ public class ShooterSubsystem extends SubsystemBase {
 	private final TunableDouble testShooterRPM = tunables.value("RPM", 3000.0, RPM);
 	private final TunableDouble testFeederRPM = tunables.getNested("Feeder").value("RPM", 3000.0, RPM);
 	private final TunableDouble testHoodPercent = tunables.getNested("Hood").value("Percent", 0.5);
-	private final TunableDouble feederFeedRPM = tunables.getNested("Feeder").value("FeedRPM", 3000.0, RPM);
-	private final TunableDouble homingVoltage = tunables.getNested("Hood").value("HomingVoltage", 5.0);
+	private final TunableDouble feederFeedRPM = tunables.getNested("Feeder").value("FeedRPM", DEFAULT_FEEDER_FEED_RPM,
+			RPM);
+	private final TunableDouble homingVoltage = tunables.getNested("Hood").value("HomingVoltage",
+			DEFAULT_HOMING_VOLTAGE);
 	private final TunableDouble distanceStepM = tunables.value("DistanceStepM", 0.5);
 
 	// ==================== Telemetry ====================
@@ -90,8 +129,6 @@ public class ShooterSubsystem extends SubsystemBase {
 	Angle targetHoodAngle = Degrees.of(0);
 	double hoodMaxDeg = Double.NaN;
 	boolean manualDistanceEnabled = false;
-	private static final double DISTANCE_MIN_M = 0.5;
-	private static final double DISTANCE_MAX_M = 9.0;
 	private double manualDistanceM = 1.0;
 	private Supplier<Distance> autoDistanceSupplier = () -> Meters.of(0);
 
@@ -103,17 +140,17 @@ public class ShooterSubsystem extends SubsystemBase {
 		hoodEncoder = hood.getEncoder();
 		feedController = feeder.getClosedLoopController();
 		hoodController = hood.getClosedLoopController();
-		atSpeedDebouncer = new Debouncer(0.1, DebounceType.kRising);
-		atFeederSpeedDebouncer = new Debouncer(0.1, DebounceType.kRising);
-		stallDebouncer = new Debouncer(0.1, DebounceType.kRising);
+		atSpeedDebouncer = new Debouncer(AT_SPEED_DEBOUNCE_S, DebounceType.kRising);
+		atFeederSpeedDebouncer = new Debouncer(AT_SPEED_DEBOUNCE_S, DebounceType.kRising);
+		stallDebouncer = new Debouncer(STALL_DEBOUNCE_S, DebounceType.kRising);
 
 		configureFlywheelAndFeeder();
 		configureHood();
 		populateLookupTables();
 
-		tunables.pidTalonFX("Shooter", motor, 0.17, 0.001, 0.0, 0.115, 0.0);
-		tunables.pidSpark("Feeder", feeder, 0.0002, 0.0, 0.0, 0.000175);
-		tunables.pidSpark("Hood", hood, 0.013, 0.0, 0.0);
+		tunables.pidTalonFX("Shooter", motor, FLYWHEEL_KP, FLYWHEEL_KI, FLYWHEEL_KD, FLYWHEEL_KV, FLYWHEEL_KS);
+		tunables.pidSpark("Feeder", feeder, FEEDER_KP, FEEDER_KI, FEEDER_KD, FEEDER_KV);
+		tunables.pidSpark("Hood", hood, HOOD_KP, HOOD_KI, HOOD_KD);
 
 		telemetry = new ShooterTelemetry(this);
 	}
@@ -124,17 +161,17 @@ public class ShooterSubsystem extends SubsystemBase {
 		SparkMaxConfig feederConfig = new SparkMaxConfig();
 		feederConfig.idleMode(IdleMode.kCoast).smartCurrentLimit(FEEDER_CURRENT_LIMIT)
 				.inverted(FEEDER_INVERTED);
-		feederConfig.closedLoop.pid(0.0002, 0.0, 0.0);
-		feederConfig.closedLoop.feedForward.kV(0.000175);
+		feederConfig.closedLoop.pid(FEEDER_KP, FEEDER_KI, FEEDER_KD);
+		feederConfig.closedLoop.feedForward.kV(FEEDER_KV);
 		feeder.configure(feederConfig, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
 
 		TalonFXConfiguration flywheelConfig = new TalonFXConfiguration();
-		flywheelConfig.Slot0.kP = 0.17;
-		flywheelConfig.Slot0.kI = 0.001;
-		flywheelConfig.Slot0.kD = 0.0;
-		flywheelConfig.Slot0.kV = 0.115;
-		flywheelConfig.Slot0.kA = 0.0;
-		flywheelConfig.Slot0.kS = 0.0;
+		flywheelConfig.Slot0.kP = FLYWHEEL_KP;
+		flywheelConfig.Slot0.kI = FLYWHEEL_KI;
+		flywheelConfig.Slot0.kD = FLYWHEEL_KD;
+		flywheelConfig.Slot0.kV = FLYWHEEL_KV;
+		flywheelConfig.Slot0.kA = FLYWHEEL_KA;
+		flywheelConfig.Slot0.kS = FLYWHEEL_KS;
 		flywheelConfig.CurrentLimits.SupplyCurrentLimit = FLYWHEEL_CURRENT_LIMIT;
 		flywheelConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
 		flywheelConfig.MotorOutput.Inverted = FLYWHEEL_INVERTED ? InvertedValue.Clockwise_Positive
@@ -148,7 +185,7 @@ public class ShooterSubsystem extends SubsystemBase {
 				.inverted(HOOD_INVERTED);
 		config.encoder.positionConversionFactor(360.0 / HOOD_GEAR_RATIO);
 		config.closedLoop
-				.pid(0.013, 0.0, 0.0)
+				.pid(HOOD_KP, HOOD_KI, HOOD_KD)
 				.allowedClosedLoopError(HOOD_TOLERANCE.in(Degrees), ClosedLoopSlot.kSlot0);
 		hood.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
 	}
@@ -184,8 +221,8 @@ public class ShooterSubsystem extends SubsystemBase {
 		distanceToHoodPercent.put(6.5, 1.00);
 		distanceToHoodPercent.put(7.0, 1.00);
 
-		rpmToBallSpeed.put(2555.0, 4.97);
-		rpmToBallSpeed.put(3250.0, 6.15);
+		rpmToBallSpeed.put(BALL_SPEED_LOW_RPM, BALL_SPEED_LOW_M_S);
+		rpmToBallSpeed.put(BALL_SPEED_HIGH_RPM, BALL_SPEED_HIGH_M_S);
 
 		hoodPercentToLaunchAngle.put(0.00, 20.0);
 		hoodPercentToLaunchAngle.put(0.17, 25.0);
@@ -219,7 +256,8 @@ public class ShooterSubsystem extends SubsystemBase {
 	public boolean isHoodStalled() {
 		double current = hood.getOutputCurrent();
 		double rpm = hood.getEncoder().getVelocity();
-		return stallDebouncer.calculate(Math.abs(rpm) < HOOD_STALL_RPM && current > HOOD_CURRENT_LIMIT * 0.5);
+		return stallDebouncer
+				.calculate(Math.abs(rpm) < HOOD_STALL_RPM && current > HOOD_CURRENT_LIMIT * HOOD_STALL_CURRENT_RATIO);
 	}
 
 	public boolean isHoodHomed() {
@@ -423,7 +461,7 @@ public class ShooterSubsystem extends SubsystemBase {
 					stallDebouncer.calculate(false);
 					hood.setVoltage(-homingVoltage.get());
 				}),
-				Commands.waitUntil(this::isHoodStalled).withTimeout(2.0),
+				Commands.waitUntil(this::isHoodStalled).withTimeout(HOMING_TIMEOUT_S),
 				Commands.runOnce(() -> {
 					hood.stopMotor();
 					hoodEncoder.setPosition(0.0);
@@ -431,7 +469,7 @@ public class ShooterSubsystem extends SubsystemBase {
 				}),
 				// Find max stop
 				Commands.runOnce(() -> hood.setVoltage(homingVoltage.get())),
-				Commands.waitUntil(this::isHoodStalled).withTimeout(2.0),
+				Commands.waitUntil(this::isHoodStalled).withTimeout(HOMING_TIMEOUT_S),
 				Commands.runOnce(() -> {
 					hood.stopMotor();
 					hoodMaxDeg = hoodEncoder.getPosition();

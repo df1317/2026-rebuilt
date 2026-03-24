@@ -39,37 +39,57 @@ public class IntakeSubsystem extends SubsystemBase {
 	private static final boolean PIVOT_INVERTED = false;
 	private static final double PIVOT_GEAR_RATIO = (48.0 * 22.0) / 14.0;
 	private static final Angle PIVOT_ANGLE_TOLERANCE = Degrees.of(8);
+	private static final double STALL_DEBOUNCE_S = 1.5;
+	private static final double AT_POSITION_DEBOUNCE_S = 0.1;
+	private static final double STALL_RPM_THRESHOLD = 2.0;
+	private static final double STALL_CURRENT_RATIO = 0.75;
+	private static final double JOG_DOWN_SPEED = -0.1;
+
+	// ==================== PID Gains ====================
+	private static final double PIVOT_KP = 0.05;
+	private static final double PIVOT_KI = 0.0;
+	private static final double PIVOT_KD = 0.0;
+
+	// ==================== Default Tunable Values ====================
+	private static final double DEFAULT_EXTENDED_ANGLE_DEG = -10.0;
+	private static final double DEFAULT_RETRACT_DELTA_DEG = 90.0;
+	private static final double DEFAULT_FAST_VELOCITY = 240.0;
+	private static final double DEFAULT_FAST_ACCEL = 240.0;
+	private static final double DEFAULT_SLOW_VELOCITY = 60.0;
+	private static final double DEFAULT_SLOW_ACCEL = 180.0;
+	private static final double DEFAULT_KICK_DURATION_S = 0.5;
+	private static final double DEFAULT_HOMING_OFFSET_DEG = -20.0;
 
 	// ==================== Hardware ====================
 	final SparkMax pivotMotor;
 	final RelativeEncoder pivotEncoder;
 	private final SparkClosedLoopController pivotController;
 	private final Debouncer atPositionDebouncer;
-	private final Debouncer stallDebouncer = new Debouncer(1.5, DebounceType.kBoth);
+	private final Debouncer stallDebouncer = new Debouncer(STALL_DEBOUNCE_S, DebounceType.kBoth);
 
 	// ==================== Tunables ====================
 	private static final TunableTable tunables = new TunableTable("Intake");
 	private static final TunableTable pivotTunables = tunables.getNested("Pivot");
-	private final TunableDouble testPivotDeg = pivotTunables.value("Degrees", -10.0, Degrees);
-	private final TunableDouble retractDelta = pivotTunables.value("RetractDelta", 90.0, Degrees);
-	private final TunableDouble fastVelocity = pivotTunables.value("FastVelDegPerS", 240.0);
-	private final TunableDouble fastAccel = pivotTunables.value("FastAccelDegPerS2", 240.0);
-	private final TunableDouble slowVelocity = pivotTunables.value("SlowVelDegPerS", 60.0);
-	private final TunableDouble slowAccel = pivotTunables.value("SlowAccelDegPerS2", 180.0);
-	private final TunableDouble kickDurationS = pivotTunables.value("KickDurationS", 0.5);
-	private final TunableDouble homingOffset = pivotTunables.value("HomingOffsetDeg", -20.0);
+	private final TunableDouble testPivotDeg = pivotTunables.value("Degrees", DEFAULT_EXTENDED_ANGLE_DEG, Degrees);
+	private final TunableDouble retractDelta = pivotTunables.value("RetractDelta", DEFAULT_RETRACT_DELTA_DEG, Degrees);
+	private final TunableDouble fastVelocity = pivotTunables.value("FastVelDegPerS", DEFAULT_FAST_VELOCITY);
+	private final TunableDouble fastAccel = pivotTunables.value("FastAccelDegPerS2", DEFAULT_FAST_ACCEL);
+	private final TunableDouble slowVelocity = pivotTunables.value("SlowVelDegPerS", DEFAULT_SLOW_VELOCITY);
+	private final TunableDouble slowAccel = pivotTunables.value("SlowAccelDegPerS2", DEFAULT_SLOW_ACCEL);
+	private final TunableDouble kickDurationS = pivotTunables.value("KickDurationS", DEFAULT_KICK_DURATION_S);
+	private final TunableDouble homingOffset = pivotTunables.value("HomingOffsetDeg", DEFAULT_HOMING_OFFSET_DEG);
 
 	// ==================== Telemetry ====================
 	private final IntakeTelemetry telemetry;
 
 	// ==================== Control State ====================
 	private final ProfiledPIDController pivotProfiler = new ProfiledPIDController(0, 0, 0,
-			new TrapezoidProfile.Constraints(240.0, 240.0));
+			new TrapezoidProfile.Constraints(DEFAULT_FAST_VELOCITY, DEFAULT_FAST_ACCEL));
 	private final RollerSubsystem roller;
 	boolean homed = false;
 	private boolean wantToExtend = false;
-	private Angle extendedPivotAngle = Degrees.of(-10);
-	Angle targetPivotAngle = extendedPivotAngle.plus(Degrees.of(90));
+	private Angle extendedPivotAngle = Degrees.of(DEFAULT_EXTENDED_ANGLE_DEG);
+	Angle targetPivotAngle = extendedPivotAngle.plus(Degrees.of(DEFAULT_RETRACT_DELTA_DEG));
 
 	public IntakeSubsystem(RollerSubsystem roller) {
 		this.roller = roller;
@@ -79,11 +99,11 @@ public class IntakeSubsystem extends SubsystemBase {
 
 		configurePivotMotor();
 
-		atPositionDebouncer = new Debouncer(0.1, DebounceType.kRising);
+		atPositionDebouncer = new Debouncer(AT_POSITION_DEBOUNCE_S, DebounceType.kRising);
 
 		telemetry = new IntakeTelemetry(this, roller);
 
-		tunables.pidSpark("Pivot", pivotMotor, 0.05, 0.0, 0.0, 0.0);
+		tunables.pidSpark("Pivot", pivotMotor, PIVOT_KP, PIVOT_KI, PIVOT_KD, 0.0);
 
 		double initialAngle = pivotEncoder.getPosition();
 		pivotProfiler.reset(initialAngle);
@@ -96,7 +116,7 @@ public class IntakeSubsystem extends SubsystemBase {
 				.inverted(PIVOT_INVERTED);
 		config.encoder
 				.positionConversionFactor(360.0 / PIVOT_GEAR_RATIO);
-		config.closedLoop.pid(0.05, 0.0, 0.0)
+		config.closedLoop.pid(PIVOT_KP, PIVOT_KI, PIVOT_KD)
 				.allowedClosedLoopError(PIVOT_ANGLE_TOLERANCE.in(Degrees), ClosedLoopSlot.kSlot0);
 
 		pivotMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
@@ -211,7 +231,7 @@ public class IntakeSubsystem extends SubsystemBase {
 
 	public Command jogDownCommand() {
 		return new CommandBuilder("Intake.jogDown", this)
-				.onExecute(() -> pivotMotor.set(-0.1))
+				.onExecute(() -> pivotMotor.set(JOG_DOWN_SPEED))
 				.onEnd(() -> {
 					pivotMotor.stopMotor();
 					double pos = pivotEncoder.getPosition();
@@ -275,7 +295,8 @@ public class IntakeSubsystem extends SubsystemBase {
 	public boolean isPivotStalled() {
 		double pivotMotorCurrent = pivotMotor.getOutputCurrent();
 		double pivotMotorRPM = pivotMotor.getEncoder().getVelocity();
-		boolean isPivotStalled = Math.abs(pivotMotorRPM) < 2.0 && pivotMotorCurrent > PIVOT_CURRENT_LIMIT * 0.75;
+		boolean isPivotStalled = Math.abs(pivotMotorRPM) < STALL_RPM_THRESHOLD
+				&& pivotMotorCurrent > PIVOT_CURRENT_LIMIT * STALL_CURRENT_RATIO;
 		return stallDebouncer.calculate(isPivotStalled);
 	}
 }

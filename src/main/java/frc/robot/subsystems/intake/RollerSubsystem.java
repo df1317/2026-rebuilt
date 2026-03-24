@@ -31,6 +31,13 @@ public class RollerSubsystem extends SubsystemBase {
 	private static final double SPEED_SCALE_MAX_ROBOT_MPS = 3.0;
 	static final AngularVelocity VELOCITY_TOLERANCE = RPM.of(100);
 
+	// ==================== PID Gains ====================
+	private static final double KP = 2E-4;
+	private static final double KI = 1.3E-4;
+	private static final double KD = 0.0;
+	private static final double KV = 1.5E-4;
+	private static final double I_ZONE = 1E-3;
+
 	// ==================== State Enum ====================
 
 	private enum State {
@@ -60,7 +67,7 @@ public class RollerSubsystem extends SubsystemBase {
 		rollerEncoder = rollerMotor.getEncoder();
 		configureRollerMotor();
 
-		tunables.pidSpark("Motor", rollerMotor, 2E-4, 1.3E-4, 0.0, 1.5E-4);
+		tunables.pidSpark("Motor", rollerMotor, KP, KI, KD, KV);
 
 		// Enum warmup
 		State.INTAKE.rpm.get();
@@ -70,8 +77,8 @@ public class RollerSubsystem extends SubsystemBase {
 		SparkMaxConfig config = new SparkMaxConfig();
 		config.idleMode(IdleMode.kCoast).smartCurrentLimit(CURRENT_LIMIT)
 				.inverted(INVERTED);
-		config.closedLoop.pid(2E-4, 1.3E-4, 0.0).iZone(1E-3);
-		config.closedLoop.feedForward.kV(1.5E-4);
+		config.closedLoop.pid(KP, KI, KD).iZone(I_ZONE);
+		config.closedLoop.feedForward.kV(KV);
 		rollerMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
 	}
 

@@ -33,6 +33,13 @@ public class HopperSubsystem extends SubsystemBase {
 	private static final double GEAR_RATIO = 24.0;
 	static final AngularVelocity VELOCITY_TOLERANCE = RPM.of(100);
 
+	// ==================== PID Gains ====================
+	private static final double KP = 2E-4;
+	private static final double KI = 1E-5;
+	private static final double KD = 0.0;
+	private static final double KV = 1.8E-4;
+	private static final double I_ZONE = 1E-3;
+
 	// ==================== State Enum ====================
 
 	private enum State {
@@ -67,7 +74,7 @@ public class HopperSubsystem extends SubsystemBase {
 
 		configureHopperMotor();
 
-		tunables.pidSpark("Motor", hopperMotor, 2E-4, 1E-5, 0.0, 1.8E-4);
+		tunables.pidSpark("Motor", hopperMotor, KP, KI, KD, KV);
 
 		telemetry = new HopperTelemetry(this);
 
@@ -81,8 +88,8 @@ public class HopperSubsystem extends SubsystemBase {
 				.inverted(INVERTED);
 		config.encoder
 				.positionConversionFactor(360.0 / GEAR_RATIO);
-		config.closedLoop.pid(2E-4, 1E-5, 0.0).iZone(1E-3);
-		config.closedLoop.feedForward.kV(1.8E-4);
+		config.closedLoop.pid(KP, KI, KD).iZone(I_ZONE);
+		config.closedLoop.feedForward.kV(KV);
 
 		hopperMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
 	}
