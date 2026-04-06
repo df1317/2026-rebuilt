@@ -51,7 +51,7 @@ public class IntakeSubsystem extends SubsystemBase {
 	private static final double PIVOT_KD = 0.0;
 
 	// ==================== Default Tunable Values ====================
-	private static final double DEFAULT_EXTENDED_ANGLE_DEG = -10.0;
+	private static final double DEFAULT_EXTENDED_ANGLE_DEG = 14.0;
 	private static final double DEFAULT_RETRACT_DELTA_DEG = 90.0;
 	private static final double DEFAULT_FAST_VELOCITY = 240.0;
 	private static final double DEFAULT_FAST_ACCEL = 240.0;
@@ -59,17 +59,15 @@ public class IntakeSubsystem extends SubsystemBase {
 	private static final double DEFAULT_SLOW_ACCEL = 180.0;
 	private static final double DEFAULT_KICK_DURATION_S = 0.5;
 	private static final double DEFAULT_HOMING_OFFSET_DEG = -20.0;
-
+	// ==================== Tunables ====================
+	private static final TunableTable tunables = new TunableTable("Intake");
+	private static final TunableTable pivotTunables = tunables.getNested("Pivot");
 	// ==================== Hardware ====================
 	final SparkMax pivotMotor;
 	final RelativeEncoder pivotEncoder;
 	private final SparkClosedLoopController pivotController;
 	private final Debouncer atPositionDebouncer;
 	private final Debouncer stallDebouncer = new Debouncer(STALL_DEBOUNCE_S, DebounceType.kBoth);
-
-	// ==================== Tunables ====================
-	private static final TunableTable tunables = new TunableTable("Intake");
-	private static final TunableTable pivotTunables = tunables.getNested("Pivot");
 	private final TunableDouble testPivotDeg = pivotTunables.value("Degrees", DEFAULT_EXTENDED_ANGLE_DEG, Degrees);
 	private final TunableDouble retractDelta = pivotTunables.value("RetractDelta", DEFAULT_RETRACT_DELTA_DEG, Degrees);
 	private final TunableDouble fastVelocity = pivotTunables.value("FastVelDegPerS", DEFAULT_FAST_VELOCITY);
@@ -90,6 +88,7 @@ public class IntakeSubsystem extends SubsystemBase {
 	private boolean wantToExtend = false;
 	private Angle extendedPivotAngle = Degrees.of(DEFAULT_EXTENDED_ANGLE_DEG);
 	Angle targetPivotAngle = extendedPivotAngle.plus(Degrees.of(DEFAULT_RETRACT_DELTA_DEG));
+	private boolean wasEnabled = false;
 
 	public IntakeSubsystem(RollerSubsystem roller) {
 		this.roller = roller;
@@ -121,8 +120,6 @@ public class IntakeSubsystem extends SubsystemBase {
 
 		pivotMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
 	}
-
-	private boolean wasEnabled = false;
 
 	@Override
 	public void periodic() {
@@ -185,12 +182,11 @@ public class IntakeSubsystem extends SubsystemBase {
 	// ==================== Command Factory Methods ====================
 
 	/**
-	 * Extends the intake using a two-phase motion profile:
-	 * KICK phase pushes through the panel at full speed, then GENTLE phase
-	 * slows down for a controlled landing.
+	 * Extends the intake using a two-phase motion profile: KICK phase pushes through the panel at full speed, then GENTLE
+	 * phase slows down for a controlled landing.
 	 */
 	public Command extendCommand() {
-		enum Phase{KICK,GENTLE}
+		enum Phase {KICK, GENTLE}
 		Mutable<Phase> phase = new Mutable<>(Phase.KICK);
 		Timer kickTimer = new Timer();
 
