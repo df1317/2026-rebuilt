@@ -80,7 +80,19 @@ public class IntakeSubsystem extends SubsystemBase {
 	// ==================== Telemetry ====================
 	private final IntakeTelemetry telemetry;
 
-	// ==================== Control State ====================
+	public enum IntakeState {
+		STOWED, EXTENDING_KICK, EXTENDING_GENTLE, EXTENDED, JOGGING_UP, JOGGING_DOWN, HOMING, TEST, UNKNOWN
+	}
+
+	private IntakeState currentState = IntakeState.UNKNOWN;
+	private final Timer stateTimer = new Timer();
+
+	public void setState(IntakeState newState) {
+		if (currentState != newState) {
+			currentState = newState;
+			stateTimer.restart();
+		}
+	}
 	private final ProfiledPIDController pivotProfiler = new ProfiledPIDController(0, 0, 0,
 			new TrapezoidProfile.Constraints(DEFAULT_FAST_VELOCITY, DEFAULT_FAST_ACCEL));
 	private final RollerSubsystem roller;
@@ -131,10 +143,59 @@ public class IntakeSubsystem extends SubsystemBase {
 			double distToExtended = Math.abs(pos - extendedPivotAngle.in(Degrees));
 			double distToRetracted = Math.abs(pos - retractedAngleDeg());
 			wantToExtend = distToExtended < distToRetracted;
+			if (wantToExtend) {
+				setState(IntakeState.EXTENDED);
+			} else {
+				setState(IntakeState.STOWED);
+			}
 		}
 		wasEnabled = enabled;
 
+		switch (currentState) {
+			case EXTENDING_KICK:
+				pivotProfiler.setConstraints(fastConstraints());
+				setPivotAngle(extendedPivotAngle);
+				if (stateTimer.hasElapsed(kickDurationS.get())) {
+					setState(IntakeState.EXTENDING_GENTLE);
+				}
+				break;
+			case EXTENDING_GENTLE:
+				pivotProfiler.setConstraints(slowConstraints());
+				setPivotAngle(extendedPivotAngle);
+				if (isPivotStalled() || isPivotAtPosition()) {
+					setState(IntakeState.EXTENDED);
+				}
+				break;
+			case EXTENDED:
+				pivotProfiler.setConstraints(fastConstraints());
+				setPivotAngle(extendedPivotAngle);
+				break;
+			case STOWED:
+				pivotProfiler.setConstraints(fastConstraints());
+				setPivotAngle(Degrees.of(retractedAngleDeg()));
+				break;
+			case JOGGING_UP:
+				pivotProfiler.setConstraints(slowConstraints());
+				setPivotAngle(Degrees.of(pivotEncoder.getPosition() + 360.0));
+				break;
+			case JOGGING_DOWN:
+				pivotProfiler.setConstraints(slowConstraints());
+				setPivotAngle(Degrees.of(pivotEncoder.getPosition() - 360.0));
+				break;
+			case HOMING:
+				pivotProfiler.setConstraints(fastConstraints());
+				setPivotAngle(Degrees.of(pivotEncoder.getPosition() + homingOffset.get()));
+				break;
+			case TEST:
+				pivotProfiler.setConstraints(fastConstraints());
+				setPivotAngle(Degrees.of(testPivotDeg.get()));
+				break;
+			case UNKNOWN:
+				break;
+		}
+
 		telemetry.log();
+		DogLog.log("Intake/State", currentState.name());
 		double profiledSetpoint = pivotProfiler.calculate(pivotEncoder.getPosition());
 		pivotController.setSetpoint(pivotProfiler.getSetpoint().position, ControlType.kPosition);
 		DogLog.log("Intake/Pivot/ProfiledSetpoint", profiledSetpoint);
@@ -186,39 +247,21 @@ public class IntakeSubsystem extends SubsystemBase {
 	 * phase slows down for a controlled landing.
 	 */
 	public Command extendCommand() {
-		enum Phase {KICK, GENTLE}
-		Mutable<Phase> phase = new Mutable<>(Phase.KICK);
-		Timer kickTimer = new Timer();
-
 		return new CommandBuilder("Intake.extend", this)
 				.onInitialize(() -> {
-					phase.value = Phase.KICK;
-					kickTimer.restart();
-					pivotProfiler.setConstraints(fastConstraints());
-					setPivotAngle(extendedPivotAngle);
 					wantToExtend = true;
+					setState(IntakeState.EXTENDING_KICK);
 				})
-				.onExecute(() -> {
-					if (phase.value == Phase.KICK && kickTimer.hasElapsed(kickDurationS.get())) {
-						pivotProfiler.setConstraints(slowConstraints());
-						phase.value = Phase.GENTLE;
-					}
-				})
-				.isFinished(() -> phase.value == Phase.GENTLE && (isPivotStalled() || isPivotAtPosition()))
-				.onEnd(() -> {
-					setPivotAngle(Degrees.of(pivotEncoder.getPosition()));
-					pivotProfiler.setConstraints(fastConstraints());
-				});
+				.isFinished(() -> currentState == IntakeState.EXTENDED);
 	}
 
 	public Command retractCommand() {
 		return new CommandBuilder("Intake.retract", this)
 				.onInitialize(() -> {
-					setPivotAngle(Degrees.of(retractedAngleDeg()));
 					wantToExtend = false;
+					setState(IntakeState.STOWED);
 				})
-				.isFinished(() -> isPivotStalled() || isPivotAtPosition())
-				.onEnd(() -> setPivotAngle(Degrees.of(pivotEncoder.getPosition())));
+				.isFinished(() -> isPivotStalled() || isPivotAtPosition());
 	}
 
 	public Command stowCommand() {
@@ -227,29 +270,23 @@ public class IntakeSubsystem extends SubsystemBase {
 
 	public Command jogDownCommand() {
 		return new CommandBuilder("Intake.jogDown", this)
-				.onInitialize(() -> {
-					pivotProfiler.setConstraints(slowConstraints());
-					setPivotAngle(Degrees.of(pivotEncoder.getPosition() - 360.0));
-				})
+				.onInitialize(() -> setState(IntakeState.JOGGING_DOWN))
 				.onEnd(() -> {
 					double pos = pivotEncoder.getPosition();
 					pivotProfiler.reset(pos);
 					setPivotAngle(Degrees.of(pos));
-					pivotProfiler.setConstraints(fastConstraints());
+					setState(IntakeState.UNKNOWN);
 				});
 	}
 
 	public Command jogUpCommand() {
 		return new CommandBuilder("Intake.jogUp", this)
-				.onInitialize(() -> {
-					pivotProfiler.setConstraints(slowConstraints());
-					setPivotAngle(Degrees.of(pivotEncoder.getPosition() + 360.0));
-				})
+				.onInitialize(() -> setState(IntakeState.JOGGING_UP))
 				.onEnd(() -> {
 					double pos = pivotEncoder.getPosition();
 					pivotProfiler.reset(pos);
 					setPivotAngle(Degrees.of(pos));
-					pivotProfiler.setConstraints(fastConstraints());
+					setState(IntakeState.UNKNOWN);
 				});
 	}
 
@@ -283,10 +320,7 @@ public class IntakeSubsystem extends SubsystemBase {
 	/** Drives toward the hard stop, zeroes on stall. */
 	public Command homeCommand() {
 		return new CommandBuilder("Intake.home", this)
-				.onInitialize(() -> {
-					pivotProfiler.setConstraints(fastConstraints());
-					setPivotAngle(Degrees.of(pivotEncoder.getPosition() + homingOffset.get()));
-				})
+				.onInitialize(() -> setState(IntakeState.HOMING))
 				.isFinished(this::isPivotStalled)
 				.onEnd(() -> {
 					pivotMotor.stopMotor();
@@ -294,13 +328,17 @@ public class IntakeSubsystem extends SubsystemBase {
 					pivotProfiler.reset(0);
 					setPivotAngle(Degrees.of(0));
 					homed = true;
+					setState(IntakeState.UNKNOWN);
 				});
 	}
 
 	public Command testPivotCommand() {
 		return new CommandBuilder("Intake.testPivot", this)
-				.onExecute(() -> setPivotAngle(Degrees.of(testPivotDeg.get())))
-				.onEnd(() -> pivotMotor.stopMotor());
+				.onInitialize(() -> setState(IntakeState.TEST))
+				.onEnd(() -> {
+					pivotMotor.stopMotor();
+					setState(IntakeState.UNKNOWN);
+				});
 	}
 
 	// ==================== Stall Detection ====================
