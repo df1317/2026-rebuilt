@@ -33,7 +33,6 @@ public class VisionTelemetry {
 	private static final TunableTable tunables = new TunableTable("Vision");
 
 	private final Field2d field2d;
-	private final TunableBoolean showTrackedTargetsToggle = tunables.value("ShowTrackedTargets", false);
 
 	/**
 	 * Constructs a new VisionTelemetry instance for debug visualization.
@@ -55,16 +54,8 @@ public class VisionTelemetry {
 		// Log target count - DogLog auto-disables NT at competition
 		DogLog.forceNt.log("Vision/TrackedTargetCount", targets.size());
 
-		// Read toggle value from the dashboard
-		boolean showTrackedTargets = showTrackedTargetsToggle.get();
-
 		// Field2d overlays only in dev mode (expensive, not needed at competition)
 		if (!DevMode.isEnabled()) {
-			field2d.getObject("tracked targets").setPoses();
-			return;
-		}
-
-		if (!showTrackedTargets) {
 			field2d.getObject("tracked targets").setPoses();
 			return;
 		}
@@ -94,14 +85,5 @@ public class VisionTelemetry {
 			}
 		}
 		return targets;
-	}
-
-	/**
-	 * Get current state of tracked target visualization toggle.
-	 *
-	 * @return true if showing tracked targets, false otherwise
-	 */
-	public boolean isShowingTrackedTargets() {
-		return showTrackedTargetsToggle.get();
 	}
 }

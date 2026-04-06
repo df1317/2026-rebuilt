@@ -26,8 +26,10 @@ import org.photonvision.targeting.PhotonTrackedTarget;
 import swervelib.SwerveDrive;
 import swervelib.telemetry.SwerveDriveTelemetry;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -73,6 +75,9 @@ public class Vision {
 		}
 	}
 
+	private final Deque<Double> recentAcceptedMeasurements = new ArrayDeque<>();
+	private static final double MEASUREMENT_WINDOW_SECONDS = 1.0;
+
 	public void updatePoseEstimation(SwerveDrive swerveDrive) {
 		if (SwerveDriveTelemetry.isSimulation && swerveDrive.getSimulationDriveTrainPose().isPresent()) {
 			visionSim.update(swerveDrive.getSimulationDriveTrainPose().get());
@@ -100,14 +105,21 @@ public class Vision {
 
 		measurements.sort(Comparator.comparingDouble(m -> m.pose.timestampSeconds));
 
+		double now = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
 		for (VisionMeasurement m : measurements) {
 			swerveDrive.addVisionMeasurement(
 					m.pose.estimatedPose.toPose2d(),
 					m.pose.timestampSeconds,
 					m.stdDevs);
+			recentAcceptedMeasurements.add(now);
+		}
+
+		while (!recentAcceptedMeasurements.isEmpty() && now - recentAcceptedMeasurements.peekFirst() > MEASUREMENT_WINDOW_SECONDS) {
+			recentAcceptedMeasurements.pollFirst();
 		}
 
 		DogLog.forceNt.log("Vision/AcceptedMeasurements", measurements.size());
+		DogLog.forceNt.log("Vision/RollingAcceptedMeasurements", recentAcceptedMeasurements.size());
 		DogLog.forceNt.log("Vision/HasVision", hasVision());
 	}
 
