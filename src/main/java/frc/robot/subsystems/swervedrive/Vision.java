@@ -112,12 +112,7 @@ public class Vision {
 	}
 
 	public boolean hasVision() {
-		for (Cameras camera : Cameras.values()) {
-			if (camera.camera.isConnected() && camera.hasRecentPose()) {
-				return true;
-			}
-		}
-		return false;
+		return hasRecentVision(5.0);
 	}
 
 	/** Returns true if any camera has received a pose estimate within the given timeout. */
