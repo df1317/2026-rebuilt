@@ -165,6 +165,7 @@ public class RobotContainer {
 			panel.key(3, 1).and(inTeleop).whileTrue(roller.ejectCommand()); // intakeReverse
 			panel.key(0, 1).and(inTeleop).onTrue(intake.zeroIntakeCommand());
 			panel.key(0, 2).and(inTeleop).whileTrue(intake.jogDownCommand());
+			panel.key(0, 3).and(inTeleop).whileTrue(intake.jogUpCommand());
 		}
 		if (hopper != null) {
 			panel.key(2, 2).and(inTeleop).whileTrue(hopper.feedCommand()); // hopperForward
@@ -193,8 +194,9 @@ public class RobotContainer {
 		// Row 0 — Climber / Intake
 		if (intake != null) {
 			panel.key(0, 0).onTrue(intake.homeCommand()); // intakeHome
-			panel.key(2, 1).and(inTest).onTrue(intake.zeroIntakeCommand());
-			panel.key(2, 2).and(inTest).whileTrue(intake.jogDownCommand());
+			panel.key(2, 0).and(inTest).onTrue(intake.zeroIntakeCommand());
+			panel.key(2, 1).and(inTest).whileTrue(intake.jogDownCommand());
+			panel.key(2, 2).and(inTest).whileTrue(intake.jogUpCommand());
 		}
 		if (climber != null) {
 			panel.key(0, 1).and(inTest).onTrue(climber.zeroCommand());

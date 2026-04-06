@@ -231,21 +231,38 @@ public class IntakeSubsystem extends SubsystemBase {
 
 	public Command jogDownCommand() {
 		return new CommandBuilder("Intake.jogDown", this)
-				.onExecute(() -> pivotMotor.set(JOG_DOWN_SPEED))
+				.onInitialize(() -> {
+					pivotProfiler.setConstraints(slowConstraints());
+					setPivotAngle(Degrees.of(pivotEncoder.getPosition() - 360.0));
+				})
 				.onEnd(() -> {
-					pivotMotor.stopMotor();
 					double pos = pivotEncoder.getPosition();
 					pivotProfiler.reset(pos);
 					setPivotAngle(Degrees.of(pos));
+					pivotProfiler.setConstraints(fastConstraints());
+				});
+	}
+
+	public Command jogUpCommand() {
+		return new CommandBuilder("Intake.jogUp", this)
+				.onInitialize(() -> {
+					pivotProfiler.setConstraints(slowConstraints());
+					setPivotAngle(Degrees.of(pivotEncoder.getPosition() + 360.0));
+				})
+				.onEnd(() -> {
+					double pos = pivotEncoder.getPosition();
+					pivotProfiler.reset(pos);
+					setPivotAngle(Degrees.of(pos));
+					pivotProfiler.setConstraints(fastConstraints());
 				});
 	}
 
 	public Command zeroIntakeCommand() {
 		return runOnce(() -> {
 			double currentAngle = pivotEncoder.getPosition();
-			extendedPivotAngle = Degrees.of(currentAngle);
+			extendedPivotAngle = Degrees.of(currentAngle - retractDelta.get());
 			pivotProfiler.reset(currentAngle);
-			setPivotAngle(extendedPivotAngle);
+			setPivotAngle(Degrees.of(currentAngle));
 			homed = true;
 		}).withName("Intake.zero");
 	}
