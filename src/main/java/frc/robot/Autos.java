@@ -30,7 +30,6 @@ import java.util.function.Supplier;
  */
 public final class Autos {
 
-	private static final double AUTO_SPEED_SCALE = 0.65;
 	private static final double SLOW_VELOCITY = 1.5; // m/s
 	private static final double SLOW_DECEL = 3.0; // m/s²
 
@@ -149,7 +148,7 @@ public final class Autos {
 	/** Apply the auto speed scale to a command. */
 	private Command withSpeedScale(Command cmd) {
 		return Commands.sequence(
-				Commands.runOnce(() -> repulsor.setAutoSpeedScale(AUTO_SPEED_SCALE)),
+				Commands.runOnce(() -> repulsor.setAutoSpeedScale(Constants.DrivebaseConstants.AUTO_SPEED_SCALE)),
 				cmd).finallyDo(() -> repulsor.resetSpeedScale());
 	}
 
