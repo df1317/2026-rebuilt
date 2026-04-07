@@ -33,7 +33,6 @@ public final class Constants {
 	}
 
 	public static final class DrivebaseConstants {
-		public static final double AUTO_SPEED_SCALE = 0.65;
 		public static final double WHEEL_LOCK_TIME = 10; // seconds
 		public static final double JOYSTICK_DEADBAND = 0.1;
 		public static final double DRIVE_KS = 0.024309;

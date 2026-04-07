@@ -99,9 +99,7 @@ public class DriveTuningHeat extends DriveTuning {
 	}
 
 	public double maxLinearSpeedMps(Pose2d robotPose) {
-		if (velocityOverride > 0.0)
-			return velocityOverride;
-		double effectiveMax = baseMaxSpeed * speedScale;
+		double effectiveMax = (velocityOverride > 0.0 ? velocityOverride : baseMaxSpeed) * speedScale;
 		if (robotPose == null)
 			return effectiveMax;
 		double heat = heatmap.heatAt(robotPose.getTranslation());
@@ -111,9 +109,7 @@ public class DriveTuningHeat extends DriveTuning {
 
 	@Override
 	public double maxLinearSpeedMps() {
-		if (velocityOverride > 0.0)
-			return velocityOverride;
-		return baseMaxSpeed * speedScale;
+		return (velocityOverride > 0.0 ? velocityOverride : baseMaxSpeed) * speedScale;
 	}
 
 	@Override
@@ -128,7 +124,7 @@ public class DriveTuningHeat extends DriveTuning {
 			return 0.0;
 		}
 
-		double effectiveMax = velocityOverride > 0.0 ? velocityOverride : baseMaxSpeed * speedScale;
+		double effectiveMax = (velocityOverride > 0.0 ? velocityOverride : baseMaxSpeed) * speedScale;
 
 		if (!slowDown) {
 			return Math.min(effectiveMax * dtSeconds(), d);
