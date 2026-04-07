@@ -118,8 +118,7 @@ public class Vision {
 			recentAcceptedMeasurements.pollFirst();
 		}
 
-		DogLog.forceNt.log("Vision/AcceptedMeasurements", measurements.size());
-		DogLog.forceNt.log("Vision/RollingAcceptedMeasurements", recentAcceptedMeasurements.size());
+		DogLog.forceNt.log("Vision/AcceptedMeasurements", recentAcceptedMeasurements.size());
 		DogLog.forceNt.log("Vision/HasVision", hasVision());
 	}
 

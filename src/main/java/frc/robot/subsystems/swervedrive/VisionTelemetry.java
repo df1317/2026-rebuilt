@@ -67,11 +67,11 @@ public class VisionTelemetry {
 		}
 
 		// Log as a Pose3d array for AdvantageScope - can be styled as vision targets
-		DogLog.log("Vision/TrackedTagPoses", poses3d.toArray(new Pose3d[0]));
+		DogLog.forceNt.log("Vision/TrackedTagPoses", poses3d.toArray(new Pose3d[0]));
 
 		// Log tracked tag IDs for AdvantageScope analysis
 		int[] tagIds = targets.stream().mapToInt(PhotonTrackedTarget::getFiducialId).toArray();
-		DogLog.log("Vision/TrackedTagIds", tagIds);
+		DogLog.forceNt.log("Vision/TrackedTagIds", tagIds);
 	}
 
 	private List<PhotonTrackedTarget> collectTrackedTargets() {
