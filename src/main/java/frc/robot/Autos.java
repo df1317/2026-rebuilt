@@ -148,7 +148,7 @@ public final class Autos {
 	/** Apply the auto speed scale to a command. */
 	private Command withSpeedScale(Command cmd) {
 		return Commands.sequence(
-				Commands.runOnce(() -> repulsor.setAutoSpeedScale(Constants.DrivebaseConstants.AUTO_SPEED_SCALE)),
+				Commands.runOnce(() -> repulsor.setAutoSpeedScale(Constants.AutoConstants.SPEED_SCALE)),
 				cmd).finallyDo(() -> repulsor.resetSpeedScale());
 	}
 
