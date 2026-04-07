@@ -21,7 +21,6 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.util.CommandBuilder;
-import frc.robot.util.Mutable;
 import frc.robot.util.TunableDouble;
 import frc.robot.util.TunableTable;
 
@@ -93,6 +92,7 @@ public class IntakeSubsystem extends SubsystemBase {
 			stateTimer.restart();
 		}
 	}
+
 	private final ProfiledPIDController pivotProfiler = new ProfiledPIDController(0, 0, 0,
 			new TrapezoidProfile.Constraints(DEFAULT_FAST_VELOCITY, DEFAULT_FAST_ACCEL));
 	private final RollerSubsystem roller;

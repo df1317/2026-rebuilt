@@ -29,6 +29,7 @@ import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import frc.robot.util.FieldTranslation;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Optional;
@@ -259,6 +260,36 @@ public class Repulsor {
 					double angErr = Math.abs(robotPose.getRotation().minus(goalPose.getRotation()).getRadians());
 					return posErr <= endTolerance.getAsDouble() && angErr <= endAngTolerance.getAsDouble();
 				});
+	}
+
+	// ===== APF Drive Facing =====
+
+	/**
+	 * Drives to the goal using P-APF while facing a specific target, with default speed profile.
+	 * Ends when within tolerances.
+	 */
+	public Command apfDriveFacing(Supplier<Pose2d> goal, FieldTranslation aimTarget, double rotationOffsetDeg,
+			double endTolerance, double endAngTolerance) {
+		return apfDriveFacing(goal, aimTarget, rotationOffsetDeg, () -> DEFAULT_VELOCITY, () -> DEFAULT_DECEL,
+				() -> endTolerance, () -> endAngTolerance);
+	}
+
+	/**
+	 * Drives to the goal using P-APF while facing a specific target, with specified speed profile.
+	 * Ends when within tolerances.
+	 */
+	public Command apfDriveFacing(Supplier<Pose2d> goal, FieldTranslation aimTarget, double rotationOffsetDeg,
+			DoubleSupplier maxVelocity, DoubleSupplier maxDeceleration,
+			DoubleSupplier endTolerance, DoubleSupplier endAngTolerance) {
+		Supplier<Pose2d> facingGoal = () -> {
+			Pose2d pose = goal.get();
+			Translation2d target = aimTarget.get();
+			edu.wpi.first.math.geometry.Rotation2d towardTarget = target.minus(pose.getTranslation()).getAngle();
+			edu.wpi.first.math.geometry.Rotation2d facing = towardTarget
+					.rotateBy(edu.wpi.first.math.geometry.Rotation2d.fromDegrees(rotationOffsetDeg));
+			return new Pose2d(pose.getTranslation(), facing);
+		};
+		return apfDrive(facingGoal, maxVelocity, maxDeceleration, endTolerance, endAngTolerance);
 	}
 
 	private Pose2d[] simulateTrajectory(Pose2d robotPose, Translation2d goal) {

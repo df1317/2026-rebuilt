@@ -30,7 +30,7 @@ import java.util.function.Supplier;
  */
 public final class Autos {
 
-	// ===== Speed Profiles =====
+	private static final double AUTO_SPEED_SCALE = 0.65;
 	private static final double SLOW_VELOCITY = 1.5; // m/s
 	private static final double SLOW_DECEL = 3.0; // m/s²
 
@@ -146,37 +146,40 @@ public final class Autos {
 
 	// ===== APF Drive Helpers =====
 
+	/** Apply the auto speed scale to a command. */
+	private Command withSpeedScale(Command cmd) {
+		return Commands.sequence(
+				Commands.runOnce(() -> repulsor.setAutoSpeedScale(AUTO_SPEED_SCALE)),
+				cmd).finallyDo(() -> repulsor.resetSpeedScale());
+	}
+
 	/** Drive to a {@link FieldPose} with default speed, ends when within default tolerances. */
 	private Command apfDefaults(FieldPose pose) {
-		return repulsor.apfDrive(pose, Repulsor.DEFAULT_POS_TOLERANCE, Repulsor.DEFAULT_ANG_TOLERANCE);
+		return withSpeedScale(repulsor.apfDrive(pose, Repulsor.DEFAULT_POS_TOLERANCE, Repulsor.DEFAULT_ANG_TOLERANCE));
 	}
 
 	/** Drive to a raw pose (already alliance-resolved), ends when within default tolerances. */
 	private Command apfDefaults(Pose2d resolvedPose) {
-		return repulsor.apfDrive(() -> resolvedPose, Repulsor.DEFAULT_POS_TOLERANCE, Repulsor.DEFAULT_ANG_TOLERANCE);
+		return withSpeedScale(
+				repulsor.apfDrive(() -> resolvedPose, Repulsor.DEFAULT_POS_TOLERANCE, Repulsor.DEFAULT_ANG_TOLERANCE));
 	}
 
 	/** Drive to a {@link FieldPose} with default speed, never ends. */
 	private Command apfForever(FieldPose pose) {
-		return repulsor.apfDrive(pose);
+		return withSpeedScale(repulsor.apfDrive(pose));
 	}
 
 	/** Drive to a {@link FieldPose} slowly (precision), ends when within default tolerances. */
 	private Command apfSlow(FieldPose pose) {
-		return repulsor.apfDrive(pose, () -> SLOW_VELOCITY, () -> SLOW_DECEL,
-				() -> Repulsor.DEFAULT_POS_TOLERANCE, () -> Repulsor.DEFAULT_ANG_TOLERANCE);
+		return withSpeedScale(repulsor.apfDrive(pose, () -> SLOW_VELOCITY, () -> SLOW_DECEL,
+				() -> Repulsor.DEFAULT_POS_TOLERANCE, () -> Repulsor.DEFAULT_ANG_TOLERANCE));
 	}
 
 	/** Drive to a pose while facing a target, ends when within default tolerances. */
 	private Command apfDefaultsFacing(Supplier<Pose2d> poseSupplier, FieldTranslation aimTarget,
 			double rotationOffsetDeg) {
-		return repulsor.apfDrive(() -> {
-			Pose2d pose = poseSupplier.get();
-			Translation2d target = aimTarget.get();
-			Rotation2d towardTarget = target.minus(pose.getTranslation()).getAngle();
-			Rotation2d facing = towardTarget.rotateBy(Rotation2d.fromDegrees(rotationOffsetDeg));
-			return new Pose2d(pose.getTranslation(), facing);
-		}, Repulsor.DEFAULT_POS_TOLERANCE, Repulsor.DEFAULT_ANG_TOLERANCE);
+		return withSpeedScale(repulsor.apfDriveFacing(poseSupplier, aimTarget, rotationOffsetDeg,
+				Repulsor.DEFAULT_POS_TOLERANCE, Repulsor.DEFAULT_ANG_TOLERANCE));
 	}
 
 	// ===== Subsystem Helpers =====

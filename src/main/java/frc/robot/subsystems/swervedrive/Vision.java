@@ -114,7 +114,8 @@ public class Vision {
 			recentAcceptedMeasurements.add(now);
 		}
 
-		while (!recentAcceptedMeasurements.isEmpty() && now - recentAcceptedMeasurements.peekFirst() > MEASUREMENT_WINDOW_SECONDS) {
+		while (!recentAcceptedMeasurements.isEmpty()
+				&& now - recentAcceptedMeasurements.peekFirst() > MEASUREMENT_WINDOW_SECONDS) {
 			recentAcceptedMeasurements.pollFirst();
 		}
 
