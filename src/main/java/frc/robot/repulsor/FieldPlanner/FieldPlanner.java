@@ -126,6 +126,12 @@ public class FieldPlanner {
 		return obstacleProvider;
 	}
 
+	private Pose2d[] lastTrajectory = new Pose2d[0];
+
+	public Pose2d[] getLastTrajectory() {
+		return lastTrajectory;
+	}
+
 	public FieldPlanner() {
 		this(new DefaultTurnTuning(), new DefaultDriveTuning(), RepulsorConstants.FIELD);
 	}
@@ -266,6 +272,62 @@ public class FieldPlanner {
 				pose, dynamicObstacles, robot_x, robot_y, cat, false);
 	}
 
+	public Translation2d getForceTarget(Pose2d pose, List<? extends Obstacle> dynamicObstacles) {
+		Pose2d effectiveGoal = goalManager.getGoalPose();
+		Translation2d curTrans = pose.getTranslation();
+		Translation2d forceTarget = effectiveGoal.getTranslation();
+
+		ArrayList<Pose2d> traj = new ArrayList<>();
+		traj.add(pose);
+
+		double e_x = forceTarget.getX() - curTrans.getX();
+		double e_y = forceTarget.getY() - curTrans.getY();
+		double error = Math.hypot(e_x, e_y);
+
+		if (error > PAPF_RESOLUTION) {
+			double simX = curTrans.getX();
+			double simY = curTrans.getY();
+			double dMax = 0.0;
+			double seg_c = forceTarget.getX() * curTrans.getY()
+					- forceTarget.getY() * curTrans.getX();
+
+			int maxSteps = (int) Math.ceil(PAPF_HORIZON / PAPF_RESOLUTION);
+			for (int i = 0; i < maxSteps; i++) {
+				Translation2d simPos = new Translation2d(simX, simY);
+				Force force = forceModel.getGoalForce(simPos, forceTarget)
+						.plus(forceModel.getObstacleForce(simPos, forceTarget, dynamicObstacles))
+						.plus(forceModel.getWallForce(simPos, forceTarget));
+				double norm = force.getNorm();
+				if (norm < 1e-6)
+					break;
+
+				double alpha = PAPF_RESOLUTION / norm;
+				simX += force.getX() * alpha;
+				simY += force.getY() * alpha;
+
+				traj.add(new Pose2d(simX, simY, force.getAngle()));
+
+				// Perpendicular distance from simulated point to line(robot -> goal)
+				double d = Math.abs(e_y * simX - e_x * simY + seg_c) / error;
+				if (d > PAPF_RESOLUTION && d >= dMax) {
+					forceTarget = new Translation2d(simX, simY);
+					dMax = d;
+				}
+
+				double remainX = effectiveGoal.getTranslation().getX() - simX;
+				double remainY = effectiveGoal.getTranslation().getY() - simY;
+				if (remainX * remainX + remainY * remainY <= PAPF_RESOLUTION * PAPF_RESOLUTION) {
+					break;
+				}
+			}
+		}
+
+		traj.add(effectiveGoal);
+		lastTrajectory = traj.toArray(Pose2d[]::new);
+
+		return forceTarget;
+	}
+
 	public RepulsorSample calculate(
 			Pose2d pose,
 			List<? extends Obstacle> dynamicObstacles,
@@ -384,48 +446,7 @@ public class FieldPlanner {
 		// setpoint that smooths the path around obstacles. The setpoint is the
 		// point along the predicted path that deviates most from the straight
 		// line to the goal.
-		Translation2d forceTarget = effectiveGoal.getTranslation();
-		{
-			double e_x = forceTarget.getX() - curTrans.getX();
-			double e_y = forceTarget.getY() - curTrans.getY();
-			double error = Math.hypot(e_x, e_y);
-
-			if (error > PAPF_RESOLUTION) {
-				double simX = curTrans.getX();
-				double simY = curTrans.getY();
-				double dMax = 0.0;
-				double seg_c = forceTarget.getX() * curTrans.getY()
-						- forceTarget.getY() * curTrans.getX();
-
-				int maxSteps = (int) Math.ceil(PAPF_HORIZON / PAPF_RESOLUTION);
-				for (int i = 0; i < maxSteps; i++) {
-					Translation2d simPos = new Translation2d(simX, simY);
-					Force force = forceModel.getGoalForce(simPos, forceTarget)
-							.plus(forceModel.getObstacleForce(simPos, forceTarget, effectiveDynamicsFinal))
-							.plus(forceModel.getWallForce(simPos, forceTarget));
-					double norm = force.getNorm();
-					if (norm < 1e-6)
-						break;
-
-					double alpha = PAPF_RESOLUTION / norm;
-					simX += force.getX() * alpha;
-					simY += force.getY() * alpha;
-
-					// Perpendicular distance from simulated point to line(robot -> goal)
-					double d = Math.abs(e_y * simX - e_x * simY + seg_c) / error;
-					if (d > PAPF_RESOLUTION && d >= dMax) {
-						forceTarget = new Translation2d(simX, simY);
-						dMax = d;
-					}
-
-					double remainX = effectiveGoal.getTranslation().getX() - simX;
-					double remainY = effectiveGoal.getTranslation().getY() - simY;
-					if (remainX * remainX + remainY * remainY <= PAPF_RESOLUTION * PAPF_RESOLUTION) {
-						break;
-					}
-				}
-			}
-		}
+		Translation2d forceTarget = getForceTarget(pose, effectiveDynamicsFinal);
 
 		var obstacleForce = getObstacleForce(curTrans, forceTarget, effectiveDynamicsFinal)
 				.plus(getWallForce(curTrans, forceTarget));

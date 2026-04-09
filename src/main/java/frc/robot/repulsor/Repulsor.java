@@ -30,7 +30,6 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.util.FieldTranslation;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -217,7 +216,7 @@ public class Repulsor {
 					m_drive.runVelocity(commanded);
 
 					DogLog.forceNt.log("Repulsor/Target", goalPose);
-					DogLog.forceNt.log("Repulsor/Trajectory", simulateTrajectory(robotPose, goalPose.getTranslation()));
+					DogLog.forceNt.log("Repulsor/Trajectory", m_planner.getLastTrajectory());
 					DogLog.log("Repulsor/Error", robotPose.getTranslation().getDistance(goalPose.getTranslation()));
 					DogLog.log("Repulsor/CommandedVx", commanded.vxMetersPerSecond);
 					DogLog.log("Repulsor/CommandedVy", commanded.vyMetersPerSecond);
@@ -290,28 +289,6 @@ public class Repulsor {
 			return new Pose2d(pose.getTranslation(), facing);
 		};
 		return apfDrive(facingGoal, maxVelocity, maxDeceleration, endTolerance, endAngTolerance);
-	}
-
-	private Pose2d[] simulateTrajectory(Pose2d robotPose, Translation2d goal) {
-		ArrayList<Pose2d> trajectory = new ArrayList<>(TRAJ_MAX_STEPS + 1);
-		Translation2d pos = robotPose.getTranslation();
-		trajectory.add(robotPose);
-
-		for (int i = 0; i < TRAJ_MAX_STEPS; i++) {
-			if (pos.getDistance(goal) < 0.1)
-				break;
-
-			Force force = m_planner.getGoalForce(pos, goal)
-					.plus(m_planner.getObstacleForce(pos, goal))
-					.plus(m_planner.getWallForce(pos, goal));
-			if (force.getNorm() < 1e-6)
-				break;
-
-			pos = pos.plus(new Translation2d(TRAJ_STEP_SIZE, force.getAngle()));
-			trajectory.add(new Pose2d(pos, force.getAngle()));
-		}
-
-		return trajectory.toArray(Pose2d[]::new);
 	}
 
 	// ===== Clamp Drive Speed =====
