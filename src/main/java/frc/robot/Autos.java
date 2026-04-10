@@ -1,7 +1,5 @@
 package frc.robot;
 
-import static edu.wpi.first.wpilibj2.command.Commands.*;
-
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -21,12 +19,14 @@ import frc.robot.util.FieldTranslation;
 
 import java.util.function.Supplier;
 
+import static edu.wpi.first.wpilibj2.command.Commands.*;
+
 /**
  * Declares autonomous modes and adds them to the dashboard.
  *
  * <p>
- * All positions are blue-alliance. Alliance flipping is handled by
- * {@link FieldPose} and {@link FieldTranslation} at runtime.
+ * All positions are blue-alliance. Alliance flipping is handled by {@link FieldPose} and {@link FieldTranslation} at
+ * runtime.
  */
 public final class Autos {
 
@@ -91,6 +91,15 @@ public final class Autos {
 
 	// ===== Auto Routines =====
 
+	private static Pose2d hubPoseBack(double angleDeg, double extraStandoffM) {
+		Translation2d hubCenter = _Rebuilt2026.hubAimpointBlue();
+		Rotation2d angle = Rotation2d.fromDegrees(angleDeg);
+		double standoff = HUB_RADIUS + Constants.DrivebaseConstants.ROBOT_HALF_LENGTH + extraStandoffM;
+		Translation2d pos = hubCenter.minus(new Translation2d(standoff, angle));
+		Rotation2d awayFromHub = hubCenter.minus(pos).getAngle().rotateBy(Rotation2d.k180deg);
+		return new Pose2d(pos, awayFromHub);
+	}
+
 	private Command frontHubAndShoot() {
 		return sequence(
 				apfDefaults(HUB_FRONT_SHOOT),
@@ -113,7 +122,8 @@ public final class Autos {
 		return sequence(
 				apfDefaultsFacing(CORNER_HIDE_RIGHT, HUB_CENTER, 180),
 				shoot(),
-				deadline(apfDefaults(OUTPOST), collect()),
+				apfDefaults(OUTPOST),
+				waitSeconds(5.0),
 				apfDefaultsFacing(CORNER_HIDE_RIGHT, HUB_CENTER, 180),
 				shoot());
 	}
@@ -145,6 +155,8 @@ public final class Autos {
 				shoot());
 	}
 
+	// ===== APF Drive Helpers =====
+
 	private Command climbAuto(FieldPose climbPose, FieldPose engagePose) {
 		return sequence(
 				apfDefaults(climbPose),
@@ -153,8 +165,6 @@ public final class Autos {
 				climber.climbTopCommand(),
 				climber.climbHangCommand());
 	}
-
-	// ===== APF Drive Helpers =====
 
 	/** Apply the auto speed scale to a command. */
 	private Command withSpeedScale(Command cmd) {
@@ -185,6 +195,8 @@ public final class Autos {
 				() -> Repulsor.DEFAULT_POS_TOLERANCE, () -> Repulsor.DEFAULT_ANG_TOLERANCE));
 	}
 
+	// ===== Subsystem Helpers =====
+
 	/** Drive to a pose while facing a target, ends when within default tolerances. */
 	private Command apfDefaultsFacing(Supplier<Pose2d> poseSupplier, FieldTranslation aimTarget,
 			double rotationOffsetDeg) {
@@ -192,19 +204,17 @@ public final class Autos {
 				Repulsor.DEFAULT_POS_TOLERANCE, Repulsor.DEFAULT_ANG_TOLERANCE));
 	}
 
-	// ===== Subsystem Helpers =====
-
 	private Command shoot() {
 		return teleopAutomation.shootCommand().withTimeout(4);
 	}
+
+	// ===== Utilities =====
 
 	private Command collect() {
 		return Commands.parallel(
 				intake.extendCommand().andThen(intake.holdExtendedCommand()),
 				roller.intakeCommand());
 	}
-
-	// ===== Utilities =====
 
 	private Pose2d computeCollectPose() {
 		Pose2d startPose = repulsor.getDrive().getPose();
@@ -214,14 +224,5 @@ public final class Autos {
 		double collectY = fromTop ? fieldCenterY + COLLECT_Y_OFFSET : fieldCenterY - COLLECT_Y_OFFSET;
 		double collectDeg = fromTop ? -120.0 : -60.0;
 		return new Pose2d(fieldCenterX + COLLECT_X_OFFSET, collectY, Rotation2d.fromDegrees(collectDeg));
-	}
-
-	private static Pose2d hubPoseBack(double angleDeg, double extraStandoffM) {
-		Translation2d hubCenter = _Rebuilt2026.hubAimpointBlue();
-		Rotation2d angle = Rotation2d.fromDegrees(angleDeg);
-		double standoff = HUB_RADIUS + Constants.DrivebaseConstants.ROBOT_HALF_LENGTH + extraStandoffM;
-		Translation2d pos = hubCenter.minus(new Translation2d(standoff, angle));
-		Rotation2d awayFromHub = hubCenter.minus(pos).getAngle().rotateBy(Rotation2d.k180deg);
-		return new Pose2d(pos, awayFromHub);
 	}
 }
