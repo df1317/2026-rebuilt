@@ -154,6 +154,11 @@ public class ShooterSubsystem extends SubsystemBase {
 		tunables.pidSpark("Feeder", feeder, FEEDER_KP, FEEDER_KI, FEEDER_KD, FEEDER_KV);
 		tunables.pidSpark("Hood", hood, HOOD_KP, HOOD_KI, HOOD_KD);
 
+		if (RobotBase.isSimulation()) {
+			hoodEncoder.setPosition(0.0);
+			hoodMaxDeg = 60.0;
+		}
+
 		telemetry = new ShooterTelemetry(this);
 	}
 

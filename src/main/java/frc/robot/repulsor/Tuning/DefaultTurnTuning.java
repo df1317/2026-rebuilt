@@ -44,8 +44,8 @@ public class DefaultTurnTuning extends TurnTuning {
 	private double probeAngleDeg = 20.0;
 	private double probeTime = 0.14;
 	private double ttcBuffer = 0.05;
-	private double snapDist = 0.15;
-	private double snapAngleDeg = 22.0;
+	private double snapDist = 0.40;
+	private double snapAngleDeg = 45.0;
 
 	private double lastAlpha = 0.0;
 	private boolean turnLatched = false;

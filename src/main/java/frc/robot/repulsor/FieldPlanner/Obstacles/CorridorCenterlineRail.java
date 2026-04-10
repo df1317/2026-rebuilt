@@ -66,7 +66,9 @@ public class CorridorCenterlineRail extends Obstacle {
 
 		double e = ey / yHalfWidth;
 
-		double f = -strength * wx * (e) / (0.35 + e * e);
+		// Dampen small errors by using a larger term in the denominator
+		// or by cubing e, so it's shallow near the center
+		double f = -strength * wx * (e) / (0.8 + e * e);
 
 		if (f > maxForce)
 			f = maxForce;

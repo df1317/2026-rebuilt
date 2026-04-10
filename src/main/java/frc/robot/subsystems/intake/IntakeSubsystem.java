@@ -120,6 +120,10 @@ public class IntakeSubsystem extends SubsystemBase {
 
 		tunables.pidSpark("Pivot", pivotMotor, PIVOT_KP, PIVOT_KI, PIVOT_KD, 0.0);
 
+		if (RobotBase.isSimulation()) {
+			pivotEncoder.setPosition(retractedAngleDeg());
+		}
+
 		double initialAngle = pivotEncoder.getPosition();
 		pivotProfiler.reset(initialAngle);
 		setPivotAngle(Degrees.of(initialAngle));

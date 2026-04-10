@@ -159,15 +159,15 @@ public final class Rebuilt2026 implements FieldDefinition {
 		double gapTopY = RepulsorConstants.FIELD_WIDTH - (gapHeight * 0.5);
 		double gapBottomY = gapHeight * 0.5;
 
-		double rectStrength = 2.5;
-		double rectRangeX = 1.2;
-		double rectRangeY = 1.5;
+		double rectStrength = 2.1; // Reduced from 2.5 to make edges less harsh
+		double rectRangeX = 1.0; // Reduced from 1.2 to limit horizontal bulge
+		double rectRangeY = 1.3; // Reduced from 1.5
 
-		double biasStrength = 0.3;
-		double biasRange = 1.2;
+		double biasStrength = 0.5; // Increased from 0.3 to pull stronger to center
+		double biasRange = 1.5; // Increased from 1.2 to grab robot earlier
 
-		double bypassStrengthScale = 1.2;
-		double bypassRange = 1.4;
+		double bypassStrengthScale = 2.0; // Increased to suck through tunnel harder
+		double bypassRange = 2.0; // Increased to grab earlier and pull through
 
 		double edgeOffset = 0.06;
 
@@ -203,10 +203,10 @@ public final class Rebuilt2026 implements FieldDefinition {
 
 		double rightPullXIn = rightRectX - sidePullDx;
 
-		double railXWindow = 1.2;
+		double railXWindow = 0.5;
 		double corridorHalfWidthGuess = Math.max(0.22, gapHeight * 0.45);
-		double railStrength = 2.1;
-		double railMaxForce = 3.2;
+		double railStrength = 1.5;
+		double railMaxForce = 1.5;
 
 		return List.of(
 				new RectangleObstacle(

@@ -288,17 +288,17 @@ public class FieldPlanner {
 			double simX = curTrans.getX();
 			double simY = curTrans.getY();
 			double dMax = 0.0;
-			double seg_c = forceTarget.getX() * curTrans.getY()
-					- forceTarget.getY() * curTrans.getX();
 
-			// We use a fixed prediction horizon of ~24 iterations to get a good lookahead
-			// without consuming too many CPU cycles.
-			int maxSteps = 24;
+			// Scale steps dynamically based on remaining distance to prevent overshoot
+			int maxSteps = (int) Math.ceil(error / PAPF_RESOLUTION);
+			// Cap the number of steps to prevent infinite/excessive loops
+			maxSteps = Math.min(100, maxSteps);
+
 			for (int i = 0; i < maxSteps; i++) {
 				Translation2d simPos = new Translation2d(simX, simY);
-				Force force = forceModel.getGoalForce(simPos, forceTarget)
-						.plus(forceModel.getObstacleForce(simPos, forceTarget, dynamicObstacles))
-						.plus(forceModel.getWallForce(simPos, forceTarget));
+				Force force = forceModel.getGoalForce(simPos, effectiveGoal.getTranslation())
+						.plus(forceModel.getObstacleForce(simPos, effectiveGoal.getTranslation(), dynamicObstacles))
+						.plus(forceModel.getWallForce(simPos, effectiveGoal.getTranslation()));
 				double norm = force.getNorm();
 				if (norm < 1e-6)
 					break;
@@ -309,11 +309,18 @@ public class FieldPlanner {
 
 				traj.add(new Translation2d(simX, simY));
 
-				// Perpendicular distance from simulated point to line(robot -> goal)
-				double d = Math.abs(e_y * simX - e_x * simY + seg_c) / error;
-				if (d > PAPF_RESOLUTION && d >= dMax) {
-					forceTarget = new Translation2d(simX, simY);
-					dMax = d;
+				// Recompute the straight line to the original target to find deviation
+				double new_e_x = forceTarget.getX() - simX;
+				double new_e_y = forceTarget.getY() - simY;
+				double new_error = Math.hypot(new_e_x, new_e_y);
+
+				if (new_error > PAPF_RESOLUTION) {
+					double seg_c = forceTarget.getX() * simY - forceTarget.getY() * simX;
+					double d = Math.abs(new_e_y * simX - new_e_x * simY + seg_c) / new_error;
+					if (d > PAPF_RESOLUTION && d >= dMax) {
+						forceTarget = new Translation2d(simX, simY);
+						dMax = d;
+					}
 				}
 
 				double remainX = effectiveGoal.getTranslation().getX() - simX;
@@ -475,14 +482,12 @@ public class FieldPlanner {
 		if (cat == CategorySpec.kCollect) {
 			desiredHeadingRaw = effectiveGoal.getRotation();
 		} else {
-			// Compute a 90°-quantized offset on first call so the robot picks the
-			// closest side (front/back/left/right) to face the travel direction
-			// and holds it through tight spaces.
-			if (headingOffset == null) {
-				double diff = pose.getRotation().minus(netForce.getAngle()).getDegrees();
-				double snapped = Math.round(diff / 90.0) * 90.0;
-				headingOffset = Rotation2d.fromDegrees(snapped);
-			}
+			// Continually update the heading offset to match the direction of travel
+			// so the robot snaps its narrowest side parallel to the force field vector
+			double diff = pose.getRotation().minus(netForce.getAngle()).getDegrees();
+			double snapped = Math.round(diff / 90.0) * 90.0;
+			headingOffset = Rotation2d.fromDegrees(snapped);
+
 			Rotation2d travelHeading = netForce.getAngle().plus(headingOffset);
 			double t = MathUtil.clamp(1.0 - dist / headingBlendDist, 0.0, 1.0);
 			desiredHeadingRaw = travelHeading.interpolate(effectiveGoal.getRotation(), t);
