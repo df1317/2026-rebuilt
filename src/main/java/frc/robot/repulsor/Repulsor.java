@@ -44,6 +44,7 @@ import frc.robot.repulsor.Fields.Rebuilt2026;
 import frc.robot.repulsor.Setpoints.GameSetpoint;
 import frc.robot.repulsor.Setpoints.HeightSetpoint;
 import frc.robot.repulsor.Setpoints.RepulsorSetpoint;
+import frc.robot.repulsor.Setpoints.SetpointContext;
 import frc.robot.repulsor.Setpoints.SetpointType;
 import frc.robot.repulsor.Tuning.DriveTuningHeat;
 
@@ -140,6 +141,32 @@ public class Repulsor {
 	}
 
 	// ===== APF Drive =====
+
+	// ===== APF Drive GameSetpoint Overloads =====
+
+	public Command apfDrive(GameSetpoint goal) {
+		return apfDrive(() -> goal.poseForCurrentAlliance(SetpointContext.EMPTY));
+	}
+
+	public Command apfDrive(GameSetpoint goal, double endTolerance, double endAngTolerance) {
+		return apfDrive(() -> goal.poseForCurrentAlliance(SetpointContext.EMPTY), endTolerance, endAngTolerance);
+	}
+
+	public Command apfDrive(GameSetpoint goal, DoubleSupplier maxVelocity, DoubleSupplier maxDeceleration) {
+		return apfDrive(() -> goal.poseForCurrentAlliance(SetpointContext.EMPTY), maxVelocity, maxDeceleration);
+	}
+
+	public Command apfDrive(GameSetpoint goal, DoubleSupplier maxVelocity, DoubleSupplier maxDeceleration,
+			DoubleSupplier endTolerance, DoubleSupplier endAngTolerance) {
+		return apfDrive(() -> goal.poseForCurrentAlliance(SetpointContext.EMPTY), maxVelocity, maxDeceleration,
+				endTolerance, endAngTolerance);
+	}
+
+	public Command apfDriveFacing(GameSetpoint goal, FieldTranslation aimTarget, double rotationOffsetDeg,
+			double endTolerance, double endAngTolerance) {
+		return apfDriveFacing(() -> goal.poseForCurrentAlliance(SetpointContext.EMPTY), aimTarget, rotationOffsetDeg,
+				endTolerance, endAngTolerance);
+	}
 
 	/**
 	 * Drives to the goal using P-APF with the default speed profile

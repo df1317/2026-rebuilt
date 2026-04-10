@@ -47,6 +47,25 @@ public abstract class GameSetpoint {
 		return type;
 	}
 
+	public GameSetpoint withRotation(edu.wpi.first.math.geometry.Rotation2d newRotation) {
+		return new GameSetpoint(name + "_ROTATED", type, canFlip) {
+			@Override
+			public Pose2d bluePose(SetpointContext ctx) {
+				return new Pose2d(GameSetpoint.this.bluePose(ctx).getTranslation(), newRotation);
+			}
+		};
+	}
+
+	public GameSetpoint withRotationOffset(edu.wpi.first.math.geometry.Rotation2d offset) {
+		return new GameSetpoint(name + "_OFFSET", type, canFlip) {
+			@Override
+			public Pose2d bluePose(SetpointContext ctx) {
+				Pose2d base = GameSetpoint.this.bluePose(ctx);
+				return new Pose2d(base.getTranslation(), base.getRotation().plus(offset));
+			}
+		};
+	}
+
 	public abstract Pose2d bluePose(SetpointContext ctx);
 
 	public Pose2d redPose(SetpointContext ctx) {

@@ -68,6 +68,11 @@ public final class FieldPose implements Supplier<Pose2d> {
 		return get(false, false);
 	}
 
+	/** Returns a new FieldPose with the same translation but a new rotation. */
+	public FieldPose withRotation(Rotation2d newRotation) {
+		return new FieldPose(original.getTranslation(), newRotation);
+	}
+
 	private static boolean isBlue() {
 		return DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue) == DriverStation.Alliance.Blue;
 	}

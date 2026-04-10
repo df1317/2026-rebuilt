@@ -35,15 +35,10 @@ public final class Autos {
 
 	// ===== Field Positions =====
 	private static final FieldTranslation HUB_CENTER = new FieldTranslation(_Rebuilt2026.hubAimpointBlue());
-	private static final FieldPose CENTER_COLLECT = new FieldPose(
-			RepulsorConstants.FIELD_LENGTH / 2.0,
-			RepulsorConstants.FIELD_WIDTH / 2.0,
-			Rotation2d.kZero);
 	private static final FieldPose CLIMB_LEFT = new FieldPose(1.062, 4.922, Rotation2d.kZero);
 	private static final FieldPose CLIMB_RIGHT = new FieldPose(1.062, 2.629, Rotation2d.k180deg);
 	private static final FieldPose CORNER_HIDE_LEFT = new FieldPose(0.749, 7.324, Rotation2d.fromDegrees(0));
 	private static final FieldPose CORNER_HIDE_RIGHT = new FieldPose(0.645, 0.645, Rotation2d.fromDegrees(0));
-	private static final FieldPose OUTPOST = new FieldPose(_Rebuilt2026.OUTPOST_COLLECT.approximateRedPose());
 	private static final double CLIMB_ENGAGE_OFFSET = 0.2;
 	private static final FieldPose CLIMB_LEFT_ENGAGE = new FieldPose(
 			CLIMB_LEFT.getBlue().getX() - CLIMB_ENGAGE_OFFSET, CLIMB_LEFT.getBlue().getY(),
@@ -52,7 +47,6 @@ public final class Autos {
 			CLIMB_RIGHT.getBlue().getX() + CLIMB_ENGAGE_OFFSET, CLIMB_RIGHT.getBlue().getY(),
 			CLIMB_RIGHT.getBlue().getRotation());
 	private static final double HUB_RADIUS = 0.9;
-	private static final FieldPose HUB_FRONT_SHOOT = new FieldPose(hubPoseBack(0, 1.0));
 	private static final double COLLECT_Y_OFFSET = 1.8;
 	private static final double COLLECT_X_OFFSET = -0.5;
 
@@ -102,7 +96,7 @@ public final class Autos {
 
 	private Command frontHubAndShoot() {
 		return sequence(
-				apfDefaults(HUB_FRONT_SHOOT),
+				apfDefaults(_Rebuilt2026.HUB_FRONT_SHOOT),
 				shoot());
 	}
 
@@ -122,16 +116,13 @@ public final class Autos {
 		return sequence(
 				apfDefaultsFacing(CORNER_HIDE_RIGHT, HUB_CENTER, 180),
 				shoot(),
-				defer(
-						() -> apfDefaults(new Pose2d(repulsor.getDrive().getPose().getTranslation(), OUTPOST.get().getRotation())),
-						java.util.Set.of()),
-				deadline(apfDefaults(OUTPOST), collect()),
+				apfTurnThenDrive(_Rebuilt2026.OUTPOST_COLLECT.withRotationOffset(Rotation2d.fromDegrees(90))),
 				apfDefaultsFacing(CORNER_HIDE_RIGHT, HUB_CENTER, 180),
 				shoot());
 	}
 
 	private Command centerFieldAuto() {
-		return apfForever(CENTER_COLLECT);
+		return apfForever(_Rebuilt2026.CENTER_COLLECT);
 	}
 
 	private Command collectAndShoot1() {
@@ -180,14 +171,34 @@ public final class Autos {
 		return withSpeedScale(repulsor.apfDrive(pose, Repulsor.DEFAULT_POS_TOLERANCE, Repulsor.DEFAULT_ANG_TOLERANCE));
 	}
 
+	/** Drive to a {@link frc.robot.repulsor.Setpoints.GameSetpoint} with default speed. */
+	private Command apfDefaults(frc.robot.repulsor.Setpoints.GameSetpoint pose) {
+		return withSpeedScale(repulsor.apfDrive(pose, Repulsor.DEFAULT_POS_TOLERANCE, Repulsor.DEFAULT_ANG_TOLERANCE));
+	}
+
 	/** Drive to a raw pose (already alliance-resolved), ends when within default tolerances. */
 	private Command apfDefaults(Pose2d resolvedPose) {
 		return withSpeedScale(
 				repulsor.apfDrive(() -> resolvedPose, Repulsor.DEFAULT_POS_TOLERANCE, Repulsor.DEFAULT_ANG_TOLERANCE));
 	}
 
+	/** Turn in place to the goal's heading, then drive to it. */
+	private Command apfTurnThenDrive(frc.robot.repulsor.Setpoints.GameSetpoint pose) {
+		return sequence(
+				defer(
+						() -> apfDefaults(new Pose2d(repulsor.getDrive().getPose().getTranslation(),
+								pose.poseForCurrentAlliance(frc.robot.repulsor.Setpoints.SetpointContext.EMPTY).getRotation())),
+						java.util.Set.of()),
+				apfDefaults(pose));
+	}
+
 	/** Drive to a {@link FieldPose} with default speed, never ends. */
 	private Command apfForever(FieldPose pose) {
+		return withSpeedScale(repulsor.apfDrive(pose));
+	}
+
+	/** Drive to a {@link frc.robot.repulsor.Setpoints.GameSetpoint} with default speed, never ends. */
+	private Command apfForever(frc.robot.repulsor.Setpoints.GameSetpoint pose) {
 		return withSpeedScale(repulsor.apfDrive(pose));
 	}
 

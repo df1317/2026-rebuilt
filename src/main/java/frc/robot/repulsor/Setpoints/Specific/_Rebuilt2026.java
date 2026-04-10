@@ -27,10 +27,9 @@ import frc.robot.repulsor.RepulsorConstants;
 import frc.robot.repulsor.Setpoints.GameSetpoint;
 import frc.robot.repulsor.Setpoints.SetpointContext;
 import frc.robot.repulsor.Setpoints.SetpointType;
+import frc.robot.util.FieldFlip;
 
 import java.util.Optional;
-
-import frc.robot.util.FieldFlip;
 
 public class _Rebuilt2026 {
 	public static final double HUB_FACE_TO_AIMPOINT_METERS = 0.60;
@@ -42,7 +41,7 @@ public class _Rebuilt2026 {
 			SetpointType.kOther,
 			new Pose2d(RepulsorConstants.FIELD_LENGTH / 2.0, RepulsorConstants.FIELD_WIDTH / 2.0, Rotation2d.kZero));
 	public static final GameSetpoint OUTPOST_COLLECT = new ApproachFromTagSetpoint(
-			"OUTPOST_COLLECT", SetpointType.kHumanPlayer, BLUE_OUTPOST_ANCHOR_TAG_ID, 1.25);
+			"OUTPOST_COLLECT", SetpointType.kHumanPlayer, BLUE_OUTPOST_ANCHOR_TAG_ID, 0.5);
 	// ===== Fixed Scoring Poses (5 positions around hub at ~1.8m radius) =====
 	private static final double HUB_SCORE_RADIUS_M = 1.8;
 	public static final GameSetpoint HUB_SCORE_FRONT = new StaticPoseSetpoint(
@@ -59,6 +58,8 @@ public class _Rebuilt2026 {
 			HUB_SCORE_FRONT, HUB_SCORE_FRONT_LEFT, HUB_SCORE_FRONT_RIGHT,
 			HUB_SCORE_REAR_LEFT, HUB_SCORE_REAR_RIGHT
 	};
+	public static final GameSetpoint HUB_FRONT_SHOOT = new StaticPoseSetpoint(
+			"HUB_FRONT_SHOOT", SetpointType.kScore, hubScoringPose(0));
 	// ===== Climb Poses =====
 	private static final double CLIMB_OFFSET_Y_M = 2.5;
 	public static final GameSetpoint CLIMB_LEFT = new StaticPoseSetpoint(
