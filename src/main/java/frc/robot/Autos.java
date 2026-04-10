@@ -86,15 +86,6 @@ public final class Autos {
 
 	// ===== Auto Routines =====
 
-	private Command testIntakeMovement() {
-		return sequence(
-				intake.extendCommand().andThen(intake.holdExtendedCommand().withTimeout(1.0)),
-				intake.stowCommand(),
-				Commands.waitSeconds(1.0),
-				intake.extendCommand().andThen(intake.holdExtendedCommand().withTimeout(1.0)),
-				intake.stowCommand());
-	}
-
 	private static Pose2d hubPoseBack(double angleDeg, double extraStandoffM) {
 		Translation2d hubCenter = _Rebuilt2026.hubAimpointBlue();
 		Rotation2d angle = Rotation2d.fromDegrees(angleDeg);
@@ -102,6 +93,15 @@ public final class Autos {
 		Translation2d pos = hubCenter.minus(new Translation2d(standoff, angle));
 		Rotation2d awayFromHub = hubCenter.minus(pos).getAngle().rotateBy(Rotation2d.k180deg);
 		return new Pose2d(pos, awayFromHub);
+	}
+
+	private Command testIntakeMovement() {
+		return sequence(
+				intake.extendCommand().andThen(intake.holdExtendedCommand().withTimeout(1.0)),
+				intake.stowCommand(),
+				Commands.waitSeconds(1.0),
+				intake.extendCommand().andThen(intake.holdExtendedCommand().withTimeout(1.0)),
+				intake.stowCommand());
 	}
 
 	private Command frontHubAndShoot() {
@@ -127,6 +127,7 @@ public final class Autos {
 				apfDefaultsFacing(CORNER_HIDE_RIGHT, HUB_CENTER, 180),
 				shoot(),
 				apfTurnThenDrive(_Rebuilt2026.OUTPOST_COLLECT.withRotationOffset(Rotation2d.fromDegrees(90))),
+				waitSeconds(5),
 				apfDefaultsFacing(CORNER_HIDE_RIGHT, HUB_CENTER, 180),
 				shoot());
 	}

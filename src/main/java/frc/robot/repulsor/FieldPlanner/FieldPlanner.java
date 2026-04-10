@@ -495,7 +495,13 @@ public class FieldPlanner {
 
 		if (stuckStepCount >= MAX_STUCK_STEPS) {
 			DogLog.log("Repulsor/Stuck", true);
-			return new RepulsorSample(curTrans, 0, 0, Radians.of(pose.getRotation().getRadians()));
+			
+			// Apply a vortex force to escape the local minimum
+			// Rotate the net obstacle force 90 degrees to slide along the obstacle
+			Force escapeForce = new Force(0.5, obstacleForce.getAngle().plus(Rotation2d.fromDegrees(90)));
+			step = new Translation2d(0.5, escapeForce.getAngle());
+		} else {
+			DogLog.log("Repulsor/Stuck", false);
 		}
 
 		Rotation2d desiredHeadingRaw;
