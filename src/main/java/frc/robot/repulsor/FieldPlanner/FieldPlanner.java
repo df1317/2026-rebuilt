@@ -126,9 +126,9 @@ public class FieldPlanner {
 		return obstacleProvider;
 	}
 
-	private Pose2d[] lastTrajectory = new Pose2d[0];
+	private Translation2d[] lastTrajectory = new Translation2d[0];
 
-	public Pose2d[] getLastTrajectory() {
+	public Translation2d[] getLastTrajectory() {
 		return lastTrajectory;
 	}
 
@@ -277,8 +277,8 @@ public class FieldPlanner {
 		Translation2d curTrans = pose.getTranslation();
 		Translation2d forceTarget = effectiveGoal.getTranslation();
 
-		ArrayList<Pose2d> traj = new ArrayList<>();
-		traj.add(pose);
+		ArrayList<Translation2d> traj = new ArrayList<>();
+		traj.add(curTrans);
 
 		double e_x = forceTarget.getX() - curTrans.getX();
 		double e_y = forceTarget.getY() - curTrans.getY();
@@ -307,7 +307,7 @@ public class FieldPlanner {
 				simX += force.getX() * alpha;
 				simY += force.getY() * alpha;
 
-				traj.add(new Pose2d(simX, simY, force.getAngle()));
+				traj.add(new Translation2d(simX, simY));
 
 				// Perpendicular distance from simulated point to line(robot -> goal)
 				double d = Math.abs(e_y * simX - e_x * simY + seg_c) / error;
@@ -319,19 +319,14 @@ public class FieldPlanner {
 				double remainX = effectiveGoal.getTranslation().getX() - simX;
 				double remainY = effectiveGoal.getTranslation().getY() - simY;
 				if (remainX * remainX + remainY * remainY <= PAPF_RESOLUTION * PAPF_RESOLUTION) {
-					// We've reached the target, let's reverse the trajectory to go back 24 points
-					int pointsToReverse = Math.min(24, traj.size());
-					for (int j = 0; j < pointsToReverse; j++) {
-						Pose2d p = traj.get(traj.size() - 1 - j);
-						traj.add(new Pose2d(p.getTranslation(), p.getRotation().plus(Rotation2d.k180deg)));
-					}
+					// Reached target
 					break;
 				}
 			}
 		}
 
-		traj.add(effectiveGoal);
-		lastTrajectory = traj.toArray(Pose2d[]::new);
+		traj.add(effectiveGoal.getTranslation());
+		lastTrajectory = traj.toArray(Translation2d[]::new);
 
 		return forceTarget;
 	}

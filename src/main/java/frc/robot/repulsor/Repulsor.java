@@ -254,7 +254,7 @@ public class Repulsor {
 					m_driveTuning.clearOverrides();
 					m_drive.lock();
 					DogLog.forceNt.log("Repulsor/Target", new Pose2d());
-					DogLog.forceNt.log("Repulsor/Trajectory", new Pose2d[] {});
+					DogLog.forceNt.log("Repulsor/Trajectory", new edu.wpi.first.math.geometry.Translation2d[] {});
 				});
 
 		return cmd;
