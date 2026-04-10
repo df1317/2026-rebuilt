@@ -319,6 +319,12 @@ public class FieldPlanner {
 				double remainX = effectiveGoal.getTranslation().getX() - simX;
 				double remainY = effectiveGoal.getTranslation().getY() - simY;
 				if (remainX * remainX + remainY * remainY <= PAPF_RESOLUTION * PAPF_RESOLUTION) {
+					// We've reached the target, let's reverse the trajectory to go back 24 points
+					int pointsToReverse = Math.min(24, traj.size());
+					for (int j = 0; j < pointsToReverse; j++) {
+						Pose2d p = traj.get(traj.size() - 1 - j);
+						traj.add(new Pose2d(p.getTranslation(), p.getRotation().plus(Rotation2d.k180deg)));
+					}
 					break;
 				}
 			}

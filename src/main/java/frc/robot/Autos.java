@@ -43,7 +43,7 @@ public final class Autos {
 	private static final FieldPose CLIMB_RIGHT = new FieldPose(1.062, 2.629, Rotation2d.k180deg);
 	private static final FieldPose CORNER_HIDE_LEFT = new FieldPose(0.749, 7.324, Rotation2d.fromDegrees(0));
 	private static final FieldPose CORNER_HIDE_RIGHT = new FieldPose(0.645, 0.645, Rotation2d.fromDegrees(0));
-	private static final FieldPose OUTPOST = new FieldPose(_Rebuilt2026.OUTPOST_COLLECT.approximateBluePose());
+	private static final FieldPose OUTPOST = new FieldPose(_Rebuilt2026.OUTPOST_COLLECT.approximateRedPose());
 	private static final double CLIMB_ENGAGE_OFFSET = 0.2;
 	private static final FieldPose CLIMB_LEFT_ENGAGE = new FieldPose(
 			CLIMB_LEFT.getBlue().getX() - CLIMB_ENGAGE_OFFSET, CLIMB_LEFT.getBlue().getY(),
