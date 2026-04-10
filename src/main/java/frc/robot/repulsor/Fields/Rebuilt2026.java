@@ -211,6 +211,44 @@ public final class Rebuilt2026 implements FieldDefinition {
 
 		return List.of(
 				new SquareObstacle(
+						new Translation2d(0.259, 5.963), // Blue low force keepout
+						0.5,
+						0.8,
+						0.5),
+				new SquareObstacle(
+						new Translation2d(RepulsorConstants.FIELD_LENGTH - 0.259, 5.963), // Red low force keepout
+						0.5,
+						0.8,
+						0.5),
+				new RectangleObstacle(
+						new Translation2d(0.518, 4.178 - 0.4305), // Blue top
+						1.036,
+						0.861,
+						1.4,
+						0.5,
+						0.5),
+				new RectangleObstacle(
+						new Translation2d(0.518, 3.317 + 0.4305), // Blue bottom
+						1.036,
+						0.861,
+						1.4,
+						0.5,
+						0.5),
+				new RectangleObstacle(
+						new Translation2d(RepulsorConstants.FIELD_LENGTH - 0.518, 4.178 - 0.4305), // Red top
+						1.036,
+						0.861,
+						1.4,
+						0.5,
+						0.5),
+				new RectangleObstacle(
+						new Translation2d(RepulsorConstants.FIELD_LENGTH - 0.518, 3.317 + 0.4305), // Red bottom
+						1.036,
+						0.861,
+						1.4,
+						0.5,
+						0.5),
+				new SquareObstacle(
 						new Translation2d(4.625594, RepulsorConstants.FIELD_WIDTH / 2),
 						1.1938,
 						1.0,
