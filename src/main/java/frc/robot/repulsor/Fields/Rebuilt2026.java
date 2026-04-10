@@ -32,6 +32,7 @@ import frc.robot.repulsor.FieldPlanner.Obstacles.CorridorCenterlineRail;
 import frc.robot.repulsor.FieldPlanner.Obstacles.GatedAttractorObstacle;
 import frc.robot.repulsor.FieldPlanner.Obstacles.HorizontalObstacle;
 import frc.robot.repulsor.FieldPlanner.Obstacles.RectangleObstacle;
+import frc.robot.repulsor.FieldPlanner.Obstacles.SquareObstacle;
 import frc.robot.repulsor.FieldPlanner.Obstacles.VerticalObstacle;
 import frc.robot.repulsor.Fields.FieldMapBuilder.CategorySpec;
 import frc.robot.repulsor.Heatmap;
@@ -205,10 +206,20 @@ public final class Rebuilt2026 implements FieldDefinition {
 
 		double railXWindow = 0.5;
 		double corridorHalfWidthGuess = Math.max(0.22, gapHeight * 0.45);
-		double railStrength = 1.5;
-		double railMaxForce = 1.5;
+		double railStrength = 2.5;
+		double railMaxForce = 3.0;
 
 		return List.of(
+				new SquareObstacle(
+						new Translation2d(4.625594, RepulsorConstants.FIELD_WIDTH / 2),
+						1.1938,
+						1.0,
+						1.4),
+				new SquareObstacle(
+						new Translation2d(RepulsorConstants.FIELD_LENGTH - 4.625594, RepulsorConstants.FIELD_WIDTH / 2),
+						1.1938,
+						1.0,
+						1.4),
 				new RectangleObstacle(
 						new Translation2d(leftRectX, rectCy),
 						rectWidth,

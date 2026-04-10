@@ -53,6 +53,13 @@ public abstract class GameSetpoint {
 			public Pose2d bluePose(SetpointContext ctx) {
 				return new Pose2d(GameSetpoint.this.bluePose(ctx).getTranslation(), newRotation);
 			}
+
+			@Override
+			public Pose2d redPose(SetpointContext ctx) {
+				if (canFlip)
+					return super.redPose(ctx);
+				return new Pose2d(GameSetpoint.this.redPose(ctx).getTranslation(), newRotation);
+			}
 		};
 	}
 
@@ -61,6 +68,14 @@ public abstract class GameSetpoint {
 			@Override
 			public Pose2d bluePose(SetpointContext ctx) {
 				Pose2d base = GameSetpoint.this.bluePose(ctx);
+				return new Pose2d(base.getTranslation(), base.getRotation().plus(offset));
+			}
+
+			@Override
+			public Pose2d redPose(SetpointContext ctx) {
+				if (canFlip)
+					return super.redPose(ctx);
+				Pose2d base = GameSetpoint.this.redPose(ctx);
 				return new Pose2d(base.getTranslation(), base.getRotation().plus(offset));
 			}
 		};

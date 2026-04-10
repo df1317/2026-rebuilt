@@ -291,19 +291,39 @@ public class FieldPlanner {
 
 			// Scale steps dynamically based on remaining distance to prevent overshoot
 			int maxSteps = (int) Math.ceil(error / PAPF_RESOLUTION);
-			// Cap the number of steps to prevent infinite/excessive loops
-			maxSteps = Math.min(100, maxSteps);
+			// Cap the number of steps strictly to prevent CPU overruns in the main loop
+			maxSteps = Math.min(24, maxSteps);
 
 			for (int i = 0; i < maxSteps; i++) {
 				Translation2d simPos = new Translation2d(simX, simY);
-				Force force = forceModel.getGoalForce(simPos, effectiveGoal.getTranslation())
-						.plus(forceModel.getObstacleForce(simPos, effectiveGoal.getTranslation(), dynamicObstacles))
-						.plus(forceModel.getWallForce(simPos, effectiveGoal.getTranslation()));
+				Force goalForce = forceModel.getGoalForce(simPos, effectiveGoal.getTranslation());
+				Force obstacleForce = forceModel.getObstacleForce(simPos, effectiveGoal.getTranslation(), dynamicObstacles);
+				Force wallForce = forceModel.getWallForce(simPos, effectiveGoal.getTranslation());
+
+				Force force = goalForce.plus(obstacleForce).plus(wallForce);
 				double norm = force.getNorm();
 				if (norm < 1e-6)
 					break;
 
-				double alpha = PAPF_RESOLUTION / norm;
+				// Adaptive step scaling using an inverse function for smooth continuous blending:
+				// As hazard forces approach 0, stepSize approaches 0.6.
+				// As hazard forces increase, stepSize smoothly decays down towards 0.1.
+				double hazardForceNorm = obstacleForce.plus(wallForce).getNorm();
+				double maxStep = 0.6;
+				double minStep = 0.1;
+
+				// When hazardForceNorm is 1.0, the scale factor is 0.5.
+				double scale = 1.0 / (1.0 + hazardForceNorm);
+				double stepSize = minStep + (maxStep - minStep) * scale;
+
+				// Don't overshoot the goal
+				double remainDist = Math.hypot(effectiveGoal.getTranslation().getX() - simX,
+						effectiveGoal.getTranslation().getY() - simY);
+				if (stepSize > remainDist) {
+					stepSize = remainDist;
+				}
+
+				double alpha = stepSize / norm;
 				simX += force.getX() * alpha;
 				simY += force.getY() * alpha;
 
@@ -325,7 +345,7 @@ public class FieldPlanner {
 
 				double remainX = effectiveGoal.getTranslation().getX() - simX;
 				double remainY = effectiveGoal.getTranslation().getY() - simY;
-				if (remainX * remainX + remainY * remainY <= PAPF_RESOLUTION * PAPF_RESOLUTION) {
+				if (remainX * remainX + remainY * remainY <= 0.05 * 0.05) { // 5cm reach threshold
 					// Reached target
 					break;
 				}
@@ -484,9 +504,12 @@ public class FieldPlanner {
 		} else {
 			// Continually update the heading offset to match the direction of travel
 			// so the robot snaps its narrowest side parallel to the force field vector
-			double diff = pose.getRotation().minus(netForce.getAngle()).getDegrees();
-			double snapped = Math.round(diff / 90.0) * 90.0;
-			headingOffset = Rotation2d.fromDegrees(snapped);
+			// Use the current offset if it's already set to avoid spinning rapidly
+			if (headingOffset == null) {
+				double diff = pose.getRotation().minus(netForce.getAngle()).getDegrees();
+				double snapped = Math.round(diff / 90.0) * 90.0;
+				headingOffset = Rotation2d.fromDegrees(snapped);
+			}
 
 			Rotation2d travelHeading = netForce.getAngle().plus(headingOffset);
 			double t = MathUtil.clamp(1.0 - dist / headingBlendDist, 0.0, 1.0);
