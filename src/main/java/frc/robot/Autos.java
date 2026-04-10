@@ -122,8 +122,10 @@ public final class Autos {
 		return sequence(
 				apfDefaultsFacing(CORNER_HIDE_RIGHT, HUB_CENTER, 180),
 				shoot(),
-				apfDefaults(OUTPOST),
-				waitSeconds(5.0),
+				defer(
+						() -> apfDefaults(new Pose2d(repulsor.getDrive().getPose().getTranslation(), OUTPOST.get().getRotation())),
+						java.util.Set.of()),
+				deadline(apfDefaults(OUTPOST), collect()),
 				apfDefaultsFacing(CORNER_HIDE_RIGHT, HUB_CENTER, 180),
 				shoot());
 	}
