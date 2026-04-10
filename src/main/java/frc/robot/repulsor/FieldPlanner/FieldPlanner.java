@@ -291,7 +291,9 @@ public class FieldPlanner {
 			double seg_c = forceTarget.getX() * curTrans.getY()
 					- forceTarget.getY() * curTrans.getX();
 
-			int maxSteps = (int) Math.ceil(PAPF_HORIZON / PAPF_RESOLUTION);
+			// We use a fixed prediction horizon of ~24 iterations to get a good lookahead
+			// without consuming too many CPU cycles.
+			int maxSteps = 24;
 			for (int i = 0; i < maxSteps; i++) {
 				Translation2d simPos = new Translation2d(simX, simY);
 				Force force = forceModel.getGoalForce(simPos, forceTarget)

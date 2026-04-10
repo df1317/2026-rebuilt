@@ -43,6 +43,7 @@ public final class Autos {
 	private static final FieldPose CLIMB_RIGHT = new FieldPose(1.062, 2.629, Rotation2d.k180deg);
 	private static final FieldPose CORNER_HIDE_LEFT = new FieldPose(0.749, 7.324, Rotation2d.fromDegrees(0));
 	private static final FieldPose CORNER_HIDE_RIGHT = new FieldPose(0.645, 0.645, Rotation2d.fromDegrees(0));
+	private static final FieldPose OUTPOST = new FieldPose(_Rebuilt2026.OUTPOST_COLLECT.approximateBluePose());
 	private static final double CLIMB_ENGAGE_OFFSET = 0.2;
 	private static final FieldPose CLIMB_LEFT_ENGAGE = new FieldPose(
 			CLIMB_LEFT.getBlue().getX() - CLIMB_ENGAGE_OFFSET, CLIMB_LEFT.getBlue().getY(),
@@ -74,6 +75,7 @@ public final class Autos {
 		chooser.add("Score Front", this::frontHubAndShoot);
 		chooser.add("Left Hide + Shoot", this::leftCornerHideAndShoot);
 		chooser.add("Right Hide + Shoot", this::rightCornerHideAndShoot);
+		chooser.add("Right Hide + Shoot + Outpost", this::rightCornerHideAndShootOutpost);
 		chooser.add("Go to center", this::centerFieldAuto);
 		chooser.add("Just Shoot", this::shoot);
 		if (intake != null && roller != null) {
@@ -103,6 +105,15 @@ public final class Autos {
 
 	private Command rightCornerHideAndShoot() {
 		return sequence(
+				apfDefaultsFacing(CORNER_HIDE_RIGHT, HUB_CENTER, 180),
+				shoot());
+	}
+
+	private Command rightCornerHideAndShootOutpost() {
+		return sequence(
+				apfDefaultsFacing(CORNER_HIDE_RIGHT, HUB_CENTER, 180),
+				shoot(),
+				deadline(apfDefaults(OUTPOST), collect()),
 				apfDefaultsFacing(CORNER_HIDE_RIGHT, HUB_CENTER, 180),
 				shoot());
 	}
