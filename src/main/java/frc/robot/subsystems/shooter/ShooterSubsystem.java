@@ -22,9 +22,11 @@ import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.wpilibj.RobotBase;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.util.BallVisualizer;
 import frc.robot.util.CommandBuilder;
 import frc.robot.util.Mutable;
 import frc.robot.util.TunableDouble;
@@ -231,10 +233,10 @@ public class ShooterSubsystem extends SubsystemBase {
 		rpmToBallSpeed.put(BALL_SPEED_LOW_RPM, BALL_SPEED_LOW_M_S);
 		rpmToBallSpeed.put(BALL_SPEED_HIGH_RPM, BALL_SPEED_HIGH_M_S);
 
-		hoodPercentToLaunchAngle.put(0.00, 20.0);
-		hoodPercentToLaunchAngle.put(0.17, 25.0);
-		hoodPercentToLaunchAngle.put(0.36, 32.0);
-		hoodPercentToLaunchAngle.put(0.51, 38.0);
+		hoodPercentToLaunchAngle.put(0.00, 30.0);
+		hoodPercentToLaunchAngle.put(0.17, 35.0);
+		hoodPercentToLaunchAngle.put(0.36, 42.0);
+		hoodPercentToLaunchAngle.put(0.51, 48.0);
 	}
 
 	@Override
@@ -343,8 +345,17 @@ public class ShooterSubsystem extends SubsystemBase {
 		return distanceToHoodPercent.get(d);
 	}
 
+	public double getBallSpeedMPS(Distance distance) {
+		// Calculate linear velocity for 4-inch wheels (0.1016 meters diameter)
+		// V = RPM * (2 * PI * r) / 60
+		double radiusMeters = 0.1016 / 2.0;
+		// Multiply by an efficiency factor to account for slip and compression
+		double efficiency = 0.4;
+		return (targetVelocity.in(RPM) * (2.0 * Math.PI * radiusMeters) / 60.0) * efficiency;
+	}
+
 	public double getHorizontalBallSpeedMPS(Distance distance) {
-		double exitSpeed = rpmToBallSpeed.get(targetVelocity.in(RPM));
+		double exitSpeed = getBallSpeedMPS(distance);
 		double hoodPercent = getHoodPercentForDistance(distance);
 		double launchAngleDeg = hoodPercentToLaunchAngle.get(hoodPercent);
 		return exitSpeed * Math.cos(Math.toRadians(launchAngleDeg));
@@ -387,8 +398,25 @@ public class ShooterSubsystem extends SubsystemBase {
 	// ==================== Shooting Commands ====================
 
 	public Command shootForDistanceCommand(Supplier<Distance> distance) {
+		Timer shotTimer = new Timer();
 		return new CommandBuilder("Shooter.shootForDistance", this)
-				.onExecute(() -> setForDistance(distance))
+				.onInitialize(() -> {
+					Distance d = distance.get();
+					edu.wpi.first.wpilibj2.command.CommandScheduler.getInstance().schedule(BallVisualizer.shoot(
+							() -> getBallSpeedMPS(d),
+							() -> hoodPercentToLaunchAngle.get(getHoodPercentForDistance(d))));
+					shotTimer.restart();
+				})
+				.onExecute(() -> {
+					setForDistance(distance);
+					if (shotTimer.hasElapsed(1.0 / 8.0)) {
+						Distance d = distance.get();
+						edu.wpi.first.wpilibj2.command.CommandScheduler.getInstance().schedule(BallVisualizer.shoot(
+								() -> getBallSpeedMPS(d),
+								() -> hoodPercentToLaunchAngle.get(getHoodPercentForDistance(d))));
+						shotTimer.restart();
+					}
+				})
 				.onEnd(this::stop);
 	}
 
@@ -399,9 +427,14 @@ public class ShooterSubsystem extends SubsystemBase {
 	public Command spinUpReverseFeederThenShootCommand(Supplier<Distance> distance) {
 		enum Phase{REVERSE,SHOOT}
 		Mutable<Phase> phase = new Mutable<>(Phase.REVERSE);
+		Timer shotTimer = new Timer();
 
 		return new CommandBuilder("Shooter.reverseAndShoot", this)
-				.onInitialize(() -> phase.value = Phase.REVERSE)
+				.onInitialize(() -> {
+					phase.value = Phase.REVERSE;
+					shotTimer.reset();
+					shotTimer.start();
+				})
 				.onExecute(() -> {
 					Distance d = distance.get();
 					switch (phase.value) {
@@ -411,10 +444,21 @@ public class ShooterSubsystem extends SubsystemBase {
 							setHoodPercent(getHoodPercentForDistance(d));
 							if (isAtSpeed()) {
 								phase.value = Phase.SHOOT;
+								edu.wpi.first.wpilibj2.command.CommandScheduler.getInstance().schedule(BallVisualizer.shoot(
+										() -> getBallSpeedMPS(d),
+										() -> hoodPercentToLaunchAngle.get(getHoodPercentForDistance(d))));
+								shotTimer.restart();
 							}
 							break;
 						case SHOOT:
 							setForDistance(distance);
+							// Simulate repeating shots if held down (8 balls per second)
+							if (shotTimer.hasElapsed(1.0 / 8.0)) {
+								edu.wpi.first.wpilibj2.command.CommandScheduler.getInstance().schedule(BallVisualizer.shoot(
+										() -> getBallSpeedMPS(d),
+										() -> hoodPercentToLaunchAngle.get(getHoodPercentForDistance(d))));
+								shotTimer.restart();
+							}
 							break;
 					}
 				})

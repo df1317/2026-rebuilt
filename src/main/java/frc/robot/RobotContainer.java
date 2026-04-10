@@ -20,6 +20,7 @@ import frc.robot.subsystems.swervedrive.SwerveSubsystem;
 import frc.robot.util.FieldZones;
 import frc.robot.util.TunableBoolean;
 import frc.robot.util.TunableTable;
+import frc.robot.util.BallVisualizer;
 import swervelib.SwerveInputStream;
 
 import java.io.File;
@@ -78,6 +79,7 @@ public class RobotContainer {
 			if (shooter != null) {
 				shooter.setAutoDistanceSupplier(teleopAutomation::getTargetDistance);
 			}
+			BallVisualizer.setRobotPoseSupplier(drivebase::getPose);
 			if (roller != null) {
 				roller.setRobotSpeedSupplier(() -> {
 					var vel = drivebase.getFieldVelocity();

@@ -81,6 +81,7 @@ public final class Autos {
 			chooser.add("Climb Left", () -> climbAuto(CLIMB_LEFT, CLIMB_LEFT_ENGAGE));
 			chooser.add("Climb Right", () -> climbAuto(CLIMB_RIGHT, CLIMB_RIGHT_ENGAGE));
 		}
+
 		chooser.setDefault("Test Intake Movement");
 	}
 
