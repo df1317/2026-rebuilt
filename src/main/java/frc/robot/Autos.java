@@ -75,15 +75,25 @@ public final class Autos {
 		if (intake != null && roller != null) {
 			chooser.add("Collect + Shoot x1", this::collectAndShoot1);
 			chooser.add("Collect + Shoot x2", this::collectAndShoot2);
+			chooser.add("Test Intake Movement", this::testIntakeMovement);
 		}
 		if (climber != null) {
 			chooser.add("Climb Left", () -> climbAuto(CLIMB_LEFT, CLIMB_LEFT_ENGAGE));
 			chooser.add("Climb Right", () -> climbAuto(CLIMB_RIGHT, CLIMB_RIGHT_ENGAGE));
 		}
-		chooser.setDefault("Score Front");
+		chooser.setDefault("Test Intake Movement");
 	}
 
 	// ===== Auto Routines =====
+
+	private Command testIntakeMovement() {
+		return sequence(
+				intake.extendCommand().andThen(intake.holdExtendedCommand().withTimeout(1.0)),
+				intake.stowCommand(),
+				Commands.waitSeconds(1.0),
+				intake.extendCommand().andThen(intake.holdExtendedCommand().withTimeout(1.0)),
+				intake.stowCommand());
+	}
 
 	private static Pose2d hubPoseBack(double angleDeg, double extraStandoffM) {
 		Translation2d hubCenter = _Rebuilt2026.hubAimpointBlue();

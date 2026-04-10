@@ -81,7 +81,7 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 		SwerveDriveTelemetry.verbosity = Constants.SwerveTelemetryVerbosity;
 		try {
 			swerveDrive = new SwerveParser(directory).createSwerveDrive(Constants.MAX_SPEED,
-					new Pose2d(new Translation2d(Meter.of(1), Meter.of(4)), Rotation2d.fromDegrees(0)));
+					new Pose2d(new Translation2d(Meter.of(3.580), Meter.of(1.695)), Rotation2d.fromDegrees(0)));
 		} catch (Exception e) {
 			throw RobotLog.fatal("Swerve/Init", "Swerve init failed",
 					"Failed to create SwerveDrive from config directory", e);

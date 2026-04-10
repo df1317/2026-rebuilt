@@ -16,7 +16,11 @@ import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -200,6 +204,29 @@ public class IntakeSubsystem extends SubsystemBase {
 		pivotController.setSetpoint(pivotProfiler.getSetpoint().position, ControlType.kPosition);
 		DogLog.log("Intake/Pivot/ProfiledSetpoint", profiledSetpoint);
 		DogLog.log("Intake/Pivot/ProfiledVelocity", pivotProfiler.getSetpoint().velocity);
+
+		if (RobotBase.isSimulation()) {
+			// spoof encoder position in sim so it isn't stuck forever at 0
+			pivotEncoder.setPosition(pivotProfiler.getSetpoint().position);
+		}
+
+		// Log 3D mechanism for AdvantageScope
+		logMechanism3d();
+	}
+
+	private void logMechanism3d() {
+		// Intake arm rotates based on current pivot angle
+		// Offset it so that the retracted (stowed) position is 0 rotations
+		// Plus a -15 degree offset
+		double currentAngleDeg = (pivotEncoder.getPosition() - retractedAngleDeg()) - 15.0;
+
+		// The CAD model/visualization might need an offset to look right.
+		// As per AdvantageScope instructions, we publish a zeroed pose and adjust in AS.
+		Pose3d armPose = new Pose3d(new Translation3d(0.0, 0.11, 0.15),
+				new Rotation3d(Math.toRadians(currentAngleDeg), 0.0, 0.0));
+
+		// Log just the single 3D pose of the arm
+		DogLog.forceNt.log("Mechanism3d/Intake", new Pose3d[] { armPose });
 	}
 
 	// ==================== Helpers ====================

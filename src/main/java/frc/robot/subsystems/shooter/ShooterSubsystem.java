@@ -18,9 +18,10 @@ import dev.doglog.DogLog;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
-import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Distance;
+import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -130,6 +131,7 @@ public class ShooterSubsystem extends SubsystemBase {
 	double hoodMaxDeg = Double.NaN;
 	boolean manualDistanceEnabled = false;
 	private double manualDistanceM = 1.0;
+	private boolean wasAtSpeed = false;
 	private Supplier<Distance> autoDistanceSupplier = () -> Meters.of(0);
 
 	public ShooterSubsystem() {
@@ -232,18 +234,36 @@ public class ShooterSubsystem extends SubsystemBase {
 
 	@Override
 	public void periodic() {
+		boolean isCurrentlyAtSpeed = isAtSpeed();
+		if (wasAtSpeed != isCurrentlyAtSpeed) {
+			DogLog.log("Shooter/Flywheel/AtSpeedRaw", isCurrentlyAtSpeed);
+			wasAtSpeed = isCurrentlyAtSpeed;
+		}
+
+		if (RobotBase.isSimulation()) {
+			hoodEncoder.setPosition(targetHoodAngle.in(Degrees));
+			// Note: We can't trivially set Phoenix 6 TalonFX velocity without physics sim,
+			// so we might need a workaround for `isAtSpeed()`.
+		}
+
 		telemetry.log();
 	}
 
 	// ==================== State Queries ====================
 
 	public boolean isAtSpeed() {
+		if (RobotBase.isSimulation()) {
+			return targetVelocity.in(RPM) > 0;
+		}
 		double error = Math.abs(targetVelocity.in(RPM) - (motor.getVelocity().getValueAsDouble() * 60));
 		boolean withinTolerance = error < VELOCITY_TOLERANCE.in(RPM) && targetVelocity.in(RPM) > 0;
 		return atSpeedDebouncer.calculate(withinTolerance);
 	}
 
 	public boolean isFeederAtSpeed() {
+		if (RobotBase.isSimulation()) {
+			return targetFeederVelocity.in(RPM) > 0;
+		}
 		double error = Math.abs(targetFeederVelocity.in(RPM) - feederEncoder.getVelocity());
 		boolean withinTolerance = error < VELOCITY_TOLERANCE.in(RPM) && targetFeederVelocity.in(RPM) > 0;
 		return atFeederSpeedDebouncer.calculate(withinTolerance);
