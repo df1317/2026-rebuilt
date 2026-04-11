@@ -32,8 +32,6 @@ public final class Autos {
 
 	private static final double SLOW_VELOCITY = 1.5; // m/s
 	private static final double SLOW_DECEL = 3.0; // m/s²
-	private static final double FAST_VELOCITY = 4.0; // m/s
-	private static final double FAST_DECEL = 5.0; // m/s²
 
 	// ===== Field Positions =====
 	private static final FieldTranslation HUB_CENTER = new FieldTranslation(_Rebuilt2026.hubAimpointBlue());
@@ -144,12 +142,12 @@ public final class Autos {
 		Pose2d tagPose = computeTagShootPose(startPose);
 		Pose2d collectPose = computeCollectPose();
 		return sequence(
-				apfFastFacing(() -> tagPose, HUB_CENTER, 180),
+				apfDefaultsFacing(() -> tagPose, HUB_CENTER, 180),
 				shootInitial(),
-				deadline(apfFastCollect(collectPose), collect()),
-				parallel(
-						intake.stowCommand(), // No longer blocking the drive
-						apfFastFacing(() -> tagPose, HUB_CENTER, 180)),
+				deadline(
+						apfDefaults(collectPose).andThen(intake.stowCommand())
+								.andThen(apfDefaultsFacing(() -> tagPose, HUB_CENTER, 180)),
+						collect()),
 				shoot());
 	}
 
@@ -158,17 +156,17 @@ public final class Autos {
 		Pose2d tagPose = computeTagShootPose(startPose);
 		Pose2d collectPose = computeCollectPose();
 		return sequence(
-				apfFastFacing(() -> tagPose, HUB_CENTER, 180),
+				apfDefaultsFacing(() -> tagPose, HUB_CENTER, 180),
 				shootInitial(),
-				deadline(apfFastCollect(collectPose), collect()),
-				parallel(
-						intake.stowCommand(), // No longer blocking the drive
-						apfFastFacing(() -> tagPose, HUB_CENTER, 180)),
+				deadline(
+						apfDefaults(collectPose).andThen(intake.stowCommand())
+								.andThen(apfDefaultsFacing(() -> tagPose, HUB_CENTER, 180)),
+						collect()),
 				shoot(),
-				deadline(apfFastCollect(collectPose), collect()),
-				parallel(
-						intake.stowCommand(), // No longer blocking the drive
-						apfFastFacing(() -> tagPose, HUB_CENTER, 180)),
+				deadline(
+						apfDefaults(collectPose).andThen(intake.stowCommand())
+								.andThen(apfDefaultsFacing(() -> tagPose, HUB_CENTER, 180)),
+						collect()),
 				shoot());
 	}
 
@@ -206,16 +204,6 @@ public final class Autos {
 				repulsor.apfDrive(() -> resolvedPose, Repulsor.DEFAULT_POS_TOLERANCE, Repulsor.DEFAULT_ANG_TOLERANCE));
 	}
 
-	private Command apfFast(Pose2d resolvedPose) {
-		return withSpeedScale(repulsor.apfDrive(() -> resolvedPose, () -> FAST_VELOCITY, () -> FAST_DECEL,
-				() -> Repulsor.DEFAULT_POS_TOLERANCE, () -> Repulsor.DEFAULT_ANG_TOLERANCE));
-	}
-
-	private Command apfFastCollect(Pose2d resolvedPose) {
-		return withSpeedScale(repulsor.apfDrive(() -> resolvedPose, () -> FAST_VELOCITY, () -> FAST_DECEL,
-				() -> Repulsor.DEFAULT_POS_TOLERANCE * 2.0, () -> Repulsor.DEFAULT_ANG_TOLERANCE * 2.0));
-	}
-
 	/** Turn in place to the goal's heading, then drive to it. */
 	private Command apfTurnThenDrive(frc.robot.repulsor.Setpoints.GameSetpoint pose) {
 		return sequence(
@@ -249,12 +237,6 @@ public final class Autos {
 			double rotationOffsetDeg) {
 		return withSpeedScale(repulsor.apfDriveFacing(poseSupplier, aimTarget, rotationOffsetDeg,
 				Repulsor.DEFAULT_POS_TOLERANCE, Repulsor.DEFAULT_ANG_TOLERANCE));
-	}
-
-	private Command apfFastFacing(Supplier<Pose2d> poseSupplier, FieldTranslation aimTarget,
-			double rotationOffsetDeg) {
-		return withSpeedScale(repulsor.apfDriveFacing(poseSupplier, aimTarget, rotationOffsetDeg, () -> FAST_VELOCITY,
-				() -> FAST_DECEL, () -> Repulsor.DEFAULT_POS_TOLERANCE, () -> Repulsor.DEFAULT_ANG_TOLERANCE));
 	}
 
 	private Command shoot() {

@@ -26,6 +26,8 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import java.util.List;
+import frc.robot.planners.ThetaStarGrid;
+import frc.robot.planners.GlobalPlannerLayer.GateDefinition;
 import frc.robot.repulsor.RepulsorConstants;
 import frc.robot.repulsor.FieldPlanner.Obstacle;
 import frc.robot.repulsor.FieldPlanner.Obstacles.CorridorCenterlineRail;
@@ -435,6 +437,101 @@ public final class Rebuilt2026 implements FieldDefinition {
 				new HorizontalObstacle(RepulsorConstants.FIELD_WIDTH, 1, false),
 				new VerticalObstacle(0.0, 2, true),
 				new VerticalObstacle(RepulsorConstants.FIELD_LENGTH, 2, false));
+	}
+
+	public ThetaStarGrid buildGrid() {
+		ThetaStarGrid grid = new ThetaStarGrid();
+		double ROBOT_INFLATION = 0.45;
+		double GATE_INFLATION = 0.15;
+
+		for (Obstacle o : fieldObstacles()) {
+			if (o instanceof RectangleObstacle) {
+				RectangleObstacle ro = (RectangleObstacle) o;
+				grid.markRect(
+						ro.center.getX() - ro.halfX - ROBOT_INFLATION,
+						ro.center.getY() - ro.halfY - ROBOT_INFLATION,
+						ro.center.getX() + ro.halfX + ROBOT_INFLATION,
+						ro.center.getY() + ro.halfY + ROBOT_INFLATION);
+			} else if (o instanceof SquareObstacle) {
+				SquareObstacle so = (SquareObstacle) o;
+				grid.markRect(
+						so.center.getX() - so.halfSize - ROBOT_INFLATION,
+						so.center.getY() - so.halfSize - ROBOT_INFLATION,
+						so.center.getX() + so.halfSize + ROBOT_INFLATION,
+						so.center.getY() + so.halfSize + ROBOT_INFLATION);
+			} else if (o instanceof GatedAttractorObstacle) {
+				GatedAttractorObstacle go = (GatedAttractorObstacle) o;
+				// Estimate the wall segment from the bounding box of the gatePoly
+				double minX = Double.MAX_VALUE, maxX = -Double.MAX_VALUE;
+				double minY = Double.MAX_VALUE, maxY = -Double.MAX_VALUE;
+				for (Translation2d p : go.gatePoly) {
+					if (p.getX() < minX)
+						minX = p.getX();
+					if (p.getX() > maxX)
+						maxX = p.getX();
+					if (p.getY() < minY)
+						minY = p.getY();
+					if (p.getY() > maxY)
+						maxY = p.getY();
+				}
+				grid.markRect(
+						minX - GATE_INFLATION,
+						minY - GATE_INFLATION,
+						maxX + GATE_INFLATION,
+						maxY + GATE_INFLATION);
+			}
+		}
+
+		for (Obstacle w : walls()) {
+			if (w instanceof HorizontalObstacle) {
+				HorizontalObstacle ho = (HorizontalObstacle) w;
+				grid.markSegment(0, ho.y, RepulsorConstants.FIELD_LENGTH, ho.y, ROBOT_INFLATION);
+			} else if (w instanceof VerticalObstacle) {
+				VerticalObstacle vo = (VerticalObstacle) w;
+				grid.markSegment(vo.x, 0, vo.x, RepulsorConstants.FIELD_WIDTH, ROBOT_INFLATION);
+			}
+		}
+
+		return grid;
+	}
+
+	public java.util.List<GateDefinition> buildGates() {
+		java.util.List<GateDefinition> gates = new java.util.ArrayList<>();
+		java.util.Set<Translation2d> addedBypassPoints = new java.util.HashSet<>();
+		for (Obstacle o : fieldObstacles()) {
+			if (o instanceof GatedAttractorObstacle) {
+				GatedAttractorObstacle go = (GatedAttractorObstacle) o;
+				double minX = Double.MAX_VALUE, maxX = -Double.MAX_VALUE;
+				double minY = Double.MAX_VALUE, maxY = -Double.MAX_VALUE;
+				for (Translation2d p : go.gatePoly) {
+					if (p.getX() < minX)
+						minX = p.getX();
+					if (p.getX() > maxX)
+						maxX = p.getX();
+					if (p.getY() < minY)
+						minY = p.getY();
+					if (p.getY() > maxY)
+						maxY = p.getY();
+				}
+				boolean isVertical = (maxY - minY) > (maxX - minX);
+				Translation2d p1, p2;
+				if (isVertical) {
+					double avgX = (minX + maxX) / 2.0;
+					p1 = new Translation2d(avgX, minY);
+					p2 = new Translation2d(avgX, maxY);
+				} else {
+					double avgY = (minY + maxY) / 2.0;
+					p1 = new Translation2d(minX, avgY);
+					p2 = new Translation2d(maxX, avgY);
+				}
+
+				if (!addedBypassPoints.contains(go.bypassPoint)) {
+					gates.add(new GateDefinition(p1, p2, go.bypassPoint));
+					addedBypassPoints.add(go.bypassPoint);
+				}
+			}
+		}
+		return gates;
 	}
 
 	@Override

@@ -110,11 +110,6 @@ public class GatedAttractorObstacle extends Obstacle {
 			strengthScale = bypassStrengthScale;
 		}
 
-		// If the target (goal) does not cross the gate, we shouldn't be pulled by it.
-		if (gatePoly != null && !FieldPlanner.segmentIntersectsPolygonOuter(position, target, gatePoly)) {
-			return new Force();
-		}
-
 		double dist = position.getDistance(pullTo);
 		if (dist < EPS || dist > range)
 			return new Force();

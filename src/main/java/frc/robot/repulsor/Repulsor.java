@@ -36,6 +36,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
+
+import frc.robot.planners.GlobalPlannerLayer;
 import frc.robot.repulsor.Fallback.PlannerFallback;
 import frc.robot.repulsor.FieldPlanner.FieldPlanner;
 import frc.robot.repulsor.FieldPlanner.RepulsorSample;
@@ -62,6 +64,7 @@ public class Repulsor {
 	private final double robot_y_stowed;
 
 	private FieldPlanner m_planner;
+	private GlobalPlannerLayer m_globalPlanner;
 	private DriveRepulsor m_drive;
 	private final DriveTuningHeat m_driveTuning;
 	private double m_lastRepulsionIntensity = 0.0;
@@ -100,7 +103,9 @@ public class Repulsor {
 		this.robot_y_stowed = robot_y;
 
 		m_driveTuning = new DriveTuningHeat(() -> m_drive.getPose());
-		m_planner = new FieldPlanner(new Rebuilt2026(), m_driveTuning);
+		Rebuilt2026 map = new Rebuilt2026();
+		m_planner = new FieldPlanner(map, m_driveTuning);
+		m_globalPlanner = new GlobalPlannerLayer(map.buildGrid(), map.buildGates());
 	}
 
 	public void setAutoSpeedScale(double scale) {
@@ -222,13 +227,18 @@ public class Repulsor {
 					if (goalPose == null)
 						return;
 
-					if (ExtraPathing.robotIntersects(
-							goalPose.getTranslation(), getRobotX(), getRobotY(),
-							m_planner.getObstacles())) {
-						return;
-					}
+					m_globalPlanner.setGoal(goalPose);
+					Pose2d currentPose = m_drive.getPose();
+					Pose2d apfTarget = m_globalPlanner.update(currentPose);
 
-					m_planner.setRequestedGoal(goalPose);
+					if (apfTarget != null) {
+						if (ExtraPathing.robotIntersects(
+								apfTarget.getTranslation(), getRobotX(), getRobotY(),
+								m_planner.getObstacles())) {
+							return;
+						}
+						m_planner.setRequestedGoal(apfTarget);
+					}
 
 					Pose2d robotPose = m_drive.getPose();
 					RepulsorSample sample = m_planner.calculate(

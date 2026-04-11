@@ -70,6 +70,12 @@ public class CorridorCenterlineRail extends Obstacle {
 		// or by cubing e, so it's shallow near the center
 		double f = -strength * wx * (e) / (0.8 + e * e);
 
+		// Only apply force if our target is actively going through or is inside the gate region
+		if (Math.signum(target.getX() - xCenter) == Math.signum(position.getX() - xCenter)
+				&& Math.abs(target.getX() - xCenter) > xHalfWindow) {
+			return new Force();
+		}
+
 		if (f > maxForce)
 			f = maxForce;
 		if (f < -maxForce)
