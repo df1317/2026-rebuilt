@@ -7,7 +7,6 @@ import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.repulsor.Repulsor;
 import frc.robot.repulsor.RepulsorConstants;
 import frc.robot.repulsor.Setpoints.Specific._Rebuilt2026;
-import frc.robot.subsystems.climber.ClimberSubsystem;
 
 /**
  * Auto target positions and pre-built routines.
@@ -25,23 +24,9 @@ public final class AutoPositions {
 			RepulsorConstants.FIELD_LENGTH / 2.0,
 			RepulsorConstants.FIELD_WIDTH / 2.0,
 			Rotation2d.kZero);
-	/** Left climb position, must move .2 m negative x to engage climber */
-	public static final Pose2d CLIMB_LEFT = new Pose2d(
-			1.062, 4.922, Rotation2d.kZero);
-	/** Right climb position, must move .2 positive x to engage climber */
-	public static final Pose2d CLIMB_RIGHT = new Pose2d(
-			1.062, 2.629, Rotation2d.k180deg);
 	static final Pose2d CORNER_HIDE_NEAR_BALLS = new Pose2d(new Translation2d(0.749, 7.324),
 			Rotation2d.fromDegrees(0));
 	static final Pose2d CORNER_HIDE = new Pose2d(new Translation2d(0.645, 0.645), Rotation2d.fromDegrees(0));
-	// ===== Climb =====
-	private static final double CLIMB_ENGAGE_OFFSET = 0.2;
-	/** Left climb engage position (0.2 m negative x from CLIMB_LEFT). */
-	public static final Pose2d CLIMB_LEFT_ENGAGE = new Pose2d(
-			CLIMB_LEFT.getX() - CLIMB_ENGAGE_OFFSET, CLIMB_LEFT.getY(), CLIMB_LEFT.getRotation());
-	/** Right climb engage position (0.2 m positive x from CLIMB_RIGHT). */
-	public static final Pose2d CLIMB_RIGHT_ENGAGE = new Pose2d(
-			CLIMB_RIGHT.getX() + CLIMB_ENGAGE_OFFSET, CLIMB_RIGHT.getY(), CLIMB_RIGHT.getRotation());
 	private static final double HUB_RADIUS = 0.9;
 	/** Hub radius + robot half-length in front of hub, facing the hub. */
 	public static final Pose2d HUB_FRONT = hubPose(0);
@@ -112,27 +97,6 @@ public final class AutoPositions {
 				.driveToCollect()
 				.driveToStart()
 				.run(shootCommand)
-				.build();
-	}
-
-	// ===== Climb Autos =====
-
-	/**
-	 * Drive to climb position, engage, and climb. Sequence: down → bottom → top → hang.
-	 *
-	 * @param climbPose
-	 *          the approach pose (CLIMB_LEFT or CLIMB_RIGHT)
-	 * @param engagePose
-	 *          the engage pose (CLIMB_LEFT_ENGAGE or CLIMB_RIGHT_ENGAGE)
-	 */
-	public static Command climbAuto(Repulsor repulsor, ClimberSubsystem climber,
-			Pose2d climbPose, Pose2d engagePose) {
-		return new AutoBuilder(repulsor)
-				.driveTo(climbPose)
-				.run(climber.climbBottomCommand())
-				.driveTo(engagePose)
-				.run(climber.climbTopCommand())
-				.run(climber.climbHangCommand())
 				.build();
 	}
 

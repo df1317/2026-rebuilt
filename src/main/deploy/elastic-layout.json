@@ -584,24 +584,6 @@
             }
           },
           {
-            "title": "Climber Height",
-            "x": 1280.0,
-            "y": 256.0,
-            "width": 128.0,
-            "height": 256.0,
-            "type": "Number Bar",
-            "properties": {
-              "topic": "/Robot/Climber/HeightMeters",
-              "period": 0.06,
-              "data_type": "double",
-              "min_value": 0.0,
-              "max_value": 1.0,
-              "divisions": 5,
-              "inverted": false,
-              "orientation": "vertical"
-            }
-          },
-          {
             "title": "Position",
             "x": 1280.0,
             "y": 512.0,

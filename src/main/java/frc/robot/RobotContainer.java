@@ -1,9 +1,15 @@
 package frc.robot;
 
+import static edu.wpi.first.units.Units.RPM;
+
+import java.io.File;
+import java.util.Set;
+import java.util.function.Supplier;
+
 import dev.doglog.DogLog;
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.networktables.BooleanSubscriber;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.networktables.BooleanSubscriber;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.GenericHID.RumbleType;
@@ -16,7 +22,6 @@ import frc.robot.Constants.DrivebaseConstants;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.commands.TeleopZoneAutomation;
 import frc.robot.repulsor.Repulsor;
-import frc.robot.subsystems.climber.ClimberSubsystem;
 import frc.robot.subsystems.hopper.HopperSubsystem;
 import frc.robot.subsystems.intake.IntakeSubsystem;
 import frc.robot.subsystems.intake.RollerSubsystem;
@@ -24,12 +29,6 @@ import frc.robot.subsystems.shooter.ShooterSubsystem;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
 import frc.robot.util.FieldZones;
 import swervelib.SwerveInputStream;
-
-import java.io.File;
-import java.util.Set;
-import java.util.function.Supplier;
-
-import static edu.wpi.first.units.Units.RPM;
 
 public class RobotContainer {
 
@@ -40,7 +39,6 @@ public class RobotContainer {
 	private final SwerveSubsystem drivebase = Constants.ENABLE_SWERVE
 			? new SwerveSubsystem(new File(Filesystem.getDeployDirectory(), "swerve/neo"))
 			: null;
-	private final ClimberSubsystem climber = Constants.ENABLE_CLIMBER ? new ClimberSubsystem() : null;
 	private final ShooterSubsystem shooter = Constants.ENABLE_SHOOTER ? new ShooterSubsystem() : null;
 	private final RollerSubsystem roller = Constants.ENABLE_INTAKE ? new RollerSubsystem() : null;
 	private final IntakeSubsystem intake = Constants.ENABLE_INTAKE ? new IntakeSubsystem(roller) : null;
@@ -109,15 +107,7 @@ public class RobotContainer {
 			autoChooser.addOption("Collect + Shoot x2",
 					Commands.defer(() -> AutoPositions.collectAndShoot2(repulsor, teleopAutomation.shootCommand()),
 							Set.of(drivebase)));
-			if (Constants.ENABLE_CLIMBER && climber != null) {
-				autoChooser.addOption("Climb Left",
-						Commands.defer(() -> AutoPositions.climbAuto(repulsor, climber, AutoPositions.CLIMB_LEFT,
-								AutoPositions.CLIMB_LEFT_ENGAGE), Set.of(drivebase)));
-				autoChooser.addOption("Climb Right",
-						Commands.defer(() -> AutoPositions.climbAuto(repulsor, climber, AutoPositions.CLIMB_RIGHT,
-								AutoPositions.CLIMB_RIGHT_ENGAGE), Set.of(drivebase)));
-			}
-			autoChain = new AutoChain(repulsor, teleopAutomation, climber);
+			autoChain = new AutoChain(repulsor, teleopAutomation);
 			autoChooser.addOption("Custom Chain", Commands.defer(() -> autoChain.asCommand(), Set.of(drivebase)));
 			autoChooser.addOption("Do Nothing", Commands.none());
 			SmartDashboard.putData("misc/Auto Chooser", autoChooser);
@@ -194,23 +184,11 @@ public class RobotContainer {
 			panel.key(2, 0).and(inTeleop).onTrue(shooter.advanceDistanceCommand()); // distanceAdvance
 			panel.key(3, 0).and(inTeleop).onTrue(shooter.reduceDistanceCommand()); // distanceReduce
 		}
-		// Row 4 — Climber positions
-		if (Constants.ENABLE_CLIMBER && climber != null) {
-			panel.key(4, 0).and(inTeleop).onTrue(climber.climbBottomCommand()); // climbBottom
-			panel.key(4, 1).and(inTeleop).onTrue(climber.climbTopCommand()); // climbTop
-			panel.key(4, 2).and(inTeleop).onTrue(climber.climbHangCommand()); // climbHang
-			panel.key(4, 3).and(inTeleop).onTrue(climber.climbReleaseCommand()); // climbRelease
-		}
 
 		// ===== Test Mode Controls (Maypad — see docs for layout) =====
-		// Row 0 — Climber / Intake
+		// Row 0 — Intake
 		if (Constants.ENABLE_INTAKE && intake != null) {
 			panel.key(0, 0).onTrue(intake.homeCommand()); // intakeHome
-		}
-		if (Constants.ENABLE_CLIMBER && climber != null) {
-			panel.key(0, 1).and(inTest).onTrue(climber.zeroCommand());
-			panel.key(0, 2).and(inTest).whileTrue(climber.jogVoltageCommand(() -> 1.0)); // climberUp
-			panel.key(0, 3).and(inTest).whileTrue(climber.jogVoltageCommand(() -> -1.0)); // climberDown
 		}
 		// Row 1 — Hood + Aim
 		if (Constants.ENABLE_SHOOTER && shooter != null) {

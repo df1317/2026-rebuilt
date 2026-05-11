@@ -1,18 +1,23 @@
 package frc.robot;
 
+import static edu.wpi.first.units.Units.Degrees;
+import static edu.wpi.first.units.Units.Inches;
+import static edu.wpi.first.units.Units.RPM;
+import static edu.wpi.first.units.Units.Volts;
+
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.units.measure.*;
+import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.units.measure.Distance;
+import edu.wpi.first.units.measure.Voltage;
 import frc.robot.util.DevMode;
 import swervelib.telemetry.SwerveDriveTelemetry.TelemetryVerbosity;
-
-import static edu.wpi.first.units.Units.*;
 
 public final class Constants {
 
 	// Subsystem enable flags
 	public static final boolean ENABLE_SWERVE = true;
-	public static final boolean ENABLE_CLIMBER = true;
 	public static final boolean ENABLE_INTAKE = true;
 	public static final boolean ENABLE_SHOOTER = true;
 	public static final boolean ENABLE_HOPPER = true;
@@ -152,35 +157,6 @@ public final class Constants {
 		public static final double BALL_SPEED_HIGH_M_S = 6.15; // ball speed at max RPM (3250)
 		public static final double CURRENT_DEBOUNCE_TIME = 0.1;
 		public static final double HOOD_HOMING_VOLTAGE = 2.0;
-	}
-
-	public static class ClimberConstants {
-		public static final int MOTOR_LEFT_ID = 29;
-
-		public static final boolean INVERTED = true;
-		public static final int CURRENT_LIMIT = 20;
-
-		public static final Distance MAX_HEIGHT = Meters.of(3.96);
-		public static final Distance MIN_HEIGHT = Meters.of(0.0);
-		public static final Distance HANG_HEIGHT = Meters.of(1.75); // TODO: measure
-		public static final Distance RELEASE_HEIGHT = Meters.of(1.3); // TODO: measure
-		public static final double ROTATIONS_PER_METER = 42.4;
-		public static final Distance POSITION_TOLERANCE = Centimeters.of(2);
-
-		public static final LinearVelocity MAX_VELOCITY = MetersPerSecond.of(0.25);
-		public static final LinearAcceleration MAX_ACCELERATION = MetersPerSecondPerSecond.of(0.5);
-
-		public static final double KP = 0.0; // 0.00065
-		public static final double KI = 0.0;
-		public static final double KD = 0.0;
-
-		public static final double KS = 0.31; // 0.37
-		public static final double KG = 0.0; // 0.49
-		public static final double KV = 4.7; // 4.7
-
-		public static final double JOG_SPEED_METERS_PER_SECOND = 0.3;
-		public static final double JOG_CURRENT_LIMIT = 1;
-		public static final double JOG_SOFT_LIMIT_ROTATIONS = 9999.0;
 	}
 
 	public static class HopperConstants {
