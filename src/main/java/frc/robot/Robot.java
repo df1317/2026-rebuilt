@@ -5,7 +5,8 @@ import dev.doglog.DogLogOptions;
 import edu.wpi.first.net.WebServer;
 import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj.simulation.DriverStationSim;
+import edu.wpi.first.hal.AllianceStationID;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.util.DevMode;
 import frc.robot.util.HubTracker;
@@ -13,7 +14,6 @@ import frc.robot.util.HubTracker;
 public class Robot extends TimedRobot {
 
 	private final double[] loopTimesMs = new double[50];
-	private Command m_autonomousCommand;
 	private RobotContainer m_robotContainer;
 	private Timer disabledTimer;
 	// Loop timing (dev mode only)
@@ -31,6 +31,8 @@ public class Robot extends TimedRobot {
 
 		if (isSimulation()) {
 			DriverStation.silenceJoystickConnectionWarning(true);
+			DriverStationSim.setAllianceStationId(AllianceStationID.Blue1);
+			DriverStationSim.notifyNewData();
 		}
 	}
 
@@ -95,13 +97,7 @@ public class Robot extends TimedRobot {
 	@Override
 	public void autonomousInit() {
 		m_robotContainer.setMotorBrake(true);
-		m_robotContainer.autonomousInit();
-		m_autonomousCommand = m_robotContainer.getAutonomousCommand();
 		HubTracker.start();
-
-		if (m_autonomousCommand != null) {
-			CommandScheduler.getInstance().schedule(m_autonomousCommand);
-		}
 	}
 
 	@Override

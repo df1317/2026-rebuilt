@@ -19,14 +19,12 @@
 
 package frc.robot.repulsor;
 
-import edu.wpi.first.apriltag.AprilTagFieldLayout;
-import edu.wpi.first.apriltag.AprilTagFields;
 import frc.robot.repulsor.Fields.FieldDefinition;
 import frc.robot.repulsor.Fields.Rebuilt2026;
+import frc.robot.util.FieldFlip;
 
 public final class RepulsorConstants {
-	public static final AprilTagFieldLayout aprilTagLayout = AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
-	public static final double FIELD_LENGTH = aprilTagLayout.getFieldLength();
-	public static final double FIELD_WIDTH = aprilTagLayout.getFieldWidth();
+	public static final double FIELD_LENGTH = FieldFlip.fieldLength();
+	public static final double FIELD_WIDTH = FieldFlip.fieldWidth();
 	public static final FieldDefinition FIELD = new Rebuilt2026();
 }

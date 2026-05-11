@@ -9,71 +9,84 @@ import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
-import dev.doglog.DogLog;
 import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.util.CommandBuilder;
+import frc.robot.util.TunableDouble;
+import frc.robot.util.TunableTable;
 
 import java.util.function.DoubleSupplier;
 
 import static edu.wpi.first.units.Units.RPM;
-import static frc.robot.Constants.IntakeConstants.*;
 
 public class RollerSubsystem extends SubsystemBase {
 
+	// ==================== Hardware Config ====================
+	private static final int MOTOR_ID = 30;
+	private static final int CURRENT_LIMIT = 40;
+	private static final boolean INVERTED = true;
+	private static final double SPEED_SCALE_MAX_RPM = 3500;
+	private static final double SPEED_SCALE_MAX_ROBOT_MPS = 3.0;
+	static final AngularVelocity VELOCITY_TOLERANCE = RPM.of(100);
+
+	// ==================== PID Gains ====================
+	private static final double KP = 2E-4;
+	private static final double KI = 1.3E-4;
+	private static final double KD = 0.0;
+	private static final double KV = 1.5E-4;
+	private static final double I_ZONE = 1E-3;
+
+	// ==================== State Enum ====================
+
+	private enum State {
+		INTAKE(2500.0), EJECT(-1500.0);
+
+		public final TunableDouble rpm;
+
+		State(double rpm) {
+			this.rpm = tunables.value("speeds/" + name(), rpm, RPM);
+		}
+	}
+
+	// ==================== Hardware ====================
 	final SparkFlex rollerMotor;
 	final RelativeEncoder rollerEncoder;
 	private final SparkClosedLoopController rollerController;
-	// Roller PID tunables
-	private final DoubleSubscriber tuneRollerKP = DogLog.tunable("Intake/Roller/kP", ROLLER_KP);
-	private final DoubleSubscriber tuneRollerKI = DogLog.tunable("Intake/Roller/kI", ROLLER_KI);
-	private final DoubleSubscriber tuneRollerKD = DogLog.tunable("Intake/Roller/kD", ROLLER_KD);
-	private final DoubleSubscriber tuneRollerKV = DogLog.tunable("Intake/Roller/kV", ROLLER_KV);
-	private final DoubleSubscriber testRollerRPM = DogLog.tunable("Intake/Roller/RPM",
-			ROLLER_INTAKE_VELOCITY.in(RPM), RPM);
+
+	// ==================== Tunables ====================
+	private static final TunableTable tunables = new TunableTable("Intake/Roller");
+	// ==================== Control State ====================
 	AngularVelocity targetRollerVelocity = RPM.of(0);
-	private double prevRollerKP = ROLLER_KP, prevRollerKI = ROLLER_KI, prevRollerKD = ROLLER_KD,
-			prevRollerKV = ROLLER_KV;
 	private DoubleSupplier robotSpeedSupplier = () -> 0.0;
 
 	public RollerSubsystem() {
-		rollerMotor = new SparkFlex(ROLLER_MOTOR_ID, MotorType.kBrushless);
+		rollerMotor = new SparkFlex(MOTOR_ID, MotorType.kBrushless);
 		rollerController = rollerMotor.getClosedLoopController();
 		rollerEncoder = rollerMotor.getEncoder();
 		configureRollerMotor();
+
+		tunables.pidSpark("Motor", rollerMotor, KP, KI, KD, KV);
+
+		// Enum warmup
+		State.INTAKE.rpm.get();
 	}
 
 	private void configureRollerMotor() {
 		SparkMaxConfig config = new SparkMaxConfig();
-		config.idleMode(IdleMode.kCoast).smartCurrentLimit(ROLLER_CURRENT_LIMIT)
-				.inverted(ROLLER_INVERTED);
-		config.closedLoop.pid(ROLLER_KP, ROLLER_KI, ROLLER_KD).iZone(ROLLER_I_ZONE);
-		config.closedLoop.feedForward.kV(ROLLER_KV);
+		config.idleMode(IdleMode.kCoast).smartCurrentLimit(CURRENT_LIMIT)
+				.inverted(INVERTED);
+		config.closedLoop.pid(KP, KI, KD).iZone(I_ZONE);
+		config.closedLoop.feedForward.kV(KV);
 		rollerMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
 	}
 
 	@Override
 	public void periodic() {
-		updateRollerPIDIfChanged();
 	}
 
-	private void updateRollerPIDIfChanged() {
-		double kP = tuneRollerKP.getAsDouble(), kI = tuneRollerKI.getAsDouble(),
-				kD = tuneRollerKD.getAsDouble(), kV = tuneRollerKV.getAsDouble();
-		if (kP == prevRollerKP && kI == prevRollerKI && kD == prevRollerKD && kV == prevRollerKV)
-			return;
-		prevRollerKP = kP;
-		prevRollerKI = kI;
-		prevRollerKD = kD;
-		prevRollerKV = kV;
-		SparkMaxConfig config = new SparkMaxConfig();
-		config.closedLoop.pid(kP, kI, kD);
-		config.closedLoop.feedForward.kV(kV);
-		rollerMotor.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
-	}
+	// ==================== Control Methods ====================
 
 	public void setRollerVelocity(AngularVelocity velocity) {
 		targetRollerVelocity = velocity;
@@ -85,14 +98,14 @@ public class RollerSubsystem extends SubsystemBase {
 	}
 
 	public AngularVelocity getSpeedScaledRollerVelocity() {
-		double t = MathUtil.clamp(robotSpeedSupplier.getAsDouble() / ROLLER_SPEED_SCALE_MAX_ROBOT_MPS, 0.0, 1.0);
-		double rpm = MathUtil.interpolate(ROLLER_INTAKE_VELOCITY.in(RPM), ROLLER_SPEED_SCALE_MAX_RPM, t);
+		double t = MathUtil.clamp(robotSpeedSupplier.getAsDouble() / SPEED_SCALE_MAX_ROBOT_MPS, 0.0, 1.0);
+		double rpm = MathUtil.interpolate(State.INTAKE.rpm.get(), SPEED_SCALE_MAX_RPM, t);
 		return RPM.of(rpm);
 	}
 
 	public boolean isRollerAtSpeed() {
 		return Math.abs(rollerEncoder.getVelocity()
-				- targetRollerVelocity.in(RPM)) < ROLLER_VELOCITY_TOLERANCE.in(RPM);
+				- targetRollerVelocity.in(RPM)) < VELOCITY_TOLERANCE.in(RPM);
 	}
 
 	public void stopRoller() {
@@ -101,29 +114,25 @@ public class RollerSubsystem extends SubsystemBase {
 
 	// ==================== Command Factory Methods ====================
 
+	private Command runState(State state) {
+		return new CommandBuilder("Roller." + state.name().toLowerCase(), this)
+				.onExecute(() -> setRollerVelocity(RPM.of(state.rpm.get())))
+				.onEnd(this::stopRoller);
+	}
+
 	public Command runRollerCommand() {
-		return run(() -> setRollerVelocity(ROLLER_INTAKE_VELOCITY))
-				.finallyDo(this::stopRoller).withName("Run Roller");
+		return runState(State.INTAKE);
 	}
 
 	public Command ejectCommand() {
-		return run(() -> setRollerVelocity(ROLLER_EJECT_VELOCITY))
-				.finallyDo(this::stopRoller).withName("Eject Roller");
+		return runState(State.EJECT);
 	}
 
+	/** Intake with speed scaling based on robot velocity. */
 	public Command intakeCommand() {
-		return run(() -> setRollerVelocity(getSpeedScaledRollerVelocity()))
-				.finallyDo(this::stopRoller)
-				.withName("Intake Roller");
+		return new CommandBuilder("Roller.intake", this)
+				.onExecute(() -> setRollerVelocity(getSpeedScaledRollerVelocity()))
+				.onEnd(this::stopRoller);
 	}
 
-	public Command stopRollerCommand() {
-		return runOnce(this::stopRoller).withName("Stop Roller");
-	}
-
-	public Command testRollerCommand() {
-		return Commands.run(() -> setRollerVelocity(RPM.of(testRollerRPM.get())), this)
-				.finallyDo(this::stopRoller)
-				.withName("Test Roller");
-	}
 }

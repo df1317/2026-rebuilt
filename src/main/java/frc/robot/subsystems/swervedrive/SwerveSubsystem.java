@@ -13,7 +13,6 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
-import edu.wpi.first.networktables.BooleanSubscriber;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -57,7 +56,8 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 
 	private final SwerveDrive swerveDrive;
 	private final PIDController repulsorOmegaPID = new PIDController(5.0, 0.0, 0.0);
-	private final BooleanSubscriber visionEnabled = DogLog.tunable("Swerve/VisionEnabled", true);
+	private final frc.robot.util.TunableBoolean visionEnabled = new frc.robot.util.TunableTable("Swerve")
+			.value("VisionEnabled", true);
 	private final double AIM_SPEED_FAST = 5.0;
 	private final double AIM_SPEED_MID = 1.0;
 	private final double AIM_SPEED_SLOW = 2.0;
@@ -81,7 +81,7 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 		SwerveDriveTelemetry.verbosity = Constants.SwerveTelemetryVerbosity;
 		try {
 			swerveDrive = new SwerveParser(directory).createSwerveDrive(Constants.MAX_SPEED,
-					new Pose2d(new Translation2d(Meter.of(1), Meter.of(4)), Rotation2d.fromDegrees(0)));
+					new Pose2d(new Translation2d(Meter.of(3.580), Meter.of(1.695)), Rotation2d.fromDegrees(0)));
 		} catch (Exception e) {
 			throw RobotLog.fatal("Swerve/Init", "Swerve init failed",
 					"Failed to create SwerveDrive from config directory", e);

@@ -55,6 +55,10 @@ public class FieldPlanner {
 	public static final double GOAL_STRENGTH = 2.2;
 	private static final double DEFAULT_HEADING_BLEND_DIST = 0.75;
 
+	// P-APF predictive lookahead parameters
+	private static final double PAPF_HORIZON = 8.0; // meters
+	private static final double PAPF_RESOLUTION = 0.25; // meters
+
 	private double headingBlendDist = DEFAULT_HEADING_BLEND_DIST;
 	private Rotation2d headingOffset = null;
 
@@ -120,6 +124,12 @@ public class FieldPlanner {
 
 	public ObstacleProvider getObstacleProvider() {
 		return obstacleProvider;
+	}
+
+	private Translation2d[] lastTrajectory = new Translation2d[0];
+
+	public Translation2d[] getLastTrajectory() {
+		return lastTrajectory;
 	}
 
 	public FieldPlanner() {
@@ -262,6 +272,92 @@ public class FieldPlanner {
 				pose, dynamicObstacles, robot_x, robot_y, cat, false);
 	}
 
+	public Translation2d getForceTarget(Pose2d pose, List<? extends Obstacle> dynamicObstacles) {
+		Pose2d effectiveGoal = goalManager.getGoalPose();
+		Translation2d curTrans = pose.getTranslation();
+		Translation2d forceTarget = effectiveGoal.getTranslation();
+
+		ArrayList<Translation2d> traj = new ArrayList<>();
+		traj.add(curTrans);
+
+		double e_x = forceTarget.getX() - curTrans.getX();
+		double e_y = forceTarget.getY() - curTrans.getY();
+		double error = Math.hypot(e_x, e_y);
+
+		if (error > PAPF_RESOLUTION) {
+			double simX = curTrans.getX();
+			double simY = curTrans.getY();
+			double dMax = 0.0;
+
+			// Scale steps dynamically based on remaining distance to prevent overshoot
+			int maxSteps = (int) Math.ceil(error / PAPF_RESOLUTION);
+			// Cap the number of steps strictly to prevent CPU overruns in the main loop
+			maxSteps = Math.min(24, maxSteps);
+
+			for (int i = 0; i < maxSteps; i++) {
+				Translation2d simPos = new Translation2d(simX, simY);
+				Force goalForce = forceModel.getGoalForce(simPos, effectiveGoal.getTranslation());
+				Force obstacleForce = forceModel.getObstacleForce(simPos, effectiveGoal.getTranslation(), dynamicObstacles);
+				Force wallForce = forceModel.getWallForce(simPos, effectiveGoal.getTranslation());
+
+				Force force = goalForce.plus(obstacleForce).plus(wallForce);
+				double norm = force.getNorm();
+				if (norm < 1e-6)
+					break;
+
+				// Adaptive step scaling using an inverse function for smooth continuous blending:
+				// As hazard forces approach 0, stepSize approaches 0.6.
+				// As hazard forces increase, stepSize smoothly decays down towards 0.1.
+				double hazardForceNorm = obstacleForce.plus(wallForce).getNorm();
+				double maxStep = 0.6;
+				double minStep = 0.1;
+
+				// When hazardForceNorm is 1.0, the scale factor is 0.5.
+				double scale = 1.0 / (1.0 + hazardForceNorm);
+				double stepSize = minStep + (maxStep - minStep) * scale;
+
+				// Don't overshoot the goal
+				double remainDist = Math.hypot(effectiveGoal.getTranslation().getX() - simX,
+						effectiveGoal.getTranslation().getY() - simY);
+				if (stepSize > remainDist) {
+					stepSize = remainDist;
+				}
+
+				double alpha = stepSize / norm;
+				simX += force.getX() * alpha;
+				simY += force.getY() * alpha;
+
+				traj.add(new Translation2d(simX, simY));
+
+				// Recompute the straight line to the original target to find deviation
+				double new_e_x = forceTarget.getX() - simX;
+				double new_e_y = forceTarget.getY() - simY;
+				double new_error = Math.hypot(new_e_x, new_e_y);
+
+				if (new_error > PAPF_RESOLUTION) {
+					double seg_c = forceTarget.getX() * simY - forceTarget.getY() * simX;
+					double d = Math.abs(new_e_y * simX - new_e_x * simY + seg_c) / new_error;
+					if (d > PAPF_RESOLUTION && d >= dMax) {
+						forceTarget = new Translation2d(simX, simY);
+						dMax = d;
+					}
+				}
+
+				double remainX = effectiveGoal.getTranslation().getX() - simX;
+				double remainY = effectiveGoal.getTranslation().getY() - simY;
+				if (remainX * remainX + remainY * remainY <= 0.05 * 0.05) { // 5cm reach threshold
+					// Reached target
+					break;
+				}
+			}
+		}
+
+		traj.add(effectiveGoal.getTranslation());
+		lastTrajectory = traj.toArray(Translation2d[]::new);
+
+		return forceTarget;
+	}
+
 	public RepulsorSample calculate(
 			Pose2d pose,
 			List<? extends Obstacle> dynamicObstacles,
@@ -376,9 +472,15 @@ public class FieldPlanner {
 
 		Pose2d effectiveGoal = goalManager.getGoalPose();
 
-		var obstacleForce = getObstacleForce(curTrans, effectiveGoal.getTranslation(), effectiveDynamicsFinal)
-				.plus(getWallForce(curTrans, effectiveGoal.getTranslation()));
-		var netForce = getGoalForce(curTrans, effectiveGoal.getTranslation()).plus(obstacleForce);
+		// P-APF: Simulate forward along the force field to find an intermediate
+		// setpoint that smooths the path around obstacles. The setpoint is the
+		// point along the predicted path that deviates most from the straight
+		// line to the goal.
+		Translation2d forceTarget = getForceTarget(pose, effectiveDynamicsFinal);
+
+		var obstacleForce = getObstacleForce(curTrans, forceTarget, effectiveDynamicsFinal)
+				.plus(getWallForce(curTrans, forceTarget));
+		var netForce = getGoalForce(curTrans, forceTarget).plus(obstacleForce);
 		var dist = curTrans.getDistance(effectiveGoal.getTranslation());
 
 		double stepSize_m = driveTuning.stepSizeMeters(
@@ -393,21 +495,28 @@ public class FieldPlanner {
 
 		if (stuckStepCount >= MAX_STUCK_STEPS) {
 			DogLog.log("Repulsor/Stuck", true);
-			return new RepulsorSample(curTrans, 0, 0, Radians.of(pose.getRotation().getRadians()));
+
+			// Apply a vortex force to escape the local minimum
+			// Rotate the net obstacle force 90 degrees to slide along the obstacle
+			Force escapeForce = new Force(0.5, obstacleForce.getAngle().plus(Rotation2d.fromDegrees(90)));
+			step = new Translation2d(0.5, escapeForce.getAngle());
+		} else {
+			DogLog.log("Repulsor/Stuck", false);
 		}
 
 		Rotation2d desiredHeadingRaw;
 		if (cat == CategorySpec.kCollect) {
 			desiredHeadingRaw = effectiveGoal.getRotation();
 		} else {
-			// Compute a 90°-quantized offset on first call so the robot picks the
-			// closest side (front/back/left/right) to face the travel direction
-			// and holds it through tight spaces.
+			// Continually update the heading offset to match the direction of travel
+			// so the robot snaps its narrowest side parallel to the force field vector
+			// Use the current offset if it's already set to avoid spinning rapidly
 			if (headingOffset == null) {
 				double diff = pose.getRotation().minus(netForce.getAngle()).getDegrees();
 				double snapped = Math.round(diff / 90.0) * 90.0;
 				headingOffset = Rotation2d.fromDegrees(snapped);
 			}
+
 			Rotation2d travelHeading = netForce.getAngle().plus(headingOffset);
 			double t = MathUtil.clamp(1.0 - dist / headingBlendDist, 0.0, 1.0);
 			desiredHeadingRaw = travelHeading.interpolate(effectiveGoal.getRotation(), t);

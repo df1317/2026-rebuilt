@@ -453,7 +453,7 @@
   .hl-num  { color: #a5d6ff; }              /* numbers */
   .hl-str  { color: #a5d6ff; }              /* strings */
   .hl-cmt  { color: #8b949e; font-style: italic; } /* comments */
-  .hl-ref  { color: #ffa657; }              /* AutoPositions refs */
+  .hl-ref  { color: #ffa657; }              /* named constant refs */
   .hl-punc { color: #c9d1d9; }              /* punctuation */
 
   #code-modal .modal-footer {
@@ -745,7 +745,7 @@
 <div id="code-modal">
   <div class="modal-content">
     <div class="modal-header">
-      <h2>Generated AutoBuilder Code</h2>
+      <h2>Generated Auto Routine</h2>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <pre id="code-output"></pre>
@@ -759,15 +759,15 @@
 <div id="load-modal">
   <div class="modal-content">
     <div class="modal-header">
-      <h2>Load AutoBuilder Java</h2>
+      <h2>Load Auto Routine</h2>
       <button class="modal-close" onclick="closeLoadModal()">&times;</button>
     </div>
-    <textarea id="load-input" placeholder="Paste AutoBuilder Java code here...
-Example:
-new AutoBuilder(repulsor)
-    .driveTo(new Pose2d(3.0, 4.0, Rotation2d.fromDegrees(90)))
-    .run(shootCommand)
-    .build();" spellcheck="false"></textarea>
+    <textarea id="load-input" placeholder="Paste auto routine Java code here...
+
+return sequence(
+    apfDefaults(HUB_FRONT_SHOOT),
+    shoot()
+);" spellcheck="false"></textarea>
     <div class="modal-footer">
       <button class="toolbar-btn secondary" onclick="loadFromFile()">Load from File</button>
       <button class="toolbar-btn primary" onclick="submitLoadModal()">Load</button>
@@ -796,46 +796,40 @@ const HUB_RADIUS = 0.9;
 const ROBOT_HALF_LENGTH = 0.4;
 const ROBOT_HALF_WIDTH = 0.4;
 
-// ===== Named positions from AutoPositions.java =====
+// ===== Named positions (constants from Autos.java) =====
 // Each has approx coordinates for visualization + the Java constant name for export.
 // Pose2d positions (for drive targets)
 const NAMED_POSES = {
-  HUB_FRONT:             { ref: 'AutoPositions.HUB_FRONT',             x: null, y: null, rot: null },
-  HUB_FRONT_SHOOT:       { ref: 'AutoPositions.HUB_FRONT_SHOOT',       x: null, y: null, rot: null },
-  CENTER_COLLECT:         { ref: 'AutoPositions.CENTER_COLLECT',         x: FIELD_LENGTH / 2, y: FIELD_WIDTH / 2, rot: 0 },
-  CORNER_HIDE_NEAR_BALLS: { ref: 'AutoPositions.CORNER_HIDE_NEAR_BALLS', x: 0.749, y: 7.324, rot: 0 },
-  CORNER_HIDE:           { ref: 'AutoPositions.CORNER_HIDE',           x: 0.645, y: 0.645, rot: 0 },
-  CLIMB_LEFT:            { ref: 'AutoPositions.CLIMB_LEFT',            x: 1.062, y: 4.922, rot: 0 },
-  CLIMB_RIGHT:           { ref: 'AutoPositions.CLIMB_RIGHT',           x: 1.062, y: 2.629, rot: 180 },
-  CLIMB_LEFT_ENGAGE:     { ref: 'AutoPositions.CLIMB_LEFT_ENGAGE',     x: 1.062 - 0.2, y: 4.922, rot: 0 },
-  CLIMB_RIGHT_ENGAGE:    { ref: 'AutoPositions.CLIMB_RIGHT_ENGAGE',    x: 1.062 + 0.2, y: 2.629, rot: 180 },
+  HUB_FRONT_SHOOT:     { ref: 'HUB_FRONT_SHOOT', x: null, y: null, rot: null },
+  CENTER_COLLECT:       { ref: 'CENTER_COLLECT', x: FIELD_LENGTH / 2, y: FIELD_WIDTH / 2, rot: 0 },
+  CORNER_HIDE_LEFT:    { ref: 'CORNER_HIDE_LEFT', x: 0.749, y: 7.324, rot: 0 },
+  CORNER_HIDE_RIGHT:   { ref: 'CORNER_HIDE_RIGHT', x: 0.645, y: 0.645, rot: 0 },
+  CLIMB_LEFT:          { ref: 'CLIMB_LEFT', x: 1.062, y: 4.922, rot: 0 },
+  CLIMB_RIGHT:         { ref: 'CLIMB_RIGHT', x: 1.062, y: 2.629, rot: 180 },
+  CLIMB_LEFT_ENGAGE:   { ref: 'CLIMB_LEFT_ENGAGE', x: 1.062 - 0.2, y: 4.922, rot: 0 },
+  CLIMB_RIGHT_ENGAGE:  { ref: 'CLIMB_RIGHT_ENGAGE', x: 1.062 + 0.2, y: 2.629, rot: 180 },
 };
 
 // Translation2d positions (for aim targets)
 const NAMED_TARGETS = {
-  HUB_CENTER: { ref: 'AutoPositions.HUB_CENTER', x: null, y: null },
+  HUB_CENTER: { ref: 'HUB_CENTER', x: null, y: null },
 };
 
 // Quick-add presets for the sidebar
 const PRESETS = {
-  hubFront:       { namedPose: 'HUB_FRONT',       label: 'Hub Front',       type: 'driveTo' },
-  hubFrontShoot:  { namedPose: 'HUB_FRONT_SHOOT',  label: 'Hub Front Shoot', type: 'driveTo' },
-  centerCollect:  { namedPose: 'CENTER_COLLECT',    label: 'Center Field',    type: 'driveToAndHold' },
-  cornerLeft:     { namedPose: 'CORNER_HIDE_NEAR_BALLS', label: 'Corner Left', type: 'driveToFacing', namedAim: 'HUB_CENTER', rot: 0 },
-  cornerRight:    { namedPose: 'CORNER_HIDE',       label: 'Corner Right',    type: 'driveToFacing', namedAim: 'HUB_CENTER', rot: 0 },
-  climbLeft:      { namedPose: 'CLIMB_LEFT',        label: 'Climb Left',      type: 'driveTo' },
-  climbRight:     { namedPose: 'CLIMB_RIGHT',       label: 'Climb Right',     type: 'driveTo' },
-  collectClosest: { label: 'Collect Closest', type: 'driveTo', x: FIELD_LENGTH / 2, y: FIELD_WIDTH / 2 + 1.5, rot: 0 },
+  hubFrontShoot:    { namedPose: 'HUB_FRONT_SHOOT', label: 'Hub Shoot', type: 'driveTo' },
+  centerCollect:    { namedPose: 'CENTER_COLLECT', label: 'Center Field', type: 'driveToAndHold' },
+  cornerHideLeft:   { namedPose: 'CORNER_HIDE_LEFT', label: 'Corner Left', type: 'driveToFacing', namedAim: 'HUB_CENTER', rot: 180 },
+  cornerHideRight:  { namedPose: 'CORNER_HIDE_RIGHT', label: 'Corner Right', type: 'driveToFacing', namedAim: 'HUB_CENTER', rot: 180 },
+  climbLeft:        { namedPose: 'CLIMB_LEFT', label: 'Climb Left', type: 'driveTo' },
+  climbRight:       { namedPose: 'CLIMB_RIGHT', label: 'Climb Right', type: 'driveTo' },
+  collectClosest:   { label: 'Collect Closest', type: 'driveTo', x: FIELD_LENGTH / 2, y: FIELD_WIDTH / 2 + 1.5, rot: 0 },
 };
 
 function initPresets() {
   const hc = HUB_CENTER_APPROX;
   const standoff = HUB_RADIUS + ROBOT_HALF_LENGTH;
 
-  // Compute approximate hub-relative positions
-  NAMED_POSES.HUB_FRONT.x = hc.x - standoff;
-  NAMED_POSES.HUB_FRONT.y = hc.y;
-  NAMED_POSES.HUB_FRONT.rot = Math.atan2(0, 1) * 180 / Math.PI; // facing +x toward hub = 0
   NAMED_POSES.HUB_FRONT_SHOOT.x = hc.x - standoff - 1.0;
   NAMED_POSES.HUB_FRONT_SHOOT.y = hc.y;
   NAMED_POSES.HUB_FRONT_SHOOT.rot = 180;
@@ -1025,13 +1019,12 @@ function canvasToField(cx, cy) {
     y: FIELD_WIDTH - (cy - panY) / canvasScale
   };
   // Un-flip: canvas shows red-flipped, but data is always blue-alliance
-  return alliance === 'red' ? { x: flipX(raw.x), y: raw.y } : raw;
+  return alliance === 'red' ? { x: FIELD_LENGTH - raw.x, y: FIELD_WIDTH - raw.y } : raw;
 }
 
-// Alliance flip (blue -> red) - mirrors X, keeps Y, flips heading
-function flipX(x) { return FIELD_LENGTH - x; }
+// Alliance flip (blue -> red) - rotational symmetry: flip both X and Y, rotate heading 180°
 function flipField(fx, fy) {
-  return alliance === 'red' ? { x: flipX(fx), y: fy } : { x: fx, y: fy };
+  return alliance === 'red' ? { x: FIELD_LENGTH - fx, y: FIELD_WIDTH - fy } : { x: fx, y: fy };
 }
 
 // Field-to-canvas with alliance flip applied (for rendering only - data stays blue)
@@ -1042,7 +1035,7 @@ function fieldToCanvasFlipped(fx, fy) {
 
 function effectiveHeadingDegFlipped(step) {
   const deg = effectiveHeadingDeg(step);
-  return alliance === 'red' ? 180 - deg : deg;
+  return alliance === 'red' ? deg + 180 : deg;
 }
 
 // ===== RENDERING =====
@@ -1187,7 +1180,7 @@ function drawGhostMarker(ghost, idx) {
   const halfLen = ROBOT_HALF_LENGTH * canvasScale;
   const halfWid = ROBOT_HALF_WIDTH * canvasScale;
   const ghostRotDeg = ghost.rot || 0;
-  const ghostRotFlipped = alliance === 'red' ? 180 - ghostRotDeg : ghostRotDeg;
+  const ghostRotFlipped = alliance === 'red' ? ghostRotDeg + 180 : ghostRotDeg;
   const rotRad = -ghostRotFlipped * Math.PI / 180;
   ctx.save();
   ctx.translate(p.x, p.y);
@@ -1460,8 +1453,8 @@ function onMouseMove(e) {
       const wp = fieldToCanvasFlipped(step.x, step.y);
       const canvasAngle = Math.atan2(cy - wp.y, cx - wp.x);
       const draggedHeadingDeg = -canvasAngle * 180 / Math.PI;
-      // When red, the visual heading is 180-deg from blue, so convert back to blue data
-      const blueHeadingDeg = alliance === 'red' ? 180 - draggedHeadingDeg : draggedHeadingDeg;
+      // When red, the visual heading is rotated 180° from blue, so convert back to blue data
+      const blueHeadingDeg = alliance === 'red' ? draggedHeadingDeg + 180 : draggedHeadingDeg;
       if (step.type === 'driveToFacing' && step.aimX !== undefined) {
         // rot is offset from facing: dragged heading = facing + offset
         const facingDeg = Math.atan2(step.aimY - step.y, step.aimX - step.x) * 180 / Math.PI;
@@ -2044,12 +2037,11 @@ function exportCode() {
   }
 
   let code = '// Generated by Auto Builder\n';
-  code += '// Alliance: Blue (auto-flipped at schedule time)\n\n';
-  code += 'new AutoBuilder(repulsor)\n';
+  code += '// All positions are blue-alliance. FieldPose handles alliance flipping.\n\n';
+  code += 'return sequence(\n';
 
-  // Map command types to their Java expressions
   const COMMAND_EXPRS = {
-    shoot: 'shootCommand',
+    shoot: 'shoot()',
     runRoller: 'roller.intakeCommand()',
     intakeDown: 'intake.extendCommand()',
     intakeUp: 'intake.stowCommand()',
@@ -2065,68 +2057,44 @@ function exportCode() {
     return expr;
   }
 
-  // Helpers for code generation
   function poseExpr(step) {
     if (step.namedPose && NAMED_POSES[step.namedPose]) {
       return NAMED_POSES[step.namedPose].ref;
     }
-    return `new Pose2d(${step.x.toFixed(3)}, ${step.y.toFixed(3)}, Rotation2d.fromDegrees(${(step.rot || 0).toFixed(1)}))`;
-  }
-
-  /** Pose2d without rotation (for driveToFacing where rot is a separate param). */
-  function poseExprNoRot(step) {
-    if (step.namedPose && NAMED_POSES[step.namedPose]) {
-      return NAMED_POSES[step.namedPose].ref;
-    }
-    return `new Pose2d(${step.x.toFixed(3)}, ${step.y.toFixed(3)}, Rotation2d.kZero)`;
+    return `new FieldPose(${step.x.toFixed(3)}, ${step.y.toFixed(3)}, Rotation2d.fromDegrees(${(step.rot || 0).toFixed(1)}))`;
   }
 
   function aimExpr(step) {
     if (step.namedAim && NAMED_TARGETS[step.namedAim]) {
       return NAMED_TARGETS[step.namedAim].ref;
     }
-    return `new Translation2d(${step.aimX.toFixed(3)}, ${step.aimY.toFixed(3)})`;
+    return `new FieldTranslation(${step.aimX.toFixed(3)}, ${step.aimY.toFixed(3)})`;
   }
 
+  const lines = [];
   for (const step of steps) {
     switch (step.type) {
-      case 'driveTo': {
-        const tol = step.tolerance !== undefined && Math.abs(step.tolerance - 0.15) > 0.001;
-        if (tol) {
-          code += `\t.driveTo(${poseExpr(step)}, Meters.of(${step.tolerance.toFixed(2)}))\n`;
-        } else {
-          code += `\t.driveTo(${poseExpr(step)})\n`;
-        }
+      case 'driveTo':
+        lines.push(`\tapfDefaults(${poseExpr(step)})`);
         break;
-      }
       case 'driveToFacing': {
-        const rot = step.rot || 0;
-        const hasRot = Math.abs(rot) > 0.1;
-        const tol = step.tolerance !== undefined && Math.abs(step.tolerance - 0.15) > 0.001;
-        const pose = hasRot ? poseExprNoRot(step) : poseExprNoRot(step);
+        const pose = poseExpr(step);
         const aim = aimExpr(step);
-        if (hasRot && tol) {
-          code += `\t.driveToFacing(${pose}, ${aim}, ${rot.toFixed(1)}, Meters.of(${step.tolerance.toFixed(2)}))\n`;
-        } else if (hasRot) {
-          code += `\t.driveToFacing(${pose}, ${aim}, ${rot.toFixed(1)})\n`;
-        } else if (tol) {
-          code += `\t.driveToFacing(${pose}, ${aim}, Meters.of(${step.tolerance.toFixed(2)}))\n`;
-        } else {
-          code += `\t.driveToFacing(${pose}, ${aim})\n`;
-        }
+        const rot = step.rot || 0;
+        lines.push(`\tapfDefaultsFacing(${pose}, ${aim}, ${rot.toFixed(1)})`);
         break;
       }
       case 'driveToAndHold':
-        code += `\t.driveToAndHold(${poseExpr(step)})\n`;
+        lines.push(`\tapfForever(${poseExpr(step)})`);
         break;
       case 'driveToStart':
-        code += `\t.driveToStart()\n`;
+        lines.push(`\tapfDefaults(startPose)`);
         break;
       case 'wait':
-        code += `\t.waitSeconds(${step.waitSeconds})\n`;
+        lines.push(`\tCommands.waitSeconds(${step.waitSeconds})`);
         break;
       case 'collect':
-        code += `\t.driveToCollect()\n`;
+        lines.push(`\tdeadline(apfDefaults(computeCollectPose()), collect())`);
         break;
       case 'shoot':
       case 'runRoller':
@@ -2134,23 +2102,33 @@ function exportCode() {
       case 'intakeUp':
       case 'custom': {
         const expr = withTimeout(commandExpr(step), step);
-        if (step.alongside) {
-          code += `\t.alongside(${expr})\n`;
+        if (step.alongside && lines.length > 0) {
+          // Wrap previous drive + this command in deadline()
+          const prev = lines.pop();
+          lines.push(`\tdeadline(${prev.trim()}, ${expr})`);
         } else {
-          code += `\t.run(${expr})\n`;
+          lines.push(`\t${expr}`);
         }
         break;
       }
       case 'climbLeft':
-        code += `\t.driveTo(AutoPositions.CLIMB_LEFT)\n\t.run(climber.climbBottomCommand())\n\t.driveTo(AutoPositions.CLIMB_LEFT_ENGAGE)\n\t.run(climber.climbTopCommand())\n\t.run(climber.climbHangCommand())\n`;
+        lines.push(`\tapfDefaults(CLIMB_LEFT)`);
+        lines.push(`\tclimber.climbBottomCommand()`);
+        lines.push(`\tapfSlow(CLIMB_LEFT_ENGAGE)`);
+        lines.push(`\tclimber.climbTopCommand()`);
+        lines.push(`\tclimber.climbHangCommand()`);
         break;
       case 'climbRight':
-        code += `\t.driveTo(AutoPositions.CLIMB_RIGHT)\n\t.run(climber.climbBottomCommand())\n\t.driveTo(AutoPositions.CLIMB_RIGHT_ENGAGE)\n\t.run(climber.climbTopCommand())\n\t.run(climber.climbHangCommand())\n`;
+        lines.push(`\tapfDefaults(CLIMB_RIGHT)`);
+        lines.push(`\tclimber.climbBottomCommand()`);
+        lines.push(`\tapfSlow(CLIMB_RIGHT_ENGAGE)`);
+        lines.push(`\tclimber.climbTopCommand()`);
+        lines.push(`\tclimber.climbHangCommand()`);
         break;
     }
   }
 
-  code += '\t.build();\n';
+  code += lines.join(',\n') + '\n);\n';
 
   document.getElementById('code-output').innerHTML = highlightJava(code);
   document.getElementById('code-modal').classList.add('visible');
@@ -2170,10 +2148,7 @@ function highlightJava(code) {
   html = html.replace(/\b(new|return|import|static|final|public|private|void)\b/g, '<span class="hl-kw">$1</span>');
 
   // Types (PascalCase words that are known WPILib/project types)
-  html = html.replace(/\b(Pose2d|Rotation2d|Translation2d|Meters|AutoPositions|AutoBuilder|Command|Commands)\b/g, '<span class="hl-type">$1</span>');
-
-  // AutoPositions.CONSTANT references
-  html = html.replace(/(AutoPositions\.)([A-Z_]+)/g, '<span class="hl-type">AutoPositions</span>.<span class="hl-ref">$2</span>');
+  html = html.replace(/\b(Pose2d|Rotation2d|Translation2d|FieldPose|FieldTranslation|Commands|Command)\b/g, '<span class="hl-type">$1</span>');
 
   // Method calls (.methodName)
   html = html.replace(/\.([a-z]\w*)\(/g, '.<span class="hl-meth">$1</span>(');
@@ -2214,7 +2189,7 @@ function submitLoadModal() {
   try {
     const parsed = parseJavaAuto(java);
     if (parsed.length === 0) {
-      alert('No AutoBuilder steps found.');
+      alert('No auto routine steps found.');
       return;
     }
     steps = parsed;
@@ -2259,23 +2234,22 @@ function findNamedTarget(ref) {
   return null;
 }
 
-/** Parse a Pose2d expression — either AutoPositions.X or new Pose2d(x, y, Rotation2d.fromDegrees(d)) */
+/** Parse a Pose2d/FieldPose expression — CONSTANT_NAME, AutoPositions.X, or new FieldPose/Pose2d(...) */
 function parsePoseArg(arg) {
   arg = arg.trim();
-  // Named: AutoPositions.SOMETHING
-  const namedMatch = arg.match(/^AutoPositions\.(\w+)$/);
+  // Named: CONSTANT_NAME (new style) or AutoPositions.SOMETHING (old style)
+  const namedMatch = arg.match(/^(?:AutoPositions\.)?(\w+)$/);
   if (namedMatch) {
     const key = namedMatch[1];
     const np = NAMED_POSES[key];
     if (np) return { x: np.x, y: np.y, rot: np.rot, namedPose: key };
   }
-  // Inline: new Pose2d(x, y, Rotation2d.fromDegrees(d))
-  const poseMatch = arg.match(/new\s+Pose2d\(\s*([^,]+),\s*([^,]+),\s*Rotation2d\.fromDegrees\(\s*([^)]+)\)\s*\)/);
+  // Inline: new FieldPose(x, y, Rotation2d.fromDegrees(d)) or new Pose2d(...)
+  const poseMatch = arg.match(/new\s+(?:Field)?Pose(?:2d)?\(\s*([^,]+),\s*([^,]+),\s*Rotation2d\.fromDegrees\(\s*([^)]+)\)\s*\)/);
   if (poseMatch) {
     return { x: parseFloat(poseMatch[1]), y: parseFloat(poseMatch[2]), rot: parseFloat(poseMatch[3]) };
   }
-  // Rotation2d.kZero / k180deg
-  const poseZeroMatch = arg.match(/new\s+Pose2d\(\s*([^,]+),\s*([^,]+),\s*Rotation2d\.(kZero|k180deg)\s*\)/);
+  const poseZeroMatch = arg.match(/new\s+(?:Field)?Pose(?:2d)?\(\s*([^,]+),\s*([^,]+),\s*Rotation2d\.(kZero|k180deg)\s*\)/);
   if (poseZeroMatch) {
     const rot = poseZeroMatch[3] === 'k180deg' ? 180 : 0;
     return { x: parseFloat(poseZeroMatch[1]), y: parseFloat(poseZeroMatch[2]), rot };
@@ -2283,16 +2257,16 @@ function parsePoseArg(arg) {
   return null;
 }
 
-/** Parse a Translation2d expression */
+/** Parse a Translation2d/FieldTranslation expression */
 function parseTranslation2dArg(arg) {
   arg = arg.trim();
-  const namedMatch = arg.match(/^AutoPositions\.(\w+)$/);
+  const namedMatch = arg.match(/^(?:AutoPositions\.)?(\w+)$/);
   if (namedMatch) {
     const key = namedMatch[1];
     const nt = NAMED_TARGETS[key];
     if (nt) return { x: nt.x, y: nt.y, namedAim: key };
   }
-  const match = arg.match(/new\s+Translation2d\(\s*([^,]+),\s*([^)]+)\)/);
+  const match = arg.match(/new\s+(?:Field)?Translation(?:2d)?\(\s*([^,]+),\s*([^)]+)\)/);
   if (match) {
     return { x: parseFloat(match[1]), y: parseFloat(match[2]) };
   }
@@ -2323,26 +2297,110 @@ function parseCommandExpr(expr) {
   return { type: 'custom', customExpr: expr, timeout };
 }
 
-/** Parse Java AutoBuilder chain into steps array */
+/** Parse Java auto routine into steps array */
 function parseJavaAuto(java) {
   const parsed = [];
-  // Strip comments and normalize whitespace
   const code = java.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ');
 
-  // Find the AutoBuilder chain
+  // Find sequence(...) or return sequence(...)
+  const seqMatch = code.match(/sequence\s*\(([\s\S]*)\)\s*;/);
+  if (!seqMatch) {
+    // Try old AutoBuilder format
+    return parseOldAutoBuilder(java);
+  }
+
+  // Split top-level args of the sequence
+  const args = splitTopLevelArgs(seqMatch[1]);
+
+  for (const arg of args) {
+    const trimmed = arg.trim();
+
+    // apfDefaults(POSE)
+    const apfDefaultsMatch = trimmed.match(/^apfDefaults\(\s*(.*)\s*\)$/);
+    if (apfDefaultsMatch) {
+      const pose = parsePoseArg(apfDefaultsMatch[1]);
+      if (pose) {
+        const step = { type: 'driveTo', x: pose.x, y: pose.y, rot: pose.rot, tolerance: 0.15 };
+        if (pose.namedPose) step.namedPose = pose.namedPose;
+        parsed.push(step);
+      }
+      continue;
+    }
+
+    // apfForever(POSE)
+    const apfForeverMatch = trimmed.match(/^apfForever\(\s*(.*)\s*\)$/);
+    if (apfForeverMatch) {
+      const pose = parsePoseArg(apfForeverMatch[1]);
+      if (pose) {
+        const step = { type: 'driveToAndHold', x: pose.x, y: pose.y, rot: pose.rot, tolerance: 0.15 };
+        if (pose.namedPose) step.namedPose = pose.namedPose;
+        parsed.push(step);
+      }
+      continue;
+    }
+
+    // apfDefaultsFacing(POSE, AIM, ROT)
+    const facingMatch = trimmed.match(/^apfDefaultsFacing\(\s*(.*)\s*\)$/);
+    if (facingMatch) {
+      const parts = splitTopLevelArgs(facingMatch[1]);
+      const pose = parsePoseArg(parts[0]);
+      const aim = parts[1] ? parseTranslation2dArg(parts[1]) : null;
+      const rot = parts[2] ? parseFloat(parts[2]) : 0;
+      if (pose) {
+        const step = { type: 'driveToFacing', x: pose.x, y: pose.y, rot, tolerance: 0.15 };
+        if (pose.namedPose) step.namedPose = pose.namedPose;
+        if (aim) {
+          step.aimX = aim.x;
+          step.aimY = aim.y;
+          if (aim.namedAim) step.namedAim = aim.namedAim;
+        }
+        parsed.push(step);
+      }
+      continue;
+    }
+
+    // shoot()
+    if (trimmed.match(/^shoot\(\)/)) {
+      parsed.push({ type: 'shoot', timeout: 0 });
+      continue;
+    }
+
+    // deadline(drive, cmd) -> drive + alongside cmd
+    const deadlineMatch = trimmed.match(/^deadline\(\s*(.*)\s*\)$/);
+    if (deadlineMatch) {
+      // Simplified: just push a collect if it contains collect()
+      if (trimmed.includes('collect()')) {
+        parsed.push({ type: 'collect' });
+      }
+      continue;
+    }
+
+    // Commands.waitSeconds(n)
+    const waitMatch = trimmed.match(/Commands\.waitSeconds\(\s*([^)]+)\)/);
+    if (waitMatch) {
+      parsed.push({ type: 'wait', waitSeconds: parseFloat(waitMatch[1]) || 0.5 });
+      continue;
+    }
+  }
+
+  return parsed;
+}
+
+// Keep old parser as fallback
+function parseOldAutoBuilder(java) {
+  const parsed = [];
+  const code = java.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ');
   const chainMatch = code.match(/new\s+AutoBuilder\s*\(\s*\w+\s*\)([\s\S]*?)\.build\s*\(\s*\)/);
   if (!chainMatch) return [];
 
   const chain = chainMatch[1];
 
-  // Match each .method(...) call — handle nested parens
   const calls = [];
   const re = /\.(\w+)\s*\(/g;
   let m;
   while ((m = re.exec(chain)) !== null) {
     const method = m[1];
     const argStart = m.index + m[0].length;
-    // Find matching closing paren
     let depth = 1;
     let i = argStart;
     while (i < chain.length && depth > 0) {
@@ -2357,7 +2415,6 @@ function parseJavaAuto(java) {
   for (const call of calls) {
     switch (call.method) {
       case 'driveTo': {
-        // Split args: first is Pose2d, optional second is Meters.of(...)
         const pose = parsePoseArg(call.args.replace(/,\s*Meters\.of\([^)]*\)/, ''));
         if (!pose) break;
         const tolMatch = call.args.match(/Meters\.of\(\s*([^)]+)\)/);
@@ -2367,13 +2424,11 @@ function parseJavaAuto(java) {
         break;
       }
       case 'driveToFacing': {
-        // Split: Pose2d, Translation2d, optional rotationDeg, optional Meters.of(...)
         const parts = splitTopLevelArgs(call.args);
         const pose = parsePoseArg(parts[0]);
         const aim = parts[1] ? parseTranslation2dArg(parts[1]) : null;
         if (!pose) break;
         const tolMatch = call.args.match(/Meters\.of\(\s*([^)]+)\)/);
-        // Check for rotation offset as 3rd param (a plain number, not Meters.of or Translation2d)
         let rotOffset = pose.rot || 0;
         if (parts[2] && !parts[2].includes('Meters') && !parts[2].includes('new')) {
           rotOffset = parseFloat(parts[2]);
@@ -2417,7 +2472,6 @@ function parseJavaAuto(java) {
         break;
       }
       case 'speedScale':
-        // Ignore for now
         break;
     }
   }

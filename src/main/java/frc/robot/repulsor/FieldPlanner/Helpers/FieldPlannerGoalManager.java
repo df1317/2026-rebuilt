@@ -36,6 +36,10 @@ public final class FieldPlannerGoalManager {
 
 	private static final double STAGED_REACH_ENTER_M = 0.35;
 	private static final double STAGED_REACH_EXIT_M = 0.55;
+
+	// How far behind the robot a gate needs to be to be considered "passed"
+	private static final double STAGED_PASSED_X_HYST_M = 0.15;
+
 	private static final int STAGED_REACH_TICKS = 3;
 
 	private static final int STAGED_MAX_TICKS = 40;
@@ -44,7 +48,6 @@ public final class FieldPlannerGoalManager {
 	private static final double STAGED_PREF_GATE_PENALTY = 2.0;
 
 	private static final double STAGED_GATE_PAD_M = 0.25;
-	private static final double STAGED_PASSED_X_HYST_M = 0.35;
 
 	private Pose2d goal = Pose2d.kZero;
 	private Pose2d requestedGoal = Pose2d.kZero;
@@ -174,9 +177,11 @@ public final class FieldPlannerGoalManager {
 
 			boolean gateCleared = stagedGatePassed;
 
-			if (stagedModeTicks >= STAGED_MAX_TICKS) {
+			// Ensure we actually passed the gate AND reached the target before switching.
+			// Re-enable checking for the next gate only if we've officially cleared the current one
+			if (stagedGatePassed) {
 				GatedAttractorObstacle nowFirst = firstOccludingGateAlongSegment(curPos, reqT, obstacles);
-				if (nowFirst == null || stagedGatePassed) {
+				if (nowFirst == null) {
 					reached = true;
 					gateCleared = true;
 				} else if (stagedGate != null && nowFirst != stagedGate) {
@@ -217,10 +222,20 @@ public final class FieldPlannerGoalManager {
 
 			if (liveTarget.getDistance(stagedAttractor) > 0.02) {
 				stagedAttractor = liveTarget;
-				goal = new Pose2d(stagedAttractor, requestedGoal.getRotation());
-			} else {
-				goal = new Pose2d(stagedAttractor, requestedGoal.getRotation());
 			}
+
+			// Blend the goal slightly towards the final requested goal based on distance
+			double blendFactor = 0.0;
+			if (d < 1.0) {
+				blendFactor = 1.0 - (d / 1.0); // 0.0 when far away, up to 1.0 when at the gate
+			}
+
+			// Clamp blend factor
+			blendFactor = Math.max(0.0, Math.min(0.4, blendFactor)); // Only blend up to 40% to keep it mostly pulling through
+
+			Translation2d blendedTarget = stagedAttractor.times(1.0 - blendFactor).plus(reqT.times(blendFactor));
+
+			goal = new Pose2d(blendedTarget, requestedGoal.getRotation());
 
 			return false;
 		}

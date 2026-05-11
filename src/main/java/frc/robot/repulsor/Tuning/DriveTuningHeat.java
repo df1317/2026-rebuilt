@@ -34,6 +34,10 @@ public class DriveTuningHeat extends DriveTuning {
 	private double nearStart = 0.40;
 	private double nearEnd = 0.02;
 
+	// Per-command overrides (set by Repulsor.apfDrive, reset on command end)
+	private double velocityOverride = -1.0;
+	private double decelOverride = -1.0;
+
 	private final Heatmap heatmap;
 	private final Supplier<Pose2d> robotPoseSupplier;
 
@@ -54,6 +58,19 @@ public class DriveTuningHeat extends DriveTuning {
 
 	public void resetSpeedScale() {
 		this.speedScale = 1.0;
+	}
+
+	public void setVelocityOverride(double mps) {
+		this.velocityOverride = mps;
+	}
+
+	public void setDecelOverride(double mps2) {
+		this.decelOverride = mps2;
+	}
+
+	public void clearOverrides() {
+		this.velocityOverride = -1.0;
+		this.decelOverride = -1.0;
 	}
 
 	public DriveTuningHeat withSqrtScale(double s) {
@@ -82,7 +99,7 @@ public class DriveTuningHeat extends DriveTuning {
 	}
 
 	public double maxLinearSpeedMps(Pose2d robotPose) {
-		double effectiveMax = baseMaxSpeed * speedScale;
+		double effectiveMax = (velocityOverride > 0.0 ? velocityOverride : baseMaxSpeed) * speedScale;
 		if (robotPose == null)
 			return effectiveMax;
 		double heat = heatmap.heatAt(robotPose.getTranslation());
@@ -92,7 +109,7 @@ public class DriveTuningHeat extends DriveTuning {
 
 	@Override
 	public double maxLinearSpeedMps() {
-		return baseMaxSpeed * speedScale;
+		return (velocityOverride > 0.0 ? velocityOverride : baseMaxSpeed) * speedScale;
 	}
 
 	@Override
@@ -107,7 +124,7 @@ public class DriveTuningHeat extends DriveTuning {
 			return 0.0;
 		}
 
-		double effectiveMax = baseMaxSpeed * speedScale;
+		double effectiveMax = (velocityOverride > 0.0 ? velocityOverride : baseMaxSpeed) * speedScale;
 
 		if (!slowDown) {
 			return Math.min(effectiveMax * dtSeconds(), d);
@@ -121,14 +138,14 @@ public class DriveTuningHeat extends DriveTuning {
 		Pose2d pose = getRobotPoseOrNull();
 		double vMaxHeat = effectiveMax;
 		double heat = 1.0;
-		if (pose != null) {
+		if (velocityOverride <= 0.0 && pose != null) {
 			Translation2d p = pose.getTranslation();
 			heat = heatmap.heatAt(p);
 			vMaxHeat = effectiveMax * MathUtil.clamp(heat, 0.0, 1.0);
 		}
 
 		double vMax = vMaxHeat;
-		double aMax = Math.max(0.01, sqrtScale);
+		double aMax = Math.max(0.01, decelOverride > 0.0 ? decelOverride : sqrtScale);
 
 		double dBrake = vMax * vMax / (2.0 * aMax);
 

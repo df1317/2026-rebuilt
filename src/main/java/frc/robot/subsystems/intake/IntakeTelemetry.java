@@ -6,7 +6,6 @@ import frc.robot.util.RobotLog;
 
 import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.RPM;
-import static frc.robot.Constants.IntakeConstants.*;
 
 public class IntakeTelemetry {
 
@@ -49,7 +48,7 @@ public class IntakeTelemetry {
 	}
 
 	private boolean isRollerRunning() {
-		return Math.abs(roller.targetRollerVelocity.in(RPM)) > ROLLER_VELOCITY_TOLERANCE.in(RPM);
+		return Math.abs(roller.targetRollerVelocity.in(RPM)) > RollerSubsystem.VELOCITY_TOLERANCE.in(RPM);
 	}
 
 	private Color getStatusColor() {

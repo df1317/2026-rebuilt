@@ -27,22 +27,22 @@ import frc.robot.repulsor.RepulsorConstants;
 import frc.robot.repulsor.Setpoints.GameSetpoint;
 import frc.robot.repulsor.Setpoints.SetpointContext;
 import frc.robot.repulsor.Setpoints.SetpointType;
+import frc.robot.util.FieldFlip;
 
 import java.util.Optional;
-
-import static frc.robot.repulsor.RepulsorConstants.aprilTagLayout;
 
 public class _Rebuilt2026 {
 	public static final double HUB_FACE_TO_AIMPOINT_METERS = 0.60;
 	public static final int BLUE_HUB_ANCHOR_TAG_ID = 20;
-	public static final int BLUE_OUTPOST_ANCHOR_TAG_ID = 13;
+	public static final int BLUE_OUTPOST_ANCHOR_TAG_ID = 29;
 	// ===== Collection =====
 	public static final GameSetpoint CENTER_COLLECT = new StaticPoseSetpoint(
 			"CENTER_COLLECT",
 			SetpointType.kOther,
 			new Pose2d(RepulsorConstants.FIELD_LENGTH / 2.0, RepulsorConstants.FIELD_WIDTH / 2.0, Rotation2d.kZero));
-	public static final GameSetpoint OUTPOST_COLLECT = new ApproachFromTagSetpoint(
-			"OUTPOST_COLLECT", SetpointType.kHumanPlayer, BLUE_OUTPOST_ANCHOR_TAG_ID, 1.25);
+	public static final GameSetpoint OUTPOST_COLLECT = new StaticPoseSetpoint(
+			"OUTPOST_COLLECT", SetpointType.kHumanPlayer,
+			approachPoseFromTag(BLUE_OUTPOST_ANCHOR_TAG_ID, 0.5));
 	// ===== Fixed Scoring Poses (5 positions around hub at ~1.8m radius) =====
 	private static final double HUB_SCORE_RADIUS_M = 1.8;
 	public static final GameSetpoint HUB_SCORE_FRONT = new StaticPoseSetpoint(
@@ -59,6 +59,8 @@ public class _Rebuilt2026 {
 			HUB_SCORE_FRONT, HUB_SCORE_FRONT_LEFT, HUB_SCORE_FRONT_RIGHT,
 			HUB_SCORE_REAR_LEFT, HUB_SCORE_REAR_RIGHT
 	};
+	public static final GameSetpoint HUB_FRONT_SHOOT = new StaticPoseSetpoint(
+			"HUB_FRONT_SHOOT", SetpointType.kScore, hubScoringPose(0));
 	// ===== Climb Poses =====
 	private static final double CLIMB_OFFSET_Y_M = 2.5;
 	public static final GameSetpoint CLIMB_LEFT = new StaticPoseSetpoint(
@@ -99,7 +101,7 @@ public class _Rebuilt2026 {
 	}
 
 	private static Translation2d hubAimpointFromAnchorTagBlue(int anchorTagId) {
-		Optional<Pose3d> pose3d = aprilTagLayout.getTagPose(anchorTagId);
+		Optional<Pose3d> pose3d = FieldFlip.aprilTagLayout().getTagPose(anchorTagId);
 		if (pose3d.isEmpty()) {
 			return new Translation2d(RepulsorConstants.FIELD_LENGTH / 2.0, RepulsorConstants.FIELD_WIDTH / 2.0);
 		}
@@ -109,6 +111,17 @@ public class _Rebuilt2026 {
 	}
 
 	// ===== Inner setpoint types =====
+
+	private static Pose2d approachPoseFromTag(int tagId, double standoffMeters) {
+		Optional<Pose3d> pose3d = FieldFlip.aprilTagLayout().getTagPose(tagId);
+		if (pose3d.isEmpty())
+			return Pose2d.kZero;
+
+		Pose2d tag2d = pose3d.get().toPose2d();
+		Translation2d approachPos = tag2d.getTranslation().plus(new Translation2d(standoffMeters, tag2d.getRotation()));
+		Rotation2d faceTag = tag2d.getRotation().plus(Rotation2d.kPi);
+		return new Pose2d(approachPos, faceTag);
+	}
 
 	private static final class StaticPoseSetpoint extends GameSetpoint {
 		private final Pose2d bluePose;
@@ -121,29 +134,6 @@ public class _Rebuilt2026 {
 		@Override
 		public Pose2d bluePose(SetpointContext ctx) {
 			return bluePose;
-		}
-	}
-
-	private static final class ApproachFromTagSetpoint extends GameSetpoint {
-		private final int tagId;
-		private final double standoffMeters;
-
-		ApproachFromTagSetpoint(String name, SetpointType type, int tagId, double standoffMeters) {
-			super(name, type);
-			this.tagId = tagId;
-			this.standoffMeters = standoffMeters;
-		}
-
-		@Override
-		public Pose2d bluePose(SetpointContext ctx) {
-			Optional<Pose3d> pose3d = aprilTagLayout.getTagPose(tagId);
-			if (pose3d.isEmpty())
-				return Pose2d.kZero;
-
-			Pose2d tag2d = pose3d.get().toPose2d();
-			Translation2d approachPos = tag2d.getTranslation().plus(new Translation2d(standoffMeters, tag2d.getRotation()));
-			Rotation2d faceTag = tag2d.getRotation().plus(Rotation2d.kPi);
-			return new Pose2d(approachPos, faceTag);
 		}
 	}
 }

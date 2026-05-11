@@ -5,7 +5,6 @@ import edu.wpi.first.wpilibj.util.Color;
 import frc.robot.util.RobotLog;
 
 import static edu.wpi.first.units.Units.RPM;
-import static frc.robot.Constants.HopperConstants.HOPPER_VELOCITY_TOLERANCE;
 
 /**
  * Handles telemetry logging for the hopper subsystem.
@@ -41,7 +40,7 @@ public class HopperTelemetry {
 	}
 
 	private boolean isHopperRunning() {
-		return Math.abs(hopper.targetHopperVelocity.in(RPM)) > HOPPER_VELOCITY_TOLERANCE.in(RPM);
+		return Math.abs(hopper.targetHopperVelocity.in(RPM)) > HopperSubsystem.VELOCITY_TOLERANCE.in(RPM);
 	}
 
 	private Color getStatusColor() {

@@ -44,7 +44,7 @@ Firmware: [df1317/maypad-frc](https://github.com/df1317/maypad-frc) — grab the
 
 |           | Col 0                    | Col 1                  | Col 2                  | Col 3                  |
 |-----------|--------------------------|------------------------|------------------------|------------------------|
-| **Row 0** | `intakeHome` (once)*     | `intakeZero` (once)    | `intakeDown` (hold)    | -                      |
+| **Row 0** | `intakeHome` (once)*     | `intakeZero` (once)    | `intakeDown` (hold)    | `intakeUp` (hold)      |
 | **Row 1** | `autoDistance` (once)    | `hoodHome` (once)*     | `intakeToggle` (once)  | `rollerRun` (hold)     |
 | **Row 2** | `distanceAdvance` (once) | `intakeForward` (hold) | `hopperForward` (hold) | `Shoot+Feed` (hold)    |
 | **Row 3** | `distanceReduce` (once)  | `intakeReverse` (hold) | `hopperReverse` (hold) | `feederReverse` (hold) |
@@ -56,7 +56,7 @@ Firmware: [df1317/maypad-frc](https://github.com/df1317/maypad-frc) — grab the
 | `key(0, 0)` | Home Intake*     | Homes pivot and zeroes encoder (works in teleop and test)                                |
 | `key(0, 1)` | Intake Zero      | Sets the intake extended angle and the retracted angle to the constant delta + new angle |
 | `key(0, 2)` | Intake Down      | Moves the intake down ignoring limits                                                    |
-| `key(0, 3)` | -                |                                                                                          |
+| `key(0, 3)` | Intake Up        | Moves the intake up ignoring limits                                                      |
 | **row 1**   |                  |                                                                                          |
 | `key(1, 0)` | Auto Distance    | Returns to auto setting the distance from vision                                         |
 | `key(1, 1)` | Home Hood*       | Homes the shooter hood (works in both teleop and test)                                   |
@@ -89,7 +89,7 @@ Glass under the `Tunable/` table. The xbox controls are inherited in this mode.
 |-----------|----------------------|----------------------|---------------------|----------------------|
 | **Row 0** | `intakeHome` (once)* | `climberZero` (once) | `climberUp` (hold)  | `climberDown` (hold) |
 | **Row 1** | `aimTest` (hold)     | `hoodHome` (once)    | `hoodTest` (hold)   | `shootAll` (hold)    |
-| **Row 2** | -                    | `intakeZero` (once)  | `intakeDown` (hold) | `shooterTest` (hold) |
+| **Row 2** | `intakeZero` (once)  | `intakeDown` (hold)  | `intakeUp` (hold)   | `shooterTest` (hold) |
 | **Row 3** | -                    | `intakeTest` (hold)  | `hopperTest` (hold) | `feederTest` (hold)  |
 | **Row 4** | -                    | -                    | -                   | -                    |
 
@@ -106,9 +106,9 @@ Glass under the `Tunable/` table. The xbox controls are inherited in this mode.
 | `key(1, 2)` | Test Hood Position    | Tunable: `Shooter/Hood/Percent`                                                                                             |
 | `key(1, 3)` | Shoot All             | Sets hood, spins up shooter+feeder, then feeds hopper. Tunables: `Shooter/TuneRPM`, `Shooter/TuneHoodPercent`, `Hopper/RPM` |
 | **row 2**   |                       |                                                                                                                             |
-| `key(2, 0)` | -                     |                                                                                                                             |
-| `key(2, 1)` | Intake Zero           | Sets the intake extended angle and the retracted angle to the constant delta + new angle                                    |
-| `key(2, 2)` | Intake Down           | Moves the intake towards being extended                                                                                     |
+| `key(2, 0)` | Intake Zero           | Sets the intake extended angle and the retracted angle to the constant delta + new angle                                    |
+| `key(2, 1)` | Intake Down           | Moves the intake towards being extended                                                                                     |
+| `key(2, 2)` | Intake Up             | Moves the intake towards being stowed                                                                                       |
 | `key(2, 3)` | Shooter Test          | Runs the whole shooter with the tunables from network tables                                                                |
 | **row 3**   |                       |                                                                                                                             |
 | `key(2, 3)` | Test Shooter Flywheel | Tunable: `Shooter/RPM`                                                                                                      |

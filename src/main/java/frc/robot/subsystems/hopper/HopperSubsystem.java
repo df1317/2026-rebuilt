@@ -9,65 +9,87 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
-import dev.doglog.DogLog;
-import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.util.CommandBuilder;
+import frc.robot.util.TunableDouble;
+import frc.robot.util.TunableTable;
 
 import java.util.function.Supplier;
 
 import static edu.wpi.first.units.Units.RPM;
-import static frc.robot.Constants.HopperConstants.*;
 
 /**
- * Hopper subsystem
+ * Hopper subsystem using enum-as-config state pattern.
  */
 public class HopperSubsystem extends SubsystemBase {
 
-	// ==================== Hardware (package-private for telemetry/visualization)
-	// ====================
+	// ==================== Hardware Config ====================
+	private static final int MOTOR_ID = 26;
+	private static final int CURRENT_LIMIT = 20;
+	private static final boolean INVERTED = true;
+	private static final double GEAR_RATIO = 24.0;
+	static final AngularVelocity VELOCITY_TOLERANCE = RPM.of(100);
+
+	// ==================== PID Gains ====================
+	private static final double KP = 2E-4;
+	private static final double KI = 1E-5;
+	private static final double KD = 0.0;
+	private static final double KV = 1.8E-4;
+	private static final double I_ZONE = 1E-3;
+
+	// ==================== State Enum ====================
+
+	private enum State {
+		FEED(2000.0), REVERSE(-2000.0);
+
+		public final TunableDouble rpm;
+
+		State(double rpm) {
+			this.rpm = tunables.value("speeds/" + name(), rpm, RPM);
+		}
+	}
+
+	// ==================== Hardware (package-private for telemetry) ====================
 	final SparkMax hopperMotor;
 	final RelativeEncoder hopperEncoder;
 	private final SparkClosedLoopController hopperController;
-	// ==================== Visualization & Telemetry ====================
+
+	// ==================== Tunables ====================
+	private static final TunableTable tunables = new TunableTable("Hopper");
+	private final TunableDouble testHopperRPM = tunables.value("RPM", 2000.0, RPM);
+
+	// ==================== Telemetry ====================
 	private final HopperTelemetry telemetry;
-	// ==================== Test Mode ====================
-	private final DoubleSubscriber testHopperRPM = DogLog.tunable("Hopper/RPM", FEED_SPEED);
-	private final DoubleSubscriber KP = DogLog.tunable("Hopper/kP", HOPPER_KP);
-	private final DoubleSubscriber KI = DogLog.tunable("Hopper/kI", HOPPER_KI);
-	private final DoubleSubscriber KD = DogLog.tunable("Hopper/kD", HOPPER_KD);
-	private final DoubleSubscriber KV = DogLog.tunable("Hopper/kV", HOPPER_KV);
-	private final DoubleSubscriber KS = DogLog.tunable("Hopper/kS", HOPPER_KS);
-	// ==================== Control State (package-private for telemetry/visualization)
-	// ====================
+
+	// ==================== Control State (package-private for telemetry) ====================
 	AngularVelocity targetHopperVelocity = RPM.of(0);
-	double prevKP = KP.getAsDouble();
-	double prevKI = KI.getAsDouble();
-	double prevKD = KD.getAsDouble();
-	double prevKV = KV.getAsDouble();
-	double prevKS = KS.getAsDouble();
 
 	public HopperSubsystem() {
-		hopperMotor = new SparkMax(HOPPER_MOTOR_ID, MotorType.kBrushless);
+		hopperMotor = new SparkMax(MOTOR_ID, MotorType.kBrushless);
 		hopperController = hopperMotor.getClosedLoopController();
 		hopperEncoder = hopperMotor.getEncoder();
 
 		configureHopperMotor();
 
+		tunables.pidSpark("Motor", hopperMotor, KP, KI, KD, KV);
+
 		telemetry = new HopperTelemetry(this);
+
+		// Enum warmup — forces lazy static enum initialization
+		State.FEED.rpm.get();
 	}
 
 	private void configureHopperMotor() {
 		SparkMaxConfig config = new SparkMaxConfig();
-		config.idleMode(IdleMode.kCoast).smartCurrentLimit(HOPPER_CURRENT_LIMIT)
+		config.idleMode(IdleMode.kCoast).smartCurrentLimit(CURRENT_LIMIT)
 				.inverted(INVERTED);
 		config.encoder
-				// Converts encoder rotations to degrees: (360 deg/rot) / gear_ratio
 				.positionConversionFactor(360.0 / GEAR_RATIO);
-		config.closedLoop.pid(HOPPER_KP, HOPPER_KI, HOPPER_KD).iZone(HOPPER_I_ZONE);
-		config.closedLoop.feedForward.kV(HOPPER_KV);
+		config.closedLoop.pid(KP, KI, KD).iZone(I_ZONE);
+		config.closedLoop.feedForward.kV(KV);
 
 		hopperMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
 	}
@@ -75,28 +97,13 @@ public class HopperSubsystem extends SubsystemBase {
 	@Override
 	public void periodic() {
 		telemetry.log();
-		if (prevKP != KP.getAsDouble() || prevKI != KI.getAsDouble() || prevKD != KD.getAsDouble()
-				|| prevKV != KV.getAsDouble()) {
-
-			prevKP = KP.getAsDouble();
-			prevKI = KI.getAsDouble();
-			prevKD = KD.getAsDouble();
-			prevKV = KV.getAsDouble();
-
-			SparkMaxConfig config = new SparkMaxConfig();
-			config.idleMode(IdleMode.kCoast).smartCurrentLimit(HOPPER_CURRENT_LIMIT)
-					.inverted(INVERTED);
-			config.closedLoop.pid(KP.getAsDouble(), KI.getAsDouble(), KD.getAsDouble()).iZone(HOPPER_I_ZONE);
-			config.closedLoop.feedForward.kV(KV.getAsDouble());
-
-			hopperMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
-		}
 	}
 
 	// ==================== State Query Methods ====================
+
 	public boolean isHopperAtSpeed() {
 		return Math.abs(hopperEncoder.getVelocity()
-				- targetHopperVelocity.in(RPM)) < HOPPER_VELOCITY_TOLERANCE.in(RPM);
+				- targetHopperVelocity.in(RPM)) < VELOCITY_TOLERANCE.in(RPM);
 	}
 
 	// ==================== Control Methods ====================
@@ -112,23 +119,25 @@ public class HopperSubsystem extends SubsystemBase {
 
 	// ==================== Command Factory Methods ====================
 
-	/** Runs the hopper at feed speed while held, stops on release. */
+	/** Runs the hopper at the given state's speed while held, stops on release. */
+	private Command runState(State state) {
+		return new CommandBuilder("Hopper." + state.name().toLowerCase(), this)
+				.onExecute(() -> setHopperVelocity(RPM.of(state.rpm.get())))
+				.onEnd(this::stopHopper);
+	}
+
 	public Command feedCommand() {
-		return Commands.run(() -> setHopperVelocity(FEED_SPEED), this)
-				.finallyDo(this::stopHopper)
-				.withName("Hopper Feed");
+		return runState(State.FEED);
 	}
 
 	public Command reverseCommand() {
-		return Commands.run(() -> setHopperVelocity(REVERSE_SPEED), this)
-				.finallyDo(this::stopHopper)
-				.withName("Hopper Reverse");
+		return runState(State.REVERSE);
 	}
 
 	public Command testHopperCommand() {
-		return Commands.run(() -> {
-			setHopperVelocity(RPM.of(testHopperRPM.get()));
-		}, this).finallyDo(this::stopHopper).withName("Test Hopper");
+		return new CommandBuilder("Hopper.test", this)
+				.onExecute(() -> setHopperVelocity(RPM.of(testHopperRPM.get())))
+				.onEnd(this::stopHopper);
 	}
 
 	public Command setHopperVelocityCommand(Supplier<AngularVelocity> velocity) {
