@@ -1,18 +1,17 @@
 package frc.robot;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Consumer;
+
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.commands.TeleopZoneAutomation;
 import frc.robot.repulsor.Repulsor;
-import frc.robot.subsystems.climber.ClimberSubsystem;
-
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Consumer;
 
 /**
  * Dashboard-driven auto composer. Each step is a {@link SendableChooser} so the
@@ -26,10 +25,9 @@ public final class AutoChain {
 	private final List<SendableChooser<Consumer<AutoBuilder>>> stepChoosers = new ArrayList<>();
 	private final Map<String, Consumer<AutoBuilder>> steps = new LinkedHashMap<>();
 
-	public AutoChain(Repulsor repulsor, TeleopZoneAutomation teleopAutomation,
-			ClimberSubsystem climber) {
+	public AutoChain(Repulsor repulsor, TeleopZoneAutomation teleopAutomation) {
 		this.repulsor = repulsor;
-		buildStepMap(teleopAutomation, climber);
+		buildStepMap(teleopAutomation);
 		for (int i = 0; i < NUM_STEPS; i++) {
 			var chooser = new SendableChooser<Consumer<AutoBuilder>>();
 			chooser.setDefaultOption("---", b -> {
@@ -64,7 +62,7 @@ public final class AutoChain {
 		});
 	}
 
-	private void buildStepMap(TeleopZoneAutomation teleopAutomation, ClimberSubsystem climber) {
+	private void buildStepMap(TeleopZoneAutomation teleopAutomation) {
 		// Drive steps
 		steps.put("Drive to Hub Front", b -> b.driveTo(AutoPositions.HUB_FRONT));
 		steps.put("Drive to Center", b -> b.driveToAndHold(AutoPositions.CENTER_COLLECT));
@@ -85,13 +83,5 @@ public final class AutoChain {
 		steps.put("Wait 0.5s", b -> b.waitSeconds(0.5));
 		steps.put("Wait 1s", b -> b.waitSeconds(1.0));
 		steps.put("Wait 2s", b -> b.waitSeconds(2.0));
-
-		// Climb
-		if (climber != null) {
-			steps.put("Climb", b -> b.run(climber.climbTopCommand())
-					.run(climber.climbHangCommand()));
-			steps.put("Descend", b -> b.run(climber.climbReleaseCommand())
-					.run(climber.climbBottomCommand()));
-		}
 	}
 }
