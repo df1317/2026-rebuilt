@@ -9,7 +9,6 @@ import frc.robot.commands.TeleopZoneAutomation;
 import frc.robot.repulsor.Repulsor;
 import frc.robot.repulsor.RepulsorConstants;
 import frc.robot.repulsor.Setpoints.Specific._Rebuilt2026;
-import frc.robot.subsystems.climber.ClimberSubsystem;
 import frc.robot.subsystems.intake.IntakeSubsystem;
 import frc.robot.subsystems.intake.RollerSubsystem;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
@@ -37,17 +36,8 @@ public final class Autos {
 
 	// ===== Field Positions =====
 	private static final FieldTranslation HUB_CENTER = new FieldTranslation(_Rebuilt2026.hubAimpointBlue());
-	private static final FieldPose CLIMB_LEFT = new FieldPose(1.062, 4.922, Rotation2d.kZero);
-	private static final FieldPose CLIMB_RIGHT = new FieldPose(1.062, 2.629, Rotation2d.k180deg);
 	private static final FieldPose CORNER_HIDE_LEFT = new FieldPose(0.749, 7.324, Rotation2d.fromDegrees(0));
 	private static final FieldPose CORNER_HIDE_RIGHT = new FieldPose(0.645, 0.645, Rotation2d.fromDegrees(0));
-	private static final double CLIMB_ENGAGE_OFFSET = 0.2;
-	private static final FieldPose CLIMB_LEFT_ENGAGE = new FieldPose(
-			CLIMB_LEFT.getBlue().getX() - CLIMB_ENGAGE_OFFSET, CLIMB_LEFT.getBlue().getY(),
-			CLIMB_LEFT.getBlue().getRotation());
-	private static final FieldPose CLIMB_RIGHT_ENGAGE = new FieldPose(
-			CLIMB_RIGHT.getBlue().getX() + CLIMB_ENGAGE_OFFSET, CLIMB_RIGHT.getBlue().getY(),
-			CLIMB_RIGHT.getBlue().getRotation());
 	private static final double HUB_RADIUS = 0.9;
 	private static final double COLLECT_Y_OFFSET = 1.8;
 	private static final double COLLECT_X_OFFSET = -0.5;
@@ -55,15 +45,13 @@ public final class Autos {
 	// ===== Subsystem References =====
 	private final Repulsor repulsor;
 	private final TeleopZoneAutomation teleopAutomation;
-	private final ClimberSubsystem climber;
 	private final IntakeSubsystem intake;
 	private final RollerSubsystem roller;
 
 	public Autos(Repulsor repulsor, SwerveSubsystem drivebase, TeleopZoneAutomation teleopAutomation,
-			ClimberSubsystem climber, IntakeSubsystem intake, RollerSubsystem roller) {
+			IntakeSubsystem intake, RollerSubsystem roller) {
 		this.repulsor = repulsor;
 		this.teleopAutomation = teleopAutomation;
-		this.climber = climber;
 		this.intake = intake;
 		this.roller = roller;
 
@@ -79,11 +67,6 @@ public final class Autos {
 			chooser.add("Collect + Shoot x2", this::collectAndShoot2);
 			chooser.add("Test Intake Movement", this::testIntakeMovement);
 		}
-		if (climber != null) {
-			chooser.add("Climb Left", () -> climbAuto(CLIMB_LEFT, CLIMB_LEFT_ENGAGE));
-			chooser.add("Climb Right", () -> climbAuto(CLIMB_RIGHT, CLIMB_RIGHT_ENGAGE));
-		}
-
 		chooser.setDefault("Test Intake Movement");
 	}
 
@@ -173,15 +156,6 @@ public final class Autos {
 	}
 
 	// ===== APF Drive Helpers =====
-
-	private Command climbAuto(FieldPose climbPose, FieldPose engagePose) {
-		return sequence(
-				apfDefaults(climbPose),
-				climber.climbBottomCommand(),
-				apfSlow(engagePose),
-				climber.climbTopCommand(),
-				climber.climbHangCommand());
-	}
 
 	/** Apply the auto speed scale to a command. */
 	private Command withSpeedScale(Command cmd) {

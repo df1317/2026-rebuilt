@@ -11,7 +11,6 @@ import frc.robot.Constants.DrivebaseConstants;
 import frc.robot.commands.TeleopZoneAutomation;
 import frc.robot.repulsor.IntakeFootprint;
 import frc.robot.repulsor.Repulsor;
-import frc.robot.subsystems.climber.ClimberSubsystem;
 import frc.robot.subsystems.hopper.HopperSubsystem;
 import frc.robot.subsystems.intake.IntakeSubsystem;
 import frc.robot.subsystems.intake.RollerSubsystem;
@@ -37,7 +36,6 @@ public class RobotContainer {
 	private final SwerveSubsystem drivebase = Constants.ENABLE_SWERVE
 			? new SwerveSubsystem(new File(Filesystem.getDeployDirectory(), "swerve/neo"))
 			: null;
-	private final ClimberSubsystem climber = Constants.ENABLE_CLIMBER ? new ClimberSubsystem() : null;
 	private final ShooterSubsystem shooter = Constants.ENABLE_SHOOTER ? new ShooterSubsystem() : null;
 	private final RollerSubsystem roller = Constants.ENABLE_INTAKE ? new RollerSubsystem() : null;
 	private final IntakeSubsystem intake = Constants.ENABLE_INTAKE ? new IntakeSubsystem(roller) : null;
@@ -95,7 +93,7 @@ public class RobotContainer {
 					.deadband(DrivebaseConstants.JOYSTICK_DEADBAND)
 					.scaleTranslation(DrivebaseConstants.TRANSLATION_SCALE).allianceRelativeControl(true);
 
-			autos = new Autos(repulsor, drivebase, teleopAutomation, climber, intake, roller);
+			autos = new Autos(repulsor, drivebase, teleopAutomation, intake, roller);
 		} else {
 			repulsor = null;
 			teleopAutomation = null;
@@ -184,29 +182,17 @@ public class RobotContainer {
 			panel.key(2, 0).and(inTeleop).onTrue(shooter.advanceDistanceCommand()); // distanceAdvance
 			panel.key(3, 0).and(inTeleop).onTrue(shooter.reduceDistanceCommand()); // distanceReduce
 		}
-		// Row 4 — Climber positions
-		if (climber != null) {
-			panel.key(4, 0).and(inTeleop).onTrue(climber.climbBottomCommand()); // climbBottom
-			panel.key(4, 1).and(inTeleop).onTrue(climber.climbTopCommand()); // climbTop
-			panel.key(4, 2).and(inTeleop).onTrue(climber.climbHangCommand()); // climbHang
-			panel.key(4, 3).and(inTeleop).onTrue(climber.climbReleaseCommand()); // climbRelease
-		}
 
 		// ===== Test Mode Controls (Maypad — see docs for layout) =====
-		// Row 0 — Climber / Intake
+		// Row 0 — Intake
 		if (intake != null) {
 			panel.key(0, 0).onTrue(intake.homeCommand()); // intakeHome
 			panel.key(2, 0).and(inTest).onTrue(intake.zeroIntakeCommand());
 			panel.key(2, 1).and(inTest).whileTrue(intake.jogDownCommand());
 			panel.key(2, 2).and(inTest).whileTrue(intake.jogUpCommand());
 		}
-		if (climber != null) {
-			panel.key(0, 1).and(inTest).onTrue(climber.zeroCommand());
-			panel.key(0, 2).and(inTest).whileTrue(climber.jogVoltageCommand(() -> 1.0)); // climberUp
-			panel.key(0, 3).and(inTest).whileTrue(climber.jogVoltageCommand(() -> -1.0)); // climberDown
-		}
-		// Row 1 — Hood + Aim
 		if (shooter != null) {
+			// Row 1 — Hood + Aim
 			panel.key(1, 1).onTrue(shooter.homeHoodCommand());
 			panel.key(1, 2).and(inTest).whileTrue(shooter.testHoodCommand());
 			panel.key(1, 3).and(inTest).whileTrue(shooter.testShooterMotorCommand());

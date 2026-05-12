@@ -73,10 +73,10 @@ Firmware: [df1317/maypad-frc](https://github.com/df1317/maypad-frc) — grab the
 | `key(3, 2)` | Hopper Reverse   | Runs hopper in reverse                                                                   |
 | `key(3, 3)` | Feeder Reverse   | Runs feeder in reverse                                                                   |
 | **row 4**   |                  |                                                                                          |
-| `key(4, 0)` | Climber Bottom   | Drives climber to the bottom                                                             |
-| `key(4, 1)` | Climber Top      | Drives climber to the top                                                                |
-| `key(4, 2)` | Climber Hang     | Drives climber to the hang position                                                      |
-| `key(4, 3)` | Climber Release  | Drives climber to release position                                                       |
+| `key(4, 0)` | -                |                                                                                          |
+| `key(4, 1)` | -                |                                                                                          |
+| `key(4, 2)` | -                |                                                                                          |
+| `key(4, 3)` | -                |                                                                                          |
 
 ### Test Mode
 
@@ -87,7 +87,7 @@ Glass under the `Tunable/` table. The xbox controls are inherited in this mode.
 
 |           | Col 0                | Col 1                | Col 2               | Col 3                |
 |-----------|----------------------|----------------------|---------------------|----------------------|
-| **Row 0** | `intakeHome` (once)* | `climberZero` (once) | `climberUp` (hold)  | `climberDown` (hold) |
+| **Row 0** | `intakeHome` (once)* | -                    | -                   | -                    |
 | **Row 1** | `aimTest` (hold)     | `hoodHome` (once)    | `hoodTest` (hold)   | `shootAll` (hold)    |
 | **Row 2** | `intakeZero` (once)  | `intakeDown` (hold)  | `intakeUp` (hold)   | `shooterTest` (hold) |
 | **Row 3** | -                    | `intakeTest` (hold)  | `hopperTest` (hold) | `feederTest` (hold)  |
@@ -97,9 +97,9 @@ Glass under the `Tunable/` table. The xbox controls are inherited in this mode.
 |-------------|-----------------------|-----------------------------------------------------------------------------------------------------------------------------|
 | **row 0**   |                       |                                                                                                                             |
 | `key(0, 0)` | Home Intake*          | Drives pivot to extended hard stop and zeroes encoder (works in teleop and test)                                            |
-| `key(0, 1)` | Zero Climber          | Zeroes the climber encoders                                                                                                 |
-| `key(0, 2)` | Climber Jog Up        | Jogs climber up with position control and low current limit                                                                 |
-| `key(0, 3)` | Climber Jog Down      | Jogs climber down with position control and low current limit                                                               |
+| `key(0, 1)` | -                     |                                                                                                                             |
+| `key(0, 2)` | -                     |                                                                                                                             |
+| `key(0, 3)` | -                     |                                                                                                                             |
 | **row 1**   |                       |                                                                                                                             |
 | `key(1, 0)` | Aim Test              | Aims drivetrain at hub while driving (test only)                                                                            |
 | `key(1, 1)` | Home Hood             | Homes the shooter hood (works in teleop and test)                                                                           |
@@ -150,7 +150,6 @@ Glass under the `Tunable/` table. The xbox controls are inherited in this mode.
 | Intake Pivot   | Motor       | `25` | 
 | Hopper         | Motor       | `26` |
 | Shooter Feeder | Motor       | `28` |
-| Climber        | Left Motor  | `29` |
 | Intake Roller  | Motor       | `30` |
 | Shooter        | Motor       | `40` |
 

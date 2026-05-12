@@ -617,8 +617,6 @@
         <button class="action-btn" id="mode-driveToAndHold" onclick="setPlaceMode('driveToAndHold')">&#128204; Hold</button>
         <button class="action-btn" onclick="addAction('driveToStart')">&#8634; To Start</button>
         <button class="action-btn" onclick="addAction('collect')">&#128230; Collect</button>
-        <button class="action-btn" onclick="addAction('climbLeft')">&#11014; Climb L</button>
-        <button class="action-btn" onclick="addAction('climbRight')">&#11014; Climb R</button>
       </div>
     </div>
 
@@ -644,8 +642,6 @@
         <button class="preset-btn" onclick="addPreset('centerCollect')">Center Field</button>
         <button class="preset-btn" onclick="addPreset('cornerLeft')">Corner Left</button>
         <button class="preset-btn" onclick="addPreset('cornerRight')">Corner Right</button>
-        <button class="preset-btn" onclick="addPreset('climbLeft')">Climb Left</button>
-        <button class="preset-btn" onclick="addPreset('climbRight')">Climb Right</button>
         <button class="preset-btn" onclick="addPreset('collectClosest')">Collect Closest</button>
       </div>
     </div>
@@ -821,8 +817,6 @@ const PRESETS = {
   centerCollect:    { namedPose: 'CENTER_COLLECT', label: 'Center Field', type: 'driveToAndHold' },
   cornerHideLeft:   { namedPose: 'CORNER_HIDE_LEFT', label: 'Corner Left', type: 'driveToFacing', namedAim: 'HUB_CENTER', rot: 180 },
   cornerHideRight:  { namedPose: 'CORNER_HIDE_RIGHT', label: 'Corner Right', type: 'driveToFacing', namedAim: 'HUB_CENTER', rot: 180 },
-  climbLeft:        { namedPose: 'CLIMB_LEFT', label: 'Climb Left', type: 'driveTo' },
-  climbRight:       { namedPose: 'CLIMB_RIGHT', label: 'Climb Right', type: 'driveTo' },
   collectClosest:   { label: 'Collect Closest', type: 'driveTo', x: FIELD_LENGTH / 2, y: FIELD_WIDTH / 2 + 1.5, rot: 0 },
 };
 
@@ -1107,10 +1101,6 @@ function getGhostPosition(step, idx) {
       if (first) return { x: first.x, y: first.y, label: 'To Start' };
       return null;
     }
-    case 'climbLeft':
-      return { x: 1.062, y: 4.922, rot: 0, label: 'Climb L' };
-    case 'climbRight':
-      return { x: 1.062, y: 2.629, rot: 180, label: 'Climb R' };
     default:
       return null;
   }
@@ -1721,8 +1711,6 @@ function addAction(type, value) {
       break;
     case 'collect':
     case 'driveToStart':
-    case 'climbLeft':
-    case 'climbRight':
       break;
   }
   steps.push(step);
@@ -1737,7 +1725,7 @@ function toggleAlongside() {
   const step = steps[selectedStepIdx];
   // Only non-drive action steps can be alongside
   const DRIVE_TYPES = ['driveTo', 'driveToFacing', 'driveToAndHold', 'driveToCollect',
-    'collect', 'driveToStart', 'climbLeft', 'climbRight'];
+    'collect', 'driveToStart'];
   if (step.x !== undefined || DRIVE_TYPES.includes(step.type)) {
     alert('Alongside applies to action steps (shoot, intake, etc.), not drive steps.');
     return;
@@ -1881,7 +1869,6 @@ function getStepIcon(step) {
       case 'intakeUp': return '\u2B06';
       case 'collect': return '\uD83D\uDCE6';
       case 'custom': return '\u270E';
-      case 'climbLeft': case 'climbRight': return '\u2B06';
       default: return '\u2022';
     }
   })();
@@ -1912,8 +1899,6 @@ function getStepDetail(step) {
     case 'intakeUp': return prefix + 'Intake up' + timeoutSuffix(step);
     case 'collect': return prefix + 'Collect from closest side';
     case 'driveToStart': return prefix + 'Return to starting pose';
-    case 'climbLeft': return prefix + 'Auto climb (left)';
-    case 'climbRight': return prefix + 'Auto climb (right)';
     case 'custom': return prefix + (step.customExpr || '(empty)') + timeoutSuffix(step);
     default: return prefix;
   }
@@ -2111,24 +2096,8 @@ function exportCode() {
         }
         break;
       }
-      case 'climbLeft':
-        lines.push(`\tapfDefaults(CLIMB_LEFT)`);
-        lines.push(`\tclimber.climbBottomCommand()`);
-        lines.push(`\tapfSlow(CLIMB_LEFT_ENGAGE)`);
-        lines.push(`\tclimber.climbTopCommand()`);
-        lines.push(`\tclimber.climbHangCommand()`);
-        break;
-      case 'climbRight':
-        lines.push(`\tapfDefaults(CLIMB_RIGHT)`);
-        lines.push(`\tclimber.climbBottomCommand()`);
-        lines.push(`\tapfSlow(CLIMB_RIGHT_ENGAGE)`);
-        lines.push(`\tclimber.climbTopCommand()`);
-        lines.push(`\tclimber.climbHangCommand()`);
-        break;
-    }
-  }
-
-  code += lines.join(',\n') + '\n);\n';
+      case 'intakeUp':
+      case 'custom': {
 
   document.getElementById('code-output').innerHTML = highlightJava(code);
   document.getElementById('code-modal').classList.add('visible');

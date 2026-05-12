@@ -113,7 +113,7 @@ public final class TunableTable {
 
 	/**
 	 * Creates kP/kI/kD/kV/kS/kG tunables under a nested table and auto-applies to a TalonFX Slot0
-	 * whenever any value changes. Use for mechanisms with gravity compensation (e.g. elevator, climber).
+	 * whenever any value changes. Use for mechanisms with gravity compensation (e.g. elevator).
 	 */
 	public void pidTalonFX(String name, TalonFX motor,
 			double kP, double kI, double kD, double kV, double kS, double kG) {

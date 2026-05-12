@@ -159,8 +159,8 @@ class CommandIntegrationTest {
 	void allAutoChooserOptionsAreValid() {
 		List<String> errors = new ArrayList<>();
 
-		// Build Autos the same way RobotContainer does (null drivebase/climber are safe)
-		Autos autos = new Autos(repulsor, null, teleopAutomation, null, intake, roller);
+		// Build Autos the same way RobotContainer does (null drivebase is safe)
+		Autos autos = new Autos(repulsor, null, teleopAutomation, intake, roller);
 
 		// Reflectively invoke every Command-returning method on Autos
 		for (Method method : Autos.class.getDeclaredMethods()) {

@@ -9,7 +9,6 @@ public final class Constants {
 
 	// Subsystem enable flags
 	public static final boolean ENABLE_SWERVE = true;
-	public static final boolean ENABLE_CLIMBER = false;
 	public static final boolean ENABLE_INTAKE = true;
 	public static final boolean ENABLE_SHOOTER = true;
 	public static final boolean ENABLE_HOPPER = true;
