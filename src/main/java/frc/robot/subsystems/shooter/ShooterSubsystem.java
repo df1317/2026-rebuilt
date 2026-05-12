@@ -1,9 +1,12 @@
 package frc.robot.subsystems.shooter;
 
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
+import com.ctre.phoenix6.signals.MotorAlignmentValue;
+import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.ResetMode;
@@ -18,31 +21,29 @@ import dev.doglog.DogLog;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
-import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.util.BallVisualizer;
-import frc.robot.util.CommandBuilder;
-import frc.robot.util.Mutable;
-import frc.robot.util.TunableDouble;
-import frc.robot.util.TunableTable;
+import frc.robot.util.*;
 
 import java.util.function.Supplier;
 
 import static edu.wpi.first.units.Units.*;
 
 /**
- * Subsystem controlling a single-motor flywheel shooter with feeder and hood.
+ * Subsystem controlling a dual-motor flywheel shooter with feeder and hood. The two flywheel Krakens are physically
+ * opposed on the same axle, so the second motor follows the first with opposite direction.
  */
 public class ShooterSubsystem extends SubsystemBase {
 
 	// ==================== Hardware Config ====================
 	private static final int MOTOR_ID = 40;
+	private static final int MOTOR2_ID = 41;
 	private static final int FEEDER_ID = 28;
 	private static final int HOOD_ID = 24;
 	private static final boolean FLYWHEEL_INVERTED = true;
@@ -92,9 +93,11 @@ public class ShooterSubsystem extends SubsystemBase {
 	// ==================== Distance Bounds ====================
 	private static final double DISTANCE_MIN_M = 0.5;
 	private static final double DISTANCE_MAX_M = 9.0;
-
+	// ==================== Tunables ====================
+	private static final TunableTable tunables = new TunableTable("Shooter");
 	// ==================== Hardware (package-private for telemetry) ====================
 	final TalonFX motor;
+	final TalonFX motor2;
 	final SparkMax feeder;
 	final SparkMax hood;
 	final RelativeEncoder feederEncoder;
@@ -105,15 +108,11 @@ public class ShooterSubsystem extends SubsystemBase {
 	private final Debouncer atFeederSpeedDebouncer;
 	private final Debouncer stallDebouncer;
 	private final VelocityVoltage velocityVoltageRequest = new VelocityVoltage(0);
-
 	// ==================== Lookup Tables ====================
 	private final InterpolatingDoubleTreeMap distanceToRPM = new InterpolatingDoubleTreeMap();
 	private final InterpolatingDoubleTreeMap distanceToHoodPercent = new InterpolatingDoubleTreeMap();
 	private final InterpolatingDoubleTreeMap rpmToBallSpeed = new InterpolatingDoubleTreeMap();
 	private final InterpolatingDoubleTreeMap hoodPercentToLaunchAngle = new InterpolatingDoubleTreeMap();
-
-	// ==================== Tunables ====================
-	private static final TunableTable tunables = new TunableTable("Shooter");
 	private final TunableDouble testShooterRPM = tunables.value("RPM", 3000.0, RPM);
 	private final TunableDouble testFeederRPM = tunables.getNested("Feeder").value("RPM", 3000.0, RPM);
 	private final TunableDouble testHoodPercent = tunables.getNested("Hood").value("Percent", 0.5);
@@ -139,6 +138,7 @@ public class ShooterSubsystem extends SubsystemBase {
 	public ShooterSubsystem() {
 		feeder = new SparkMax(FEEDER_ID, MotorType.kBrushless);
 		motor = new TalonFX(MOTOR_ID);
+		motor2 = new TalonFX(MOTOR2_ID);
 		hood = new SparkMax(HOOD_ID, MotorType.kBrushless);
 		feederEncoder = feeder.getEncoder();
 		hoodEncoder = hood.getEncoder();
@@ -149,10 +149,12 @@ public class ShooterSubsystem extends SubsystemBase {
 		stallDebouncer = new Debouncer(STALL_DEBOUNCE_S, DebounceType.kRising);
 
 		configureFlywheelAndFeeder();
+		configureFollowerMotor();
 		configureHood();
 		populateLookupTables();
 
 		tunables.pidTalonFX("Shooter", motor, FLYWHEEL_KP, FLYWHEEL_KI, FLYWHEEL_KD, FLYWHEEL_KV, FLYWHEEL_KS);
+		tunables.pidTalonFX("Shooter2", motor2, FLYWHEEL_KP, FLYWHEEL_KI, FLYWHEEL_KD, FLYWHEEL_KV, FLYWHEEL_KS);
 		tunables.pidSpark("Feeder", feeder, FEEDER_KP, FEEDER_KI, FEEDER_KD, FEEDER_KV);
 		tunables.pidSpark("Hood", hood, HOOD_KP, HOOD_KI, HOOD_KD);
 
@@ -186,6 +188,12 @@ public class ShooterSubsystem extends SubsystemBase {
 		flywheelConfig.MotorOutput.Inverted = FLYWHEEL_INVERTED ? InvertedValue.Clockwise_Positive
 				: InvertedValue.CounterClockwise_Positive;
 		motor.getConfigurator().apply(flywheelConfig);
+		motor2.getConfigurator().apply(flywheelConfig);
+	}
+
+	private void configureFollowerMotor() {
+		motor2.setControl(new Follower(motor.getDeviceID(), MotorAlignmentValue.Opposed));
+		motor2.setNeutralMode(NeutralModeValue.Coast);
 	}
 
 	private void configureHood() {
@@ -330,6 +338,7 @@ public class ShooterSubsystem extends SubsystemBase {
 		targetFeederVelocity = RPM.of(0);
 		setHoodPercent(0);
 		motor.stopMotor();
+		motor2.stopMotor();
 		feeder.stopMotor();
 	}
 
@@ -421,11 +430,11 @@ public class ShooterSubsystem extends SubsystemBase {
 	}
 
 	/**
-	 * Spins up the flywheel while reversing the feeder to prevent premature feeding,
-	 * then switches to forward feed once at speed.
+	 * Spins up the flywheel while reversing the feeder to prevent premature feeding, then switches to forward feed once
+	 * at speed.
 	 */
 	public Command spinUpReverseFeederThenShootCommand(Supplier<Distance> distance) {
-		enum Phase{REVERSE,SHOOT}
+		enum Phase {REVERSE, SHOOT}
 		Mutable<Phase> phase = new Mutable<>(Phase.REVERSE);
 		Timer shotTimer = new Timer();
 
@@ -520,38 +529,38 @@ public class ShooterSubsystem extends SubsystemBase {
 
 	public Command homeHoodCommand() {
 		return Commands.sequence(
-				Commands.runOnce(() -> {
-					SparkMaxConfig config = new SparkMaxConfig();
-					config.softLimit.forwardSoftLimitEnabled(false).reverseSoftLimitEnabled(false);
-					hood.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
-				}, this),
-				// Find min stop
-				Commands.runOnce(() -> {
-					stallDebouncer.calculate(false);
-					hood.setVoltage(-homingVoltage.get());
-				}),
-				Commands.waitUntil(this::isHoodStalled).withTimeout(HOMING_TIMEOUT_S),
-				Commands.runOnce(() -> {
-					hood.stopMotor();
-					hoodEncoder.setPosition(0.0);
-					stallDebouncer.calculate(false);
-				}),
-				// Find max stop
-				Commands.runOnce(() -> hood.setVoltage(homingVoltage.get())),
-				Commands.waitUntil(this::isHoodStalled).withTimeout(HOMING_TIMEOUT_S),
-				Commands.runOnce(() -> {
-					hood.stopMotor();
-					hoodMaxDeg = hoodEncoder.getPosition();
-					DogLog.log("Shooter/HoodMaxDeg", hoodMaxDeg);
-					SparkMaxConfig config = new SparkMaxConfig();
-					config.softLimit
-							.forwardSoftLimit((float) hoodMaxDeg).forwardSoftLimitEnabled(true)
-							.reverseSoftLimit(0.0f).reverseSoftLimitEnabled(true);
-					hood.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
-				}),
-				// Zero to min position
-				runOnce(() -> setHoodPercent(0)),
-				Commands.waitUntil(this::isHoodAtPosition))
+						Commands.runOnce(() -> {
+							SparkMaxConfig config = new SparkMaxConfig();
+							config.softLimit.forwardSoftLimitEnabled(false).reverseSoftLimitEnabled(false);
+							hood.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
+						}, this),
+						// Find min stop
+						Commands.runOnce(() -> {
+							stallDebouncer.calculate(false);
+							hood.setVoltage(-homingVoltage.get());
+						}),
+						Commands.waitUntil(this::isHoodStalled).withTimeout(HOMING_TIMEOUT_S),
+						Commands.runOnce(() -> {
+							hood.stopMotor();
+							hoodEncoder.setPosition(0.0);
+							stallDebouncer.calculate(false);
+						}),
+						// Find max stop
+						Commands.runOnce(() -> hood.setVoltage(homingVoltage.get())),
+						Commands.waitUntil(this::isHoodStalled).withTimeout(HOMING_TIMEOUT_S),
+						Commands.runOnce(() -> {
+							hood.stopMotor();
+							hoodMaxDeg = hoodEncoder.getPosition();
+							DogLog.log("Shooter/HoodMaxDeg", hoodMaxDeg);
+							SparkMaxConfig config = new SparkMaxConfig();
+							config.softLimit
+									.forwardSoftLimit((float) hoodMaxDeg).forwardSoftLimitEnabled(true)
+									.reverseSoftLimit(0.0f).reverseSoftLimitEnabled(true);
+							hood.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
+						}),
+						// Zero to min position
+						runOnce(() -> setHoodPercent(0)),
+						Commands.waitUntil(this::isHoodAtPosition))
 				.finallyDo(hood::stopMotor)
 				.withName("Shooter.homeHood");
 	}

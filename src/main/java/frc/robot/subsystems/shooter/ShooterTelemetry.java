@@ -39,6 +39,12 @@ public class ShooterTelemetry {
 		DogLog.log("Shooter/Motor/CurrentAmps", shooter.motor.getStatorCurrent().getValueAsDouble());
 		DogLog.log("Shooter/Motor/Voltage", shooter.motor.getMotorVoltage().getValueAsDouble());
 
+		// Shooter motor 2
+		double currentRPM2 = shooter.motor2.getVelocity().getValueAsDouble() * 60;
+		DogLog.log("Shooter/Motor2/VelocityRPM", currentRPM2);
+		DogLog.log("Shooter/Motor2/CurrentAmps", shooter.motor2.getStatorCurrent().getValueAsDouble());
+		DogLog.log("Shooter/Motor2/Voltage", shooter.motor2.getMotorVoltage().getValueAsDouble());
+
 		// Feeder motor
 		DogLog.log("Shooter/Feeder/VelocityRPM", feederCurrentRPM);
 		DogLog.log("Shooter/Feeder/TargetVelocityRPM", feederTargetRPM);
