@@ -434,7 +434,7 @@ public class ShooterSubsystem extends SubsystemBase {
 	 * at speed.
 	 */
 	public Command spinUpReverseFeederThenShootCommand(Supplier<Distance> distance) {
-		enum Phase {REVERSE, SHOOT}
+		enum Phase{REVERSE,SHOOT}
 		Mutable<Phase> phase = new Mutable<>(Phase.REVERSE);
 		Timer shotTimer = new Timer();
 
@@ -529,38 +529,38 @@ public class ShooterSubsystem extends SubsystemBase {
 
 	public Command homeHoodCommand() {
 		return Commands.sequence(
-						Commands.runOnce(() -> {
-							SparkMaxConfig config = new SparkMaxConfig();
-							config.softLimit.forwardSoftLimitEnabled(false).reverseSoftLimitEnabled(false);
-							hood.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
-						}, this),
-						// Find min stop
-						Commands.runOnce(() -> {
-							stallDebouncer.calculate(false);
-							hood.setVoltage(-homingVoltage.get());
-						}),
-						Commands.waitUntil(this::isHoodStalled).withTimeout(HOMING_TIMEOUT_S),
-						Commands.runOnce(() -> {
-							hood.stopMotor();
-							hoodEncoder.setPosition(0.0);
-							stallDebouncer.calculate(false);
-						}),
-						// Find max stop
-						Commands.runOnce(() -> hood.setVoltage(homingVoltage.get())),
-						Commands.waitUntil(this::isHoodStalled).withTimeout(HOMING_TIMEOUT_S),
-						Commands.runOnce(() -> {
-							hood.stopMotor();
-							hoodMaxDeg = hoodEncoder.getPosition();
-							DogLog.log("Shooter/HoodMaxDeg", hoodMaxDeg);
-							SparkMaxConfig config = new SparkMaxConfig();
-							config.softLimit
-									.forwardSoftLimit((float) hoodMaxDeg).forwardSoftLimitEnabled(true)
-									.reverseSoftLimit(0.0f).reverseSoftLimitEnabled(true);
-							hood.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
-						}),
-						// Zero to min position
-						runOnce(() -> setHoodPercent(0)),
-						Commands.waitUntil(this::isHoodAtPosition))
+				Commands.runOnce(() -> {
+					SparkMaxConfig config = new SparkMaxConfig();
+					config.softLimit.forwardSoftLimitEnabled(false).reverseSoftLimitEnabled(false);
+					hood.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
+				}, this),
+				// Find min stop
+				Commands.runOnce(() -> {
+					stallDebouncer.calculate(false);
+					hood.setVoltage(-homingVoltage.get());
+				}),
+				Commands.waitUntil(this::isHoodStalled).withTimeout(HOMING_TIMEOUT_S),
+				Commands.runOnce(() -> {
+					hood.stopMotor();
+					hoodEncoder.setPosition(0.0);
+					stallDebouncer.calculate(false);
+				}),
+				// Find max stop
+				Commands.runOnce(() -> hood.setVoltage(homingVoltage.get())),
+				Commands.waitUntil(this::isHoodStalled).withTimeout(HOMING_TIMEOUT_S),
+				Commands.runOnce(() -> {
+					hood.stopMotor();
+					hoodMaxDeg = hoodEncoder.getPosition();
+					DogLog.log("Shooter/HoodMaxDeg", hoodMaxDeg);
+					SparkMaxConfig config = new SparkMaxConfig();
+					config.softLimit
+							.forwardSoftLimit((float) hoodMaxDeg).forwardSoftLimitEnabled(true)
+							.reverseSoftLimit(0.0f).reverseSoftLimitEnabled(true);
+					hood.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
+				}),
+				// Zero to min position
+				runOnce(() -> setHoodPercent(0)),
+				Commands.waitUntil(this::isHoodAtPosition))
 				.finallyDo(hood::stopMotor)
 				.withName("Shooter.homeHood");
 	}

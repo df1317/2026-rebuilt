@@ -24,8 +24,6 @@ import swervelib.SwerveInputStream;
 import java.io.File;
 import java.util.function.Supplier;
 
-import static edu.wpi.first.units.Units.RPM;
-
 public class RobotContainer {
 
 	// HID
