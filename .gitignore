@@ -197,3 +197,5 @@ compile_commands.json
 .factorypath
 
 .crush/
+.rej
+*.orig
