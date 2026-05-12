@@ -15,8 +15,8 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
  *        Col 0               Col 1               Col 2               Col 3
  * Row 0  [ intakeHome*     ] [                  ] [                  ] [               ]
  * Row 1  [ autoDistance    ] [ hoodHome*       ] [ hoodTest(T)    ] [ shootAll(T)   ]
- * Row 2  [ distAdvance     ] [ intakeFwd       ] [ hopperFwd      ] [ shootFeed     ]
- * Row 3  [ distReduce      ] [ intakeRev       ] [ hopperRev      ] [ feedRev       ]
+ * Row 2  [ distAdvance     ] [ intakeFwd       ] [                ] [ shootFeed     ]
+ * Row 3  [ distReduce      ] [ intakeRev       ] [                ] [ feedRev       ]
  * Row 4  [                 ] [                 ] [                ] [               ]
  *
  * * = works in both teleop and test    (T) = test mode only

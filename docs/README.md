@@ -33,7 +33,7 @@ Triggers activate automatically based on field position during teleop.
 | Condition                                | Action                                                    |
 |------------------------------------------|-----------------------------------------------------------|
 | Shuttle mode + in own alliance zone      | Auto-extend intake and run rollers                        |
-| Right Bumper held + in own alliance zone | Spin up shooter to hub distance, feed hopper concurrently |
+| Right Bumper held + in own alliance zone | Spin up shooter to hub distance, feed feeder concurrently |
 
 The shooter speed is calculated from the live robot-to-hub distance using the distance LUT
 (see [Shooter docs](shooter.md#distance-lut)).
@@ -46,9 +46,9 @@ Firmware: [df1317/maypad-frc](https://github.com/df1317/maypad-frc) — grab the
 |-----------|--------------------------|------------------------|------------------------|------------------------|
 | **Row 0** | `intakeHome` (once)*     | `intakeZero` (once)    | `intakeDown` (hold)    | `intakeUp` (hold)      |
 | **Row 1** | `autoDistance` (once)    | `hoodHome` (once)*     | `intakeToggle` (once)  | `rollerRun` (hold)     |
-| **Row 2** | `distanceAdvance` (once) | `intakeForward` (hold) | `hopperForward` (hold) | `Shoot+Feed` (hold)    |
-| **Row 3** | `distanceReduce` (once)  | `intakeReverse` (hold) | `hopperReverse` (hold) | `feederReverse` (hold) |
-| **Row 4** | `climbBottom` (once)     | `climbTop` (once)      | `climbHang` (once)     | `climbRelease` (once)  |
+| **Row 2** | `distanceAdvance` (once) | `intakeForward` (hold) | -                      | `Shoot+Feed` (hold)    |
+| **Row 3** | `distanceReduce` (once)  | `intakeReverse` (hold) | -                      | `feederReverse` (hold) |
+| **Row 4** | -                        | -                      | -                      | -                      |
 
 | Key         | Action           | Notes                                                                                    |
 |-------------|------------------|------------------------------------------------------------------------------------------|
@@ -65,12 +65,12 @@ Firmware: [df1317/maypad-frc](https://github.com/df1317/maypad-frc) — grab the
 | **row 2**   |                  |                                                                                          |
 | `key(2, 0)` | Distance Advance | Switches to manual distance and advances distance map by one increment                   |
 | `key(2, 1)` | Intake Forward   | Runs intake roller forward                                                               |
-| `key(2, 2)` | Hopper Forward   | Runs hopper forward                                                                      |
+| `key(2, 2)` | -                |                                                                                          |
 | `key(2, 3)` | Shoot + Feed     | Shoots and feeds but doesn't aim                                                         |
 | **row 3**   |                  |                                                                                          |
 | `key(3, 0)` | Distance Reduce  | Switches to manual distance and decrements distance map by one increment                 |
 | `key(3, 1)` | Intake Reverse   | Ejects from intake                                                                       |
-| `key(3, 2)` | Hopper Reverse   | Runs hopper in reverse                                                                   |
+| `key(3, 2)` | -                |                                                                                          |
 | `key(3, 3)` | Feeder Reverse   | Runs feeder in reverse                                                                   |
 | **row 4**   |                  |                                                                                          |
 | `key(4, 0)` | -                |                                                                                          |
@@ -90,7 +90,7 @@ Glass under the `Tunable/` table. The xbox controls are inherited in this mode.
 | **Row 0** | `intakeHome` (once)* | -                    | -                   | -                    |
 | **Row 1** | `aimTest` (hold)     | `hoodHome` (once)    | `hoodTest` (hold)   | `shootAll` (hold)    |
 | **Row 2** | `intakeZero` (once)  | `intakeDown` (hold)  | `intakeUp` (hold)   | `shooterTest` (hold) |
-| **Row 3** | -                    | `intakeTest` (hold)  | `hopperTest` (hold) | `feederTest` (hold)  |
+| **Row 3** | -                    | `intakeTest` (hold)  | -                   | `feederTest` (hold)  |
 | **Row 4** | -                    | -                    | -                   | -                    |
 
 | Key         | Action                | Notes                                                                                                                       |
@@ -104,7 +104,7 @@ Glass under the `Tunable/` table. The xbox controls are inherited in this mode.
 | `key(1, 0)` | Aim Test              | Aims drivetrain at hub while driving (test only)                                                                            |
 | `key(1, 1)` | Home Hood             | Homes the shooter hood (works in teleop and test)                                                                           |
 | `key(1, 2)` | Test Hood Position    | Tunable: `Shooter/Hood/Percent`                                                                                             |
-| `key(1, 3)` | Shoot All             | Sets hood, spins up shooter+feeder, then feeds hopper. Tunables: `Shooter/TuneRPM`, `Shooter/TuneHoodPercent`, `Hopper/RPM` |
+| `key(1, 3)` | Shoot All             | Sets hood, spins up shooter+feeder. Tunables: `Shooter/TuneRPM`, `Shooter/TuneHoodPercent` |
 | **row 2**   |                       |                                                                                                                             |
 | `key(2, 0)` | Intake Zero           | Sets the intake extended angle and the retracted angle to the constant delta + new angle                                    |
 | `key(2, 1)` | Intake Down           | Moves the intake towards being extended                                                                                     |
@@ -113,7 +113,7 @@ Glass under the `Tunable/` table. The xbox controls are inherited in this mode.
 | **row 3**   |                       |                                                                                                                             |
 | `key(2, 3)` | Test Shooter Flywheel | Tunable: `Shooter/RPM`                                                                                                      |
 | `key(3, 1)` | Test Intake Pivot     | Tunable: `Intake/Pivot/Degrees`                                                                                             |
-| `key(3, 2)` | Test Hopper           | Tunable: `Hopper/RPM`                                                                                                       |
+| `key(3, 2)` | -                     |                                                                                                                             |
 | `key(3, 3)` | Test Feeder           | Tunable: `Shooter/Feeder/RPM`                                                                                               |
 | **row 4**   |                       |                                                                                                                             |
 | `key(4, 0)` | -                     |                                                                                                                             |
@@ -148,7 +148,6 @@ Glass under the `Tunable/` table. The xbox controls are inherited in this mode.
 |                |             |      |
 | Shooter Hood   | Motor       | `24` |
 | Intake Pivot   | Motor       | `25` | 
-| Hopper         | Motor       | `26` |
 | Shooter Feeder | Motor       | `28` |
 | Intake Roller  | Motor       | `30` |
 | Shooter        | Motor       | `40` |

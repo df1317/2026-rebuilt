@@ -9,7 +9,6 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.repulsor.Repulsor;
-import frc.robot.subsystems.hopper.HopperSubsystem;
 import frc.robot.subsystems.intake.IntakeSubsystem;
 import frc.robot.subsystems.shooter.ShooterSubsystem;
 import frc.robot.util.FieldZones;
@@ -26,7 +25,6 @@ public class TeleopZoneAutomation {
 	private final Repulsor repulsor;
 	private final IntakeSubsystem intake;
 	private final ShooterSubsystem shooter;
-	private final HopperSubsystem hopper;
 	private final Supplier<Pose2d> robotPose;
 	private final Supplier<ChassisSpeeds> fieldVelocity;
 
@@ -34,13 +32,11 @@ public class TeleopZoneAutomation {
 			Repulsor repulsor,
 			IntakeSubsystem intake,
 			ShooterSubsystem shooter,
-			HopperSubsystem hopper,
 			Supplier<Pose2d> robotPose,
 			Supplier<ChassisSpeeds> fieldVelocity) {
 		this.repulsor = repulsor;
 		this.intake = intake;
 		this.shooter = shooter;
-		this.hopper = hopper;
 		this.robotPose = robotPose;
 		this.fieldVelocity = fieldVelocity;
 	}
@@ -53,21 +49,15 @@ public class TeleopZoneAutomation {
 	}
 
 	public Command shootCommand() {
-		if (shooter == null || hopper == null)
+		if (shooter == null)
 			return Commands.none();
-		return Commands.parallel(
-				shooter.spinUpReverseFeederThenShootCommand(() -> Meters.of(shooter.getActiveDistanceM())),
-				hopper.reverseCommand().until(shooter::isAtSpeed)
-						.andThen(hopper.feedCommand()));
+		return shooter.spinUpReverseFeederThenShootCommand(() -> Meters.of(shooter.getActiveDistanceM()));
 	}
 
 	public Command shootCommand(BooleanSupplier aimed) {
-		if (shooter == null || hopper == null)
+		if (shooter == null)
 			return Commands.none();
-		return Commands.parallel(
-				shooter.shootForDistanceCommand(() -> Meters.of(shooter.getActiveDistanceM())),
-				hopper.reverseCommand().until(() -> shooter.isAtSpeed() && aimed.getAsBoolean())
-						.andThen(hopper.feedCommand()));
+		return shooter.shootForDistanceCommand(() -> Meters.of(shooter.getActiveDistanceM()));
 	}
 
 	public Pose2d getShootingPose() {

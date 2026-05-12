@@ -13,7 +13,6 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.commands.TeleopZoneAutomation;
 import frc.robot.repulsor.DriveRepulsor;
 import frc.robot.repulsor.Repulsor;
-import frc.robot.subsystems.hopper.HopperSubsystem;
 import frc.robot.subsystems.intake.IntakeSubsystem;
 import frc.robot.subsystems.intake.RollerSubsystem;
 import frc.robot.subsystems.shooter.ShooterSubsystem;
@@ -49,7 +48,6 @@ class CommandIntegrationTest {
 	private static RollerSubsystem roller;
 	private static IntakeSubsystem intake;
 	private static ShooterSubsystem shooter;
-	private static HopperSubsystem hopper;
 	private static Repulsor repulsor;
 	private static SubsystemBase mockDriveSubsystem;
 	private static TeleopZoneAutomation teleopAutomation;
@@ -60,8 +58,6 @@ class CommandIntegrationTest {
 		roller = new RollerSubsystem();
 		intake = new IntakeSubsystem(roller);
 		shooter = new ShooterSubsystem();
-		hopper = new HopperSubsystem();
-
 		mockDriveSubsystem = new SubsystemBase() {
 		};
 		DriveRepulsor mockDrive = new DriveRepulsor() {
@@ -91,7 +87,7 @@ class CommandIntegrationTest {
 		};
 		repulsor = new Repulsor(mockDrive, 0.35, 0.35);
 		teleopAutomation = new TeleopZoneAutomation(
-				repulsor, intake, shooter, hopper, Pose2d::new, ChassisSpeeds::new);
+				repulsor, intake, shooter, Pose2d::new, ChassisSpeeds::new);
 	}
 
 	@BeforeEach
@@ -110,7 +106,6 @@ class CommandIntegrationTest {
 		checkSubsystemRequirements(intake, "IntakeSubsystem", errors);
 		checkSubsystemRequirements(roller, "RollerSubsystem", errors);
 		checkSubsystemRequirements(shooter, "ShooterSubsystem", errors);
-		checkSubsystemRequirements(hopper, "HopperSubsystem", errors);
 
 		if (!errors.isEmpty()) {
 			fail("Found command(s) missing subsystem requirements:\n\n"
@@ -225,8 +220,8 @@ class CommandIntegrationTest {
 	void crossSubsystemCommandsCanParallel() {
 		List<String> errors = new ArrayList<>();
 
-		SubsystemBase[] subsystems = { intake, roller, shooter, hopper };
-		String[] names = { "intake", "roller", "shooter", "hopper" };
+		SubsystemBase[] subsystems = { intake, roller, shooter };
+		String[] names = { "intake", "roller", "shooter" };
 
 		List<List<NamedCommand>> allCommands = new ArrayList<>();
 		for (int i = 0; i < subsystems.length; i++) {

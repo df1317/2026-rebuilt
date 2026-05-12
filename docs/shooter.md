@@ -37,7 +37,7 @@ Use this when auto-homing doesn't reach the stops cleanly:
 |------------------|-------------------------------|
 | `Left Trigger`   | Decrease hood angle (–5% per press) |
 | `Right Trigger`  | Increase hood angle (+5% per press) |
-| `Joystick L Button 2` (toggle) | Spin up flywheel → start feeder → run hopper |
+| `Joystick L Button 2` (toggle) | Spin up flywheel → start feeder |
 
 ## Test Mode Controls
 

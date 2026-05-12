@@ -11,7 +11,6 @@ import frc.robot.Constants.DrivebaseConstants;
 import frc.robot.commands.TeleopZoneAutomation;
 import frc.robot.repulsor.IntakeFootprint;
 import frc.robot.repulsor.Repulsor;
-import frc.robot.subsystems.hopper.HopperSubsystem;
 import frc.robot.subsystems.intake.IntakeSubsystem;
 import frc.robot.subsystems.intake.RollerSubsystem;
 import frc.robot.subsystems.shooter.ShooterSubsystem;
@@ -39,7 +38,6 @@ public class RobotContainer {
 	private final ShooterSubsystem shooter = Constants.ENABLE_SHOOTER ? new ShooterSubsystem() : null;
 	private final RollerSubsystem roller = Constants.ENABLE_INTAKE ? new RollerSubsystem() : null;
 	private final IntakeSubsystem intake = Constants.ENABLE_INTAKE ? new IntakeSubsystem(roller) : null;
-	private final HopperSubsystem hopper = Constants.ENABLE_HOPPER ? new HopperSubsystem() : null;
 	private static final TunableTable driveTunables = new TunableTable("Drive");
 	private final TunableBoolean obstacleClampEnabled = driveTunables.value("ObstacleClampEnabled", true);
 	private final TunableBoolean repulsorRumbleEnabled = driveTunables.value("RepulsorRumbleEnabled", true);
@@ -70,7 +68,7 @@ public class RobotContainer {
 
 			// Setup teleop automation
 			teleopAutomation = new TeleopZoneAutomation(
-					repulsor, intake, shooter, hopper,
+					repulsor, intake, shooter,
 					drivebase::getPose, drivebase::getFieldVelocity);
 			drivebase.setTargetDistanceSupplier(teleopAutomation::getTargetDistance);
 			drivebase.setAimTargetSupplier(teleopAutomation::getVirtualAimTarget);
@@ -167,10 +165,6 @@ public class RobotContainer {
 			panel.key(0, 2).and(inTeleop).whileTrue(intake.jogDownCommand());
 			panel.key(0, 3).and(inTeleop).whileTrue(intake.jogUpCommand());
 		}
-		if (hopper != null) {
-			panel.key(2, 2).and(inTeleop).whileTrue(hopper.feedCommand()); // hopperForward
-			panel.key(3, 2).and(inTeleop).whileTrue(hopper.reverseCommand()); // hopperReverse
-		}
 		if (shooter != null) {
 			panel.key(2, 3).and(inTeleop).whileTrue(teleopAutomation.shootCommand()); // shoot+feed (no aim)
 			panel.key(3, 3).and(inTeleop).whileTrue(shooter.reverseFeederCommand()); // feederReverse
@@ -208,19 +202,10 @@ public class RobotContainer {
 					Commands.parallel(
 							Commands.runOnce(shooter::setTestHoodPercent),
 							shooter.spinUpAndWaitCommand(shooter::getShooterTestRPM, shooter::getFeederTestRPM))
-							.andThen(hopper != null
-									? hopper.setHopperVelocityCommand(hopper::getHopperTestRPM)
-									: Commands.none())
 							.finallyDo(() -> {
 								shooter.stop();
-								if (hopper != null) {
-									hopper.setHopperVelocity(RPM.of(0));
-								}
 							}));
 			panel.key(3, 3).and(inTest).whileTrue(shooter.testFeederCommand());
-		}
-		if (hopper != null) {
-			panel.key(3, 2).and(inTest).whileTrue(hopper.testHopperCommand());
 		}
 		if (intake != null) {
 			panel.key(3, 1).and(inTest).whileTrue(intake.testPivotCommand());

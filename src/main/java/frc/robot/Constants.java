@@ -11,7 +11,6 @@ public final class Constants {
 	public static final boolean ENABLE_SWERVE = true;
 	public static final boolean ENABLE_INTAKE = true;
 	public static final boolean ENABLE_SHOOTER = true;
-	public static final boolean ENABLE_HOPPER = true;
 
 	public static final double ROBOT_MASS = Units.lbsToKilograms(120.4); // 60lbs * kg per pound
 

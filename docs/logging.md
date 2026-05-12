@@ -136,14 +136,13 @@ All subsystem status colors use the `RobotLog` palette and follow a consistent s
 |-----------|-----|--------|-------|------|
 | **Shooter** | Target RPM ~0 (idle) | Spinning up | At speed | Reverse |
 | **Intake** | Retracted & idle | Extending or not at speed | Extended & at speed | Reverse |
-| **Hopper** | Target RPM 0 (idle) | Spinning up | At speed | Reverse |
 | **Hub** | Not available | Buffered (available within 3s) | Active (can score now) | — |
 
 ### Dashboard Keys
 
 Status colors are logged via `DogLog.forceNt` as hex strings:
 
-- `Shooter/Status`, `Intake/Status`, `Hopper/Status`
+- `Shooter/Status`, `Intake/Status`
 - `Hub/StatusColor` (also logs `Hub/Status` as enum name)
 
 ## Configuration
