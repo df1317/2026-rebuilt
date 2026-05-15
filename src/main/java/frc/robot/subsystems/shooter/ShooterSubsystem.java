@@ -46,7 +46,7 @@ public class ShooterSubsystem extends SubsystemBase {
 	private static final int MOTOR2_ID = 41;
 	private static final int FEEDER_ID = 28;
 	private static final int HOOD_ID = 24;
-	private static final boolean FLYWHEEL_INVERTED = true;
+	private static final boolean FLYWHEEL_INVERTED = false;
 	private static final boolean FEEDER_INVERTED = true;
 	private static final boolean HOOD_INVERTED = true;
 	private static final int FLYWHEEL_CURRENT_LIMIT = 25;
