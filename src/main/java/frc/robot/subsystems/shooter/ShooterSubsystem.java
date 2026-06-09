@@ -154,7 +154,6 @@ public class ShooterSubsystem extends SubsystemBase {
 		populateLookupTables();
 
 		tunables.pidTalonFX("Shooter", motor, FLYWHEEL_KP, FLYWHEEL_KI, FLYWHEEL_KD, FLYWHEEL_KV, FLYWHEEL_KS);
-		tunables.pidTalonFX("Shooter2", motor2, FLYWHEEL_KP, FLYWHEEL_KI, FLYWHEEL_KD, FLYWHEEL_KV, FLYWHEEL_KS);
 		tunables.pidSpark("Feeder", feeder, FEEDER_KP, FEEDER_KI, FEEDER_KD, FEEDER_KV);
 		tunables.pidSpark("Hood", hood, HOOD_KP, HOOD_KI, HOOD_KD);
 
