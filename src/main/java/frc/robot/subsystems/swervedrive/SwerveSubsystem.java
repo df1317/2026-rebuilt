@@ -101,7 +101,7 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
         new SlewRateLimiter(Constants.MAX_ACCELERATION),
         new SlewRateLimiter(Constants.MAX_ANGULAR_ACCELERATION));
 
-    swerveDrive.setGyroOffset(new Rotation3d(0, 0, Math.PI * 0.5f));
+    swerveDrive.setGyroOffset(new Rotation3d(0, 0, -Math.PI * 0.5f));
     swerveDrive.setHeadingCorrection(true);
     swerveDrive.setCosineCompensator(true);
     swerveDrive.setAngularVelocityCompensation(true, true, 0.1);
@@ -416,6 +416,7 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 
   public void zeroGyro() {
     swerveDrive.zeroGyro();
+    swerveDrive.setGyroOffset(new Rotation3d(0, 0, -Math.PI * 0.5f));
   }
 
   public void setMotorBrake(boolean brake) {
