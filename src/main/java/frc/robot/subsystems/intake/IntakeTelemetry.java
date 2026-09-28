@@ -27,6 +27,7 @@ public class IntakeTelemetry {
     DogLog.forceNt.log("Intake/Homed", intake.homed);
 
     DogLog.log("Intake/ExtenEncoder", intake.externEncoder.get());
+    DogLog.log("Intake/EncoderRatio", intake.externEncoder.get() / intake.pivotEncoder.getPosition());
 
     DogLog.log("Intake/PivotAngleDeg", pivotAngleDeg);
     DogLog.log("Intake/PivotTargetAngleDeg", pivotTargetAngleDeg);

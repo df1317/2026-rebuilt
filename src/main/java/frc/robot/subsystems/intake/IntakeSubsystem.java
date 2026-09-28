@@ -22,7 +22,7 @@ import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.wpilibj.DutyCycleEncoder;
+import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -41,7 +41,8 @@ public class IntakeSubsystem extends SubsystemBase {
   // ==================== Hardware Config ====================
   private static final int PIVOT_MOTOR_ID = 25;
   private static final int PIVOT_CURRENT_LIMIT = 35;
-  private static final int EXTERN_ENCODER_CHANNEL = -0;
+  private static final int EXTERN_ENCODER_CHANNEL_A = 4;
+  private static final int EXTERN_ENCODER_CHANNEL_B = 7;
   private static final boolean PIVOT_INVERTED = false;
   private static final double PIVOT_GEAR_RATIO = (48.0 * 22.0) / 14.0;
   private static final Angle PIVOT_ANGLE_TOLERANCE = Degrees.of(8);
@@ -71,7 +72,7 @@ public class IntakeSubsystem extends SubsystemBase {
   // ==================== Hardware ====================
   final SparkMax pivotMotor;
   final RelativeEncoder pivotEncoder;
-  final DutyCycleEncoder externEncoder;
+  final Encoder externEncoder;
   private final SparkClosedLoopController pivotController;
   private final Debouncer atPositionDebouncer;
   private final Debouncer stallDebouncer = new Debouncer(STALL_DEBOUNCE_S, DebounceType.kBoth);
@@ -115,7 +116,7 @@ public class IntakeSubsystem extends SubsystemBase {
     pivotMotor = new SparkMax(PIVOT_MOTOR_ID, MotorType.kBrushless);
     pivotController = pivotMotor.getClosedLoopController();
     pivotEncoder = pivotMotor.getEncoder();
-    externEncoder = new DutyCycleEncoder(EXTERN_ENCODER_CHANNEL);
+    externEncoder = new Encoder(EXTERN_ENCODER_CHANNEL_A, EXTERN_ENCODER_CHANNEL_B);
 
     configurePivotMotor();
 
