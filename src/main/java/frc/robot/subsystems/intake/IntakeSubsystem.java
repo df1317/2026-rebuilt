@@ -29,6 +29,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.util.CommandBuilder;
+import frc.robot.util.TunableBoolean;
 import frc.robot.util.TunableDouble;
 import frc.robot.util.TunableTable;
 
@@ -85,6 +86,13 @@ public class IntakeSubsystem extends SubsystemBase {
   private final TunableDouble kickDurationS = pivotTunables.value("KickDurationS", DEFAULT_KICK_DURATION_S);
   private final TunableDouble homingOffset = pivotTunables.value("HomingOffsetDeg", DEFAULT_HOMING_OFFSET_DEG);
 
+  private double initialValInternalEncoder;
+  private double initialValExternalEncoder;
+  // final double initialEncoderRatio = 1 / 5.6;
+  double encoderRatio = 1 / 5.6;
+  private final TunableDouble encoderRatioTunnale = pivotTunables.value("encoderRatio", encoderRatio);
+  private final TunableBoolean useEncoderConversion = pivotTunables.value("encoderConversion", false);
+
   // ==================== Telemetry ====================
   private final IntakeTelemetry telemetry;
 
@@ -97,6 +105,7 @@ public class IntakeSubsystem extends SubsystemBase {
 
   public void setState(IntakeState newState) {
     if (currentState != newState) {
+      updateEncoderToRealPos();
       currentState = newState;
       stateTimer.restart();
     }
@@ -117,6 +126,9 @@ public class IntakeSubsystem extends SubsystemBase {
     pivotController = pivotMotor.getClosedLoopController();
     pivotEncoder = pivotMotor.getEncoder();
     externEncoder = new Encoder(EXTERN_ENCODER_CHANNEL_A, EXTERN_ENCODER_CHANNEL_B);
+
+    initialValExternalEncoder = externEncoder.get();
+    initialValInternalEncoder = pivotEncoder.getPosition();
 
     configurePivotMotor();
 
@@ -147,6 +159,12 @@ public class IntakeSubsystem extends SubsystemBase {
     pivotMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
   }
 
+  public void updateEncoderToRealPos() {
+    encoderRatio = encoderRatioTunnale.get();
+    pivotEncoder
+        .setPosition((externEncoder.get() - initialValExternalEncoder) * encoderRatio + initialValInternalEncoder);
+  }
+
   @Override
   public void periodic() {
     boolean enabled = edu.wpi.first.wpilibj.DriverStation.isEnabled();
@@ -165,6 +183,11 @@ public class IntakeSubsystem extends SubsystemBase {
     }
     wasEnabled = enabled;
 
+    // if (useEncoderConversion.get()) {
+    // encoderRatio = encoderRatioTunnale.get();
+    // pivotEncoder
+    // .setPosition((externEncoder.get() - initialValExternalEncoder) * encoderRatio + initialValInternalEncoder);
+    // }
     switch (currentState) {
       case EXTENDING_KICK:
         pivotProfiler.setConstraints(fastConstraints());
