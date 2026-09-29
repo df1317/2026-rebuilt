@@ -406,8 +406,11 @@ public class IntakeSubsystem extends SubsystemBase {
   public boolean isPivotStalled() {
     double pivotMotorCurrent = pivotMotor.getOutputCurrent();
     double pivotMotorRPM = pivotMotor.getEncoder().getVelocity();
-    boolean isPivotStalled = Math.abs(pivotMotorRPM) < STALL_RPM_THRESHOLD
+    boolean isCurrentStalled = Math.abs(pivotMotorRPM) < STALL_RPM_THRESHOLD
         && pivotMotorCurrent > PIVOT_CURRENT_LIMIT * STALL_CURRENT_RATIO;
-    return stallDebouncer.calculate(isPivotStalled);
+    boolean isDesyncStalled = Math.abs((externEncoder.get() - initialValExternalEncoder) * encoderRatio
+      - (pivotEncoder.getPosition() - initialValInternalEncoder)) > 0.1;
+    DogLog.log("desyncStall", isDesyncStalled);
+    return stallDebouncer.calculate(isCurrentStalled);
   }
 }
