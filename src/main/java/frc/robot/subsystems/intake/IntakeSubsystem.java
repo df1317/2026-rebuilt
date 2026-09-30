@@ -183,6 +183,13 @@ public class IntakeSubsystem extends SubsystemBase {
     return stallDebouncer.calculate(isCurrentStalled || isDesyncStalled);
   }
 
+  TrapezoidProfile.Constraints constraints = new TrapezoidProfile.Constraints(60, 10);
+  TrapezoidProfile.State previousProfiledReference = new TrapezoidProfile.State(0, 0.0);
+  TrapezoidProfile profile = new TrapezoidProfile(constraints);
+  TrapezoidProfile.State goal = new TrapezoidProfile.State(0, 0);
+
+  long t = System.nanoTime();
+
   @Override
   public void periodic() {
     // boolean enabled = edu.wpi.first.wpilibj.DriverStation.isEnabled();
@@ -201,37 +208,41 @@ public class IntakeSubsystem extends SubsystemBase {
     // }
     // wasEnabled = enabled;
 
+    previousProfiledReference = profile.calculate((System.nanoTime() - t) / 1e9, previousProfiledReference,
+        goal);
+
     double sign = 0;
 
     DogLog.log("intake/state", currentState);
 
     DogLog.log("intake/externEcoder", externEncoder.get());
 
-    double epsilon = 10;
-    if (currentState == IntakeState.STOWED) {
-      sign = externEncoder.get() + stowStart < stowTune.get() ? 1 : -1;
-      if (Math.abs(externEncoder.get() + stowStart - stowTune.get()) < epsilon)
-        sign = 0;
-    } else if (currentState == IntakeState.EXTENDED) {
-      sign = externEncoder.get() + stowStart > extendTune.get() ? -1 : 1;
-      if (Math.abs(-externEncoder.get() + stowStart + extendTune.get()) < epsilon)
-        sign = 0;
-    }
+    // double epsilon = 10;
+    // if (currentState == IntakeState.STOWED) {
+    // sign = externEncoder.get() + stowStart < stowTune.get() ? 1 : -1;
+    // if (Math.abs(externEncoder.get() + stowStart - stowTune.get()) < epsilon)
+    // sign = 0;
+    // } else if (currentState == IntakeState.EXTENDED) {
+    // sign = externEncoder.get() + stowStart > extendTune.get() ? -1 : 1;
+    // if (Math.abs(-externEncoder.get() + stowStart + extendTune.get()) < epsilon)
+    // sign = 0;
+    // }
 
-    if (isPivotStalled()) {
-      // sign = 0;
+    // if (isPivotStalled()) {
+    // // sign = 0;
 
-      // if (currentState == IntakeState.STOWED) {
-      // stowStart = externEncoder.get() + stowTune.get();
-      // }
-      // if (currentState == IntakeState.EXTENDED) {
-      // stowStart = externEncoder.get() + extendTune.get();
-      // }
-    }
+    // // if (currentState == IntakeState.STOWED) {
+    // // stowStart = externEncoder.get() + stowTune.get();
+    // // }
+    // // if (currentState == IntakeState.EXTENDED) {
+    // // stowStart = externEncoder.get() + extendTune.get();
+    // // }
+    // }
 
-    DogLog.log("intake/sign", sign);
+    // DogLog.log("intake/sign",sign);
 
-    pivotMotor.set(speedTune.get() * sign);
+    pivotMotor.set(previousProfiledReference.velocity * speedTune.get());
+
   }
 
   // ==================== Command Factory Methods ====================
@@ -245,6 +256,8 @@ public class IntakeSubsystem extends SubsystemBase {
         .onInitialize(() -> {
           System.out.println("EXTEND COMMAND!");
           setState(IntakeState.EXTENDED);
+          goal.position = extendTune.get();
+          goal.velocity = 0;
           wantToExtend = true;
         }).isFinished(true);
   }
@@ -254,6 +267,8 @@ public class IntakeSubsystem extends SubsystemBase {
         .onInitialize(() -> {
           System.out.println("STOW COMMAND!");
           setState(IntakeState.STOWED);
+          goal.position = stowTune.get();
+          goal.velocity = 0;
           wantToExtend = false;
         }).isFinished(true);
   }
