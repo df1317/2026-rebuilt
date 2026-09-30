@@ -85,6 +85,9 @@ public class IntakeSubsystem extends SubsystemBase {
   private final TunableDouble extendTune = pivotTunables.value("extendTune", -340.0);
   private final TunableDouble speedTune = pivotTunables.value("speedTune", 0.1);
 
+  private final TunableDouble THRESHOLD_EXTERNAL = pivotTunables.value("External Threshold", 5);
+  private final TunableDouble THRESHOLD_INTERNAL = pivotTunables.value("Internal Threshold", 2);
+
   double stowStart;
 
   private double initialValInternalEncoder;
@@ -168,6 +171,18 @@ public class IntakeSubsystem extends SubsystemBase {
         .setPosition((externEncoder.get() - initialValExternalEncoder) * encoderRatio + initialValInternalEncoder);
   }
 
+  public boolean isPivotStalled() {
+    double pivotMotorCurrent = pivotMotor.getOutputCurrent();
+    double pivotMotorRPM = pivotMotor.getEncoder().getVelocity();
+    boolean isCurrentStalled = Math.abs(pivotMotorRPM) < STALL_RPM_THRESHOLD
+        && pivotMotorCurrent > PIVOT_CURRENT_LIMIT * STALL_CURRENT_RATIO;
+    boolean isDesyncStalled = Math.abs(pivotEncoder.getVelocity()) > THRESHOLD_INTERNAL.get()
+        && Math.abs(externEncoder.getRate()) > THRESHOLD_EXTERNAL.get();
+    DogLog.log("desyncStall", isDesyncStalled);
+    DogLog.log("externalEncoderRate", externEncoder.getRate());
+    return stallDebouncer.calculate(isCurrentStalled || isDesyncStalled);
+  }
+
   @Override
   public void periodic() {
     // boolean enabled = edu.wpi.first.wpilibj.DriverStation.isEnabled();
@@ -201,6 +216,17 @@ public class IntakeSubsystem extends SubsystemBase {
       sign = externEncoder.get() + stowStart > extendTune.get() ? -1 : 1;
       if (Math.abs(-externEncoder.get() + stowStart + extendTune.get()) < epsilon)
         sign = 0;
+    }
+
+    if (isPivotStalled()) {
+      // sign = 0;
+
+      // if (currentState == IntakeState.STOWED) {
+      // stowStart = externEncoder.get() + stowTune.get();
+      // }
+      // if (currentState == IntakeState.EXTENDED) {
+      // stowStart = externEncoder.get() + extendTune.get();
+      // }
     }
 
     DogLog.log("intake/sign", sign);
