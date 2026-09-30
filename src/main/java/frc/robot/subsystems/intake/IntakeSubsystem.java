@@ -6,7 +6,6 @@ import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.ResetMode;
 import com.revrobotics.spark.ClosedLoopSlot;
-import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
@@ -17,13 +16,9 @@ import dev.doglog.DogLog;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
-import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.math.geometry.Rotation3d;
-import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj.Encoder;
-import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -86,6 +81,12 @@ public class IntakeSubsystem extends SubsystemBase {
   private final TunableDouble kickDurationS = pivotTunables.value("KickDurationS", DEFAULT_KICK_DURATION_S);
   private final TunableDouble homingOffset = pivotTunables.value("HomingOffsetDeg", DEFAULT_HOMING_OFFSET_DEG);
 
+  private final TunableDouble stowTune = pivotTunables.value("stowTune", 0.0);
+  private final TunableDouble extendTune = pivotTunables.value("extendTune", -340.0);
+  private final TunableDouble speedTune = pivotTunables.value("speedTune", 0.1);
+
+  double stowStart;
+
   private double initialValInternalEncoder;
   private double initialValExternalEncoder;
   // final double initialEncoderRatio = 1 / 5.6;
@@ -105,9 +106,9 @@ public class IntakeSubsystem extends SubsystemBase {
 
   public void setState(IntakeState newState) {
     if (currentState != newState) {
-      updateEncoderToRealPos();
+      // updateEncoderToRealPos();
       currentState = newState;
-      stateTimer.restart();
+      // stateTimer.restart();
     }
   }
 
@@ -138,13 +139,15 @@ public class IntakeSubsystem extends SubsystemBase {
 
     tunables.pidSpark("Pivot", pivotMotor, PIVOT_KP, PIVOT_KI, PIVOT_KD, 0.0);
 
-    if (RobotBase.isSimulation()) {
-      pivotEncoder.setPosition(retractedAngleDeg());
-    }
+    stowStart = externEncoder.get();
 
-    double initialAngle = pivotEncoder.getPosition();
-    pivotProfiler.reset(initialAngle);
-    setPivotAngle(Degrees.of(initialAngle));
+    // if (RobotBase.isSimulation()) {
+    // pivotEncoder.setPosition(retractedAngleDeg());
+    // }
+
+    // double initialAngle = pivotEncoder.getPosition();
+    // pivotProfiler.reset(initialAngle);
+    // setPivotAngle(Degrees.of(initialAngle));
   }
 
   private void configurePivotMotor() {
@@ -167,137 +170,42 @@ public class IntakeSubsystem extends SubsystemBase {
 
   @Override
   public void periodic() {
-    boolean enabled = edu.wpi.first.wpilibj.DriverStation.isEnabled();
-    if (enabled && !wasEnabled) {
-      double pos = pivotEncoder.getPosition();
-      pivotProfiler.reset(pos);
-      setPivotAngle(Degrees.of(pos));
-      double distToExtended = Math.abs(pos - extendedPivotAngle.in(Degrees));
-      double distToRetracted = Math.abs(pos - retractedAngleDeg());
-      wantToExtend = distToExtended < distToRetracted;
-      if (wantToExtend) {
-        setState(IntakeState.EXTENDED);
-      } else {
-        setState(IntakeState.STOWED);
-      }
-    }
-    wasEnabled = enabled;
-
-    // if (useEncoderConversion.get()) {
-    // encoderRatio = encoderRatioTunnale.get();
-    // pivotEncoder
-    // .setPosition((externEncoder.get() - initialValExternalEncoder) * encoderRatio + initialValInternalEncoder);
+    // boolean enabled = edu.wpi.first.wpilibj.DriverStation.isEnabled();
+    // if (enabled && !wasEnabled) {
+    // double pos = pivotEncoder.getPosition();
+    // pivotProfiler.reset(pos);
+    // setPivotAngle(Degrees.of(pos));
+    // double distToExtended = Math.abs(pos - extendedPivotAngle.in(Degrees));
+    // double distToRetracted = Math.abs(pos - retractedAngleDeg());
+    // wantToExtend = distToExtended < distToRetracted;
+    // if (wantToExtend) {
+    // setState(IntakeState.EXTENDED);
+    // } else {
+    // setState(IntakeState.STOWED);
     // }
-    switch (currentState) {
-      case EXTENDING_KICK:
-        pivotProfiler.setConstraints(fastConstraints());
-        setPivotAngle(extendedPivotAngle);
-        if (stateTimer.hasElapsed(kickDurationS.get())) {
-          setState(IntakeState.EXTENDING_GENTLE);
-        }
-        break;
-      case EXTENDING_GENTLE:
-        pivotProfiler.setConstraints(slowConstraints());
-        setPivotAngle(extendedPivotAngle);
-        if (isPivotStalled() || isPivotAtPosition()) {
-          setState(IntakeState.EXTENDED);
-        }
-        break;
-      case EXTENDED:
-        pivotProfiler.setConstraints(fastConstraints());
-        setPivotAngle(extendedPivotAngle);
-        break;
-      case STOWED:
-        pivotProfiler.setConstraints(fastConstraints());
-        setPivotAngle(Degrees.of(retractedAngleDeg()));
-        break;
-      case JOGGING_UP:
-        pivotProfiler.setConstraints(slowConstraints());
-        setPivotAngle(Degrees.of(pivotEncoder.getPosition() + 360.0));
-        break;
-      case JOGGING_DOWN:
-        pivotProfiler.setConstraints(slowConstraints());
-        setPivotAngle(Degrees.of(pivotEncoder.getPosition() - 360.0));
-        break;
-      case HOMING:
-        pivotProfiler.setConstraints(fastConstraints());
-        setPivotAngle(Degrees.of(pivotEncoder.getPosition() + homingOffset.get()));
-        break;
-      case TEST:
-        pivotProfiler.setConstraints(fastConstraints());
-        setPivotAngle(Degrees.of(testPivotDeg.get()));
-        break;
-      case UNKNOWN:
-        break;
+    // }
+    // wasEnabled = enabled;
+
+    double sign = 0;
+
+    DogLog.log("intake/state", currentState);
+
+    DogLog.log("intake/externEcoder", externEncoder.get());
+
+    double epsilon = 10;
+    if (currentState == IntakeState.STOWED) {
+      sign = externEncoder.get() + stowStart < stowTune.get() ? 1 : -1;
+      if (Math.abs(externEncoder.get() + stowStart - stowTune.get()) < epsilon)
+        sign = 0;
+    } else if (currentState == IntakeState.EXTENDED) {
+      sign = externEncoder.get() + stowStart > extendTune.get() ? -1 : 1;
+      if (Math.abs(-externEncoder.get() + stowStart + extendTune.get()) < epsilon)
+        sign = 0;
     }
 
-    telemetry.log();
-    DogLog.log("Intake/State", currentState.name());
-    double profiledSetpoint = pivotProfiler.calculate(pivotEncoder.getPosition());
-    pivotController.setSetpoint(pivotProfiler.getSetpoint().position, ControlType.kPosition);
-    DogLog.log("Intake/Pivot/ProfiledSetpoint", profiledSetpoint);
-    DogLog.log("Intake/Pivot/ProfiledVelocity", pivotProfiler.getSetpoint().velocity);
+    DogLog.log("intake/sign", sign);
 
-    if (RobotBase.isSimulation()) {
-      // spoof encoder position in sim so it isn't stuck forever at 0
-      pivotEncoder.setPosition(pivotProfiler.getSetpoint().position);
-    }
-
-    // Log 3D mechanism for AdvantageScope
-    logMechanism3d();
-  }
-
-  private void logMechanism3d() {
-    // Intake arm rotates based on current pivot angle
-    // Offset it so that the retracted (stowed) position is 0 rotations
-    // Plus a -15 degree offset
-    double currentAngleDeg = (pivotEncoder.getPosition() - retractedAngleDeg()) - 15.0;
-
-    // The CAD model/visualization might need an offset to look right.
-    // As per AdvantageScope instructions, we publish a zeroed pose and adjust in AS.
-    Pose3d armPose = new Pose3d(new Translation3d(0.0, 0.11, 0.15),
-        new Rotation3d(Math.toRadians(currentAngleDeg), 0.0, 0.0));
-
-    // Log just the single 3D pose of the arm
-    DogLog.forceNt.log("Mechanism3d/Intake", new Pose3d[] { armPose });
-  }
-
-  // ==================== Helpers ====================
-
-  private TrapezoidProfile.Constraints fastConstraints() {
-    return new TrapezoidProfile.Constraints(fastVelocity.get(), fastAccel.get());
-  }
-
-  private TrapezoidProfile.Constraints slowConstraints() {
-    return new TrapezoidProfile.Constraints(slowVelocity.get(), slowAccel.get());
-  }
-
-  private double retractedAngleDeg() {
-    return extendedPivotAngle.in(Degrees) + retractDelta.get();
-  }
-
-  // ==================== State Query Methods ====================
-
-  public boolean isPivotAtPosition() {
-    boolean atPositionRaw = Math.abs(pivotEncoder.getPosition() - targetPivotAngle.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
-        .in(Degrees);
-    return atPositionDebouncer.calculate(atPositionRaw);
-  }
-
-  public boolean isExtended() {
-    return Math.abs(pivotEncoder.getPosition() - extendedPivotAngle.in(Degrees)) < PIVOT_ANGLE_TOLERANCE
-        .in(Degrees);
-  }
-
-  public boolean isRetracted() {
-    return Math.abs(pivotEncoder.getPosition() - retractedAngleDeg()) < PIVOT_ANGLE_TOLERANCE.in(Degrees);
-  }
-
-  // ==================== Control Methods ====================
-
-  public void setPivotAngle(Angle angle) {
-    targetPivotAngle = angle;
-    pivotProfiler.setGoal(angle.in(Degrees));
+    pivotMotor.set(speedTune.get() * sign);
   }
 
   // ==================== Command Factory Methods ====================
@@ -309,108 +217,34 @@ public class IntakeSubsystem extends SubsystemBase {
   public Command extendCommand() {
     return new CommandBuilder("Intake.extend", this)
         .onInitialize(() -> {
+          System.out.println("EXTEND COMMAND!");
+          setState(IntakeState.EXTENDED);
           wantToExtend = true;
-          setState(IntakeState.EXTENDING_KICK);
-        })
-        .isFinished(() -> currentState == IntakeState.EXTENDED);
+        }).isFinished(true);
   }
 
   public Command retractCommand() {
     return new CommandBuilder("Intake.retract", this)
         .onInitialize(() -> {
-          wantToExtend = false;
+          System.out.println("STOW COMMAND!");
           setState(IntakeState.STOWED);
-        })
-        .isFinished(() -> isPivotStalled() || isPivotAtPosition());
+          wantToExtend = false;
+        }).isFinished(true);
   }
 
   public Command stowCommand() {
     return retractCommand().withName("Intake.stow");
   }
 
-  public Command jogDownCommand() {
-    return new CommandBuilder("Intake.jogDown", this)
-        .onInitialize(() -> setState(IntakeState.JOGGING_DOWN))
-        .onEnd(() -> {
-          double pos = pivotEncoder.getPosition();
-          pivotProfiler.reset(pos);
-          setPivotAngle(Degrees.of(pos));
-          setState(IntakeState.UNKNOWN);
-        });
-  }
-
-  public Command jogUpCommand() {
-    return new CommandBuilder("Intake.jogUp", this)
-        .onInitialize(() -> setState(IntakeState.JOGGING_UP))
-        .onEnd(() -> {
-          double pos = pivotEncoder.getPosition();
-          pivotProfiler.reset(pos);
-          setPivotAngle(Degrees.of(pos));
-          setState(IntakeState.UNKNOWN);
-        });
-  }
-
-  public Command zeroIntakeCommand() {
-    return runOnce(() -> {
-      double currentAngle = pivotEncoder.getPosition();
-      extendedPivotAngle = Degrees.of(currentAngle - retractDelta.get());
-      pivotProfiler.reset(currentAngle);
-      setPivotAngle(Degrees.of(currentAngle));
-      homed = true;
-    }).withName("Intake.zero");
+  public Command atBottCommand() {
+    return new CommandBuilder("intkae.atBottom", this).onInitialize(() -> {
+      stowStart = externEncoder.get() + extendTune.get();
+    }).isFinished(true);
   }
 
   /** Extends or stows depending on current position. */
   public Command stowToggleCommand() {
     return Commands.either(stowCommand(), extendCommand(), () -> wantToExtend)
         .withName("Intake.toggle");
-  }
-
-  public Command holdExtendedCommand() {
-    return new CommandBuilder("Intake.holdExtended", this)
-        .onExecute(() -> {
-          if (!isRetracted()) {
-            setPivotAngle(extendedPivotAngle);
-          }
-        });
-  }
-
-  // ==================== Homing & Test ====================
-
-  /** Drives toward the hard stop, zeroes on stall. */
-  public Command homeCommand() {
-    return new CommandBuilder("Intake.home", this)
-        .onInitialize(() -> setState(IntakeState.HOMING))
-        .isFinished(this::isPivotStalled)
-        .onEnd(() -> {
-          pivotMotor.stopMotor();
-          pivotEncoder.setPosition(0);
-          pivotProfiler.reset(0);
-          setPivotAngle(Degrees.of(0));
-          homed = true;
-          setState(IntakeState.UNKNOWN);
-        });
-  }
-
-  public Command testPivotCommand() {
-    return new CommandBuilder("Intake.testPivot", this)
-        .onInitialize(() -> setState(IntakeState.TEST))
-        .onEnd(() -> {
-          pivotMotor.stopMotor();
-          setState(IntakeState.UNKNOWN);
-        });
-  }
-
-  // ==================== Stall Detection ====================
-
-  public boolean isPivotStalled() {
-    double pivotMotorCurrent = pivotMotor.getOutputCurrent();
-    double pivotMotorRPM = pivotMotor.getEncoder().getVelocity();
-    boolean isCurrentStalled = Math.abs(pivotMotorRPM) < STALL_RPM_THRESHOLD
-        && pivotMotorCurrent > PIVOT_CURRENT_LIMIT * STALL_CURRENT_RATIO;
-    boolean isDesyncStalled = Math.abs((externEncoder.get() - initialValExternalEncoder) * encoderRatio
-      - (pivotEncoder.getPosition() - initialValInternalEncoder)) > 0.1;
-    DogLog.log("desyncStall", isDesyncStalled);
-    return stallDebouncer.calculate(isCurrentStalled);
   }
 }
