@@ -13,6 +13,7 @@ import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
 
 import dev.doglog.DogLog;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
@@ -94,7 +95,7 @@ public class IntakeSubsystem extends SubsystemBase {
   private double initialValExternalEncoder;
   // final double initialEncoderRatio = 1 / 5.6;
   double encoderRatio = 1 / 5.6;
-  private final TunableDouble encoderRatioTunnale = pivotTunables.value("encoderRatio", encoderRatio);
+  private final TunableDouble encoderRatioTunable = pivotTunables.value("encoderRatio", encoderRatio);
   private final TunableBoolean useEncoderConversion = pivotTunables.value("encoderConversion", false);
 
   // ==================== Telemetry ====================
@@ -122,7 +123,9 @@ public class IntakeSubsystem extends SubsystemBase {
   private boolean wantToExtend = false;
   private Angle extendedPivotAngle = Degrees.of(DEFAULT_EXTENDED_ANGLE_DEG);
   Angle targetPivotAngle = extendedPivotAngle.plus(Degrees.of(DEFAULT_RETRACT_DELTA_DEG));
-  private boolean wasEnabled = false;
+
+  private double maxPivotPos = 0;
+  private double pivotOffset = 0;
 
   public IntakeSubsystem(RollerSubsystem roller) {
     this.roller = roller;
@@ -166,7 +169,7 @@ public class IntakeSubsystem extends SubsystemBase {
   }
 
   public void updateEncoderToRealPos() {
-    encoderRatio = encoderRatioTunnale.get();
+    encoderRatio = encoderRatioTunable.get();
     pivotEncoder
         .setPosition((externEncoder.get() - initialValExternalEncoder) * encoderRatio + initialValInternalEncoder);
   }
@@ -183,7 +186,7 @@ public class IntakeSubsystem extends SubsystemBase {
     return stallDebouncer.calculate(isCurrentStalled || isDesyncStalled);
   }
 
-  TrapezoidProfile.Constraints constraints = new TrapezoidProfile.Constraints(60, 10);
+  TrapezoidProfile.Constraints constraints = new TrapezoidProfile.Constraints(15, 30);
   TrapezoidProfile.State previousProfiledReference = new TrapezoidProfile.State(0, 0.0);
   TrapezoidProfile profile = new TrapezoidProfile(constraints);
   TrapezoidProfile.State goal = new TrapezoidProfile.State(0, 0);
@@ -208,14 +211,20 @@ public class IntakeSubsystem extends SubsystemBase {
     // }
     // wasEnabled = enabled;
 
+    double externEncoderPos = externEncoder.get();
+    previousProfiledReference.position = externEncoderPos;
     previousProfiledReference = profile.calculate((System.nanoTime() - t) / 1e9, previousProfiledReference,
         goal);
+    t = System.nanoTime();
 
-    double sign = 0;
+    if (externEncoderPos < maxPivotPos) {
+      maxPivotPos = externEncoderPos;
+    }
 
+    DogLog.log("pivotGoal", goal.position);
     DogLog.log("intake/state", currentState);
 
-    DogLog.log("intake/externEcoder", externEncoder.get());
+    DogLog.log("intake/externEcoder", externEncoderPos);
 
     // double epsilon = 10;
     // if (currentState == IntakeState.STOWED) {
@@ -241,7 +250,16 @@ public class IntakeSubsystem extends SubsystemBase {
 
     // DogLog.log("intake/sign",sign);
 
-    pivotMotor.set(previousProfiledReference.velocity * speedTune.get());
+    if (!MathUtil.isNear(goal.position, externEncoderPos, 10)) {
+      pivotMotor.set(previousProfiledReference.velocity * speedTune.get() * encoderRatioTunable.get());
+    } else {
+      pivotMotor.set(0);
+    }
+
+    DogLog.log("pivot_offset", pivotOffset);
+    DogLog.log("pivot_max", maxPivotPos);
+    DogLog.log("pivot_pos", previousProfiledReference.position);
+    DogLog.log("pivot_velocity", previousProfiledReference.velocity);
 
   }
 
@@ -256,7 +274,7 @@ public class IntakeSubsystem extends SubsystemBase {
         .onInitialize(() -> {
           System.out.println("EXTEND COMMAND!");
           setState(IntakeState.EXTENDED);
-          goal.position = extendTune.get();
+          goal.position = extendTune.get() + pivotOffset;
           goal.velocity = 0;
           wantToExtend = true;
         }).isFinished(true);
@@ -267,7 +285,7 @@ public class IntakeSubsystem extends SubsystemBase {
         .onInitialize(() -> {
           System.out.println("STOW COMMAND!");
           setState(IntakeState.STOWED);
-          goal.position = stowTune.get();
+          goal.position = stowTune.get() + pivotOffset;
           goal.velocity = 0;
           wantToExtend = false;
         }).isFinished(true);
@@ -279,7 +297,7 @@ public class IntakeSubsystem extends SubsystemBase {
 
   public Command atBottCommand() {
     return new CommandBuilder("intkae.atBottom", this).onInitialize(() -> {
-      stowStart = externEncoder.get() + extendTune.get();
+      pivotOffset = (maxPivotPos - extendTune.get());
     }).isFinished(true);
   }
 
