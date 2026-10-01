@@ -178,10 +178,10 @@ public class RobotContainer {
     // ===== Test Mode Controls (Maypad — see docs for layout) =====
     // Row 0 — Intake
     if (intake != null) {
-      // panel.key(0, 0).onTrue(intake.homeCommand()); // intakeHome
+      panel.key(0, 0).onTrue(intake.homeCommand()); // intakeHome
       // panel.key(2, 0).and(inTest).onTrue(intake.zeroIntakeCommand());
-      // panel.key(2, 1).and(inTest).whileTrue(intake.jogDownCommand());
-      // panel.key(2, 2).and(inTest).whileTrue(intake.jogUpCommand());
+      // panel.key(2, 1).and(inTest).whileTrue(intake.jogDownCommand()).onFalse(intake.jogStopCommand());
+      // panel.key(2, 2).and(inTest).whileTrue(intake.jogUpCommand()).onFalse(intake.jogStopCommand());
     }
     if (shooter != null) {
       // Row 1 — Hood + Aim

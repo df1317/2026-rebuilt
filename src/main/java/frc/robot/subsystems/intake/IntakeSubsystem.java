@@ -112,7 +112,7 @@ public class IntakeSubsystem extends SubsystemBase {
     if (currentState != newState) {
       // updateEncoderToRealPos();
       currentState = newState;
-      // stateTimer.restart();
+      stateTimer.restart();
     }
   }
 
@@ -213,6 +213,13 @@ public class IntakeSubsystem extends SubsystemBase {
 
     double externEncoderPos = externEncoder.get();
     previousProfiledReference.position = externEncoderPos;
+
+    if (currentState == IntakeState.HOMING && stateTimer.get() > 1.25) {
+      currentState = IntakeState.EXTENDED;
+      pivotOffset = (maxPivotPos - extendTune.get());
+      goal.position = maxPivotPos;
+    }
+
     previousProfiledReference = profile.calculate((System.nanoTime() - t) / 1e9, previousProfiledReference,
         goal);
     t = System.nanoTime();
@@ -252,6 +259,12 @@ public class IntakeSubsystem extends SubsystemBase {
 
     if (!MathUtil.isNear(goal.position, externEncoderPos, 10)) {
       pivotMotor.set(previousProfiledReference.velocity * speedTune.get() * encoderRatioTunable.get());
+    } else if (currentState == IntakeState.JOGGING_UP) {
+      goal.position++;
+      goal.velocity = 0;
+    } else if (currentState == IntakeState.JOGGING_DOWN) {
+      goal.position--;
+      goal.velocity = 0;
     } else {
       pivotMotor.set(0);
     }
@@ -296,8 +309,17 @@ public class IntakeSubsystem extends SubsystemBase {
   }
 
   public Command atBottCommand() {
-    return new CommandBuilder("intkae.atBottom", this).onInitialize(() -> {
+    return new CommandBuilder("intake.atBottom", this).onInitialize(() -> {
       pivotOffset = (maxPivotPos - extendTune.get());
+    }).isFinished(true);
+  }
+
+  public Command homeCommand() {
+    return new CommandBuilder("intake.home", this).onInitialize(() -> {
+      setState(IntakeState.HOMING);
+      goal.position = 2 * extendTune.get();
+      goal.velocity = 0;
+      wantToExtend = true;
     }).isFinished(true);
   }
 
@@ -305,5 +327,23 @@ public class IntakeSubsystem extends SubsystemBase {
   public Command stowToggleCommand() {
     return Commands.either(stowCommand(), extendCommand(), () -> wantToExtend)
         .withName("Intake.toggle");
+  }
+
+  public Command jogDownCommand() {
+    return new CommandBuilder("Intake.jogDown", this)
+        .onInitialize(() -> {
+          currentState = IntakeState.JOGGING_DOWN;
+        })
+        .onEnd(() -> {
+        });
+  }
+
+  public Command jogUpCommand() {
+    return new CommandBuilder("Intake.jogUp", this)
+        .onInitialize(() -> {
+          currentState = IntakeState.JOGGING_UP;
+        })
+        .onEnd(() -> {
+        });
   }
 }
