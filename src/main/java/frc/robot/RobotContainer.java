@@ -147,7 +147,7 @@ public class RobotContainer {
     }
     if (intake != null && roller != null) {
       driverXbox.x().onTrue(intake.stowToggleCommand());
-      driverXbox.b().onTrue(intake.atBottCommand());
+      // driverXbox.b().onTrue(intake.atBottCommand());
       driverXbox.leftTrigger().and(inTeleop).whileTrue(roller.intakeCommand());
       // driverXbox.leftTrigger().and(inTeleop).whileTrue(intake.holdExtendedCommand());
     }

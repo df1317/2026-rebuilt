@@ -173,7 +173,7 @@ public class Vision {
   public enum Cameras {
     SHOOTER(
         "BOULDER",
-        new Rotation3d(0, Units.degreesToRadians(15.0), Units.degreesToRadians(-90)),
+        new Rotation3d(0, Units.degreesToRadians(15.0), Units.degreesToRadians(-135)),
         new Translation3d(Units.inchesToMeters(-13), Units.inchesToMeters(-8.5), Units.inchesToMeters(10.5)),
         VecBuilder.fill(
             VisionConstants.CameraStdDevs.SINGLE_TAG[0],

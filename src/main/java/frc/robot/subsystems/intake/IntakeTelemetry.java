@@ -1,6 +1,5 @@
 package frc.robot.subsystems.intake;
 
-import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.RPM;
 
 import dev.doglog.DogLog;
@@ -19,19 +18,17 @@ public class IntakeTelemetry {
 
   public void log() {
     double pivotAngleDeg = intake.pivotEncoder.getPosition();
-    double pivotTargetAngleDeg = intake.targetPivotAngle.in(Degrees);
     double rollerVelocityRPM = roller.rollerEncoder.getVelocity();
     double rollerTargetRPM = roller.targetRollerVelocity.in(RPM);
 
     DogLog.forceNt.log("Intake/Status", getStatusColor().toHexString());
-    DogLog.forceNt.log("Intake/Homed", intake.homed);
 
     DogLog.log("Intake/ExtenEncoder", intake.externEncoder.get());
     DogLog.log("Intake/EncoderRatio", intake.externEncoder.get() / intake.pivotEncoder.getPosition());
 
     DogLog.log("Intake/PivotAngleDeg", pivotAngleDeg);
-    DogLog.log("Intake/PivotTargetAngleDeg", pivotTargetAngleDeg);
-    DogLog.log("Intake/PivotErrorDeg", pivotTargetAngleDeg - pivotAngleDeg);
+    // DogLog.log("Intake/PivotTargetAngleDeg", pivotTargetAngleDeg);
+    // DogLog.log("Intake/PivotErrorDeg", pivotTargetAngleDeg - pivotAngleDeg);
     // DogLog.log("Intake/PivotAtPosition", intake.isPivotAtPosition());
     // DogLog.log("Intake/IsExtended", intake.isExtended());
     // DogLog.log("Intake/IsRetracted", intake.isRetracted());

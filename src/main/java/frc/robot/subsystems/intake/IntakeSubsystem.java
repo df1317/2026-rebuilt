@@ -6,7 +6,6 @@ import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.ResetMode;
 import com.revrobotics.spark.ClosedLoopSlot;
-import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
@@ -14,7 +13,7 @@ import com.revrobotics.spark.config.SparkMaxConfig;
 
 import dev.doglog.DogLog;
 import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.controller.ProfiledPIDController;
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
@@ -25,7 +24,6 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.util.CommandBuilder;
-import frc.robot.util.TunableBoolean;
 import frc.robot.util.TunableDouble;
 import frc.robot.util.TunableTable;
 
@@ -44,7 +42,6 @@ public class IntakeSubsystem extends SubsystemBase {
   private static final double PIVOT_GEAR_RATIO = (48.0 * 22.0) / 14.0;
   private static final Angle PIVOT_ANGLE_TOLERANCE = Degrees.of(8);
   private static final double STALL_DEBOUNCE_S = 1.5;
-  private static final double AT_POSITION_DEBOUNCE_S = 0.1;
   private static final double STALL_RPM_THRESHOLD = 2.0;
   private static final double STALL_CURRENT_RATIO = 0.75;
   private static final double JOG_DOWN_SPEED = -0.1;
@@ -55,48 +52,28 @@ public class IntakeSubsystem extends SubsystemBase {
   private static final double PIVOT_KD = 0.0;
 
   // ==================== Default Tunable Values ====================
-  private static final double DEFAULT_EXTENDED_ANGLE_DEG = 14.0;
-  private static final double DEFAULT_RETRACT_DELTA_DEG = 90.0;
-  private static final double DEFAULT_FAST_VELOCITY = 240.0;
-  private static final double DEFAULT_FAST_ACCEL = 240.0;
-  private static final double DEFAULT_SLOW_VELOCITY = 60.0;
-  private static final double DEFAULT_SLOW_ACCEL = 180.0;
-  private static final double DEFAULT_KICK_DURATION_S = 0.5;
-  private static final double DEFAULT_HOMING_OFFSET_DEG = -20.0;
+  private static final double DEFAULT_ENCODER_RATIO = 1 / 5.6;
   // ==================== Tunables ====================
   private static final TunableTable tunables = new TunableTable("Intake");
   private static final TunableTable pivotTunables = tunables.getNested("Pivot");
-  // ==================== Hardware ====================
-  final SparkMax pivotMotor;
-  final RelativeEncoder pivotEncoder;
-  final Encoder externEncoder;
-  private final SparkClosedLoopController pivotController;
-  private final Debouncer atPositionDebouncer;
-  private final Debouncer stallDebouncer = new Debouncer(STALL_DEBOUNCE_S, DebounceType.kBoth);
-  private final TunableDouble testPivotDeg = pivotTunables.value("Degrees", DEFAULT_EXTENDED_ANGLE_DEG, Degrees);
-  private final TunableDouble retractDelta = pivotTunables.value("RetractDelta", DEFAULT_RETRACT_DELTA_DEG, Degrees);
-  private final TunableDouble fastVelocity = pivotTunables.value("FastVelDegPerS", DEFAULT_FAST_VELOCITY);
-  private final TunableDouble fastAccel = pivotTunables.value("FastAccelDegPerS2", DEFAULT_FAST_ACCEL);
-  private final TunableDouble slowVelocity = pivotTunables.value("SlowVelDegPerS", DEFAULT_SLOW_VELOCITY);
-  private final TunableDouble slowAccel = pivotTunables.value("SlowAccelDegPerS2", DEFAULT_SLOW_ACCEL);
-  private final TunableDouble kickDurationS = pivotTunables.value("KickDurationS", DEFAULT_KICK_DURATION_S);
-  private final TunableDouble homingOffset = pivotTunables.value("HomingOffsetDeg", DEFAULT_HOMING_OFFSET_DEG);
 
-  private final TunableDouble stowTune = pivotTunables.value("stowTune", 0.0);
+  private final TunableDouble stowTune = pivotTunables.value("stowTune", 5.0);
   private final TunableDouble extendTune = pivotTunables.value("extendTune", -340.0);
   private final TunableDouble speedTune = pivotTunables.value("speedTune", 0.1);
 
   private final TunableDouble THRESHOLD_EXTERNAL = pivotTunables.value("External Threshold", 5);
   private final TunableDouble THRESHOLD_INTERNAL = pivotTunables.value("Internal Threshold", 2);
 
-  double stowStart;
+  private final TunableDouble encoderRatioTunable = pivotTunables.value("encoderRatio", DEFAULT_ENCODER_RATIO);
 
-  private double initialValInternalEncoder;
-  private double initialValExternalEncoder;
-  // final double initialEncoderRatio = 1 / 5.6;
-  double encoderRatio = 1 / 5.6;
-  private final TunableDouble encoderRatioTunable = pivotTunables.value("encoderRatio", encoderRatio);
-  private final TunableBoolean useEncoderConversion = pivotTunables.value("encoderConversion", false);
+  private final TunableDouble INTAKE_KP = pivotTunables.value("IntakeKP", DEFAULT_ENCODER_RATIO);
+  private final TunableDouble INTAKE_KI = pivotTunables.value("IntakeKI", 0);
+  private final TunableDouble INTAKE_KD = pivotTunables.value("IntakeKD", 0.02);
+  // ==================== Hardware ====================
+  final SparkMax pivotMotor;
+  final RelativeEncoder pivotEncoder;
+  final Encoder externEncoder;
+  private final Debouncer stallDebouncer = new Debouncer(STALL_DEBOUNCE_S, DebounceType.kBoth);
 
   // ==================== Telemetry ====================
   private final IntakeTelemetry telemetry;
@@ -108,52 +85,28 @@ public class IntakeSubsystem extends SubsystemBase {
   private IntakeState currentState = IntakeState.UNKNOWN;
   private final Timer stateTimer = new Timer();
 
-  public void setState(IntakeState newState) {
-    if (currentState != newState) {
-      // updateEncoderToRealPos();
-      currentState = newState;
-      stateTimer.restart();
-    }
-  }
-
-  private final ProfiledPIDController pivotProfiler = new ProfiledPIDController(0, 0, 0,
-      new TrapezoidProfile.Constraints(DEFAULT_FAST_VELOCITY, DEFAULT_FAST_ACCEL));
-  private final RollerSubsystem roller;
-  boolean homed = false;
   private boolean wantToExtend = false;
-  private Angle extendedPivotAngle = Degrees.of(DEFAULT_EXTENDED_ANGLE_DEG);
-  Angle targetPivotAngle = extendedPivotAngle.plus(Degrees.of(DEFAULT_RETRACT_DELTA_DEG));
 
   private double maxPivotPos = 0;
   private double pivotOffset = 0;
 
+  private final TrapezoidProfile.Constraints constraints = new TrapezoidProfile.Constraints(15, 30);
+  private TrapezoidProfile.State previousProfiledReference = new TrapezoidProfile.State(0, 0.0);
+  private final TrapezoidProfile profile = new TrapezoidProfile(constraints);
+  private TrapezoidProfile.State goal = new TrapezoidProfile.State(0, 0);
+  private PIDController IntakePID = new PIDController(INTAKE_KP.get(), INTAKE_KI.get(), INTAKE_KD.get());
+
+  private long profileTime = System.nanoTime();
+
   public IntakeSubsystem(RollerSubsystem roller) {
-    this.roller = roller;
+
     pivotMotor = new SparkMax(PIVOT_MOTOR_ID, MotorType.kBrushless);
-    pivotController = pivotMotor.getClosedLoopController();
     pivotEncoder = pivotMotor.getEncoder();
     externEncoder = new Encoder(EXTERN_ENCODER_CHANNEL_A, EXTERN_ENCODER_CHANNEL_B);
-
-    initialValExternalEncoder = externEncoder.get();
-    initialValInternalEncoder = pivotEncoder.getPosition();
-
     configurePivotMotor();
 
-    atPositionDebouncer = new Debouncer(AT_POSITION_DEBOUNCE_S, DebounceType.kRising);
-
     telemetry = new IntakeTelemetry(this, roller);
-
     tunables.pidSpark("Pivot", pivotMotor, PIVOT_KP, PIVOT_KI, PIVOT_KD, 0.0);
-
-    stowStart = externEncoder.get();
-
-    // if (RobotBase.isSimulation()) {
-    // pivotEncoder.setPosition(retractedAngleDeg());
-    // }
-
-    // double initialAngle = pivotEncoder.getPosition();
-    // pivotProfiler.reset(initialAngle);
-    // setPivotAngle(Degrees.of(initialAngle));
   }
 
   private void configurePivotMotor() {
@@ -168,10 +121,11 @@ public class IntakeSubsystem extends SubsystemBase {
     pivotMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kNoPersistParameters);
   }
 
-  public void updateEncoderToRealPos() {
-    encoderRatio = encoderRatioTunable.get();
-    pivotEncoder
-        .setPosition((externEncoder.get() - initialValExternalEncoder) * encoderRatio + initialValInternalEncoder);
+  public void setState(IntakeState newState) {
+    if (currentState != newState) {
+      currentState = newState;
+      stateTimer.restart();
+    }
   }
 
   public boolean isPivotStalled() {
@@ -186,31 +140,8 @@ public class IntakeSubsystem extends SubsystemBase {
     return stallDebouncer.calculate(isCurrentStalled || isDesyncStalled);
   }
 
-  TrapezoidProfile.Constraints constraints = new TrapezoidProfile.Constraints(15, 30);
-  TrapezoidProfile.State previousProfiledReference = new TrapezoidProfile.State(0, 0.0);
-  TrapezoidProfile profile = new TrapezoidProfile(constraints);
-  TrapezoidProfile.State goal = new TrapezoidProfile.State(0, 0);
-
-  long t = System.nanoTime();
-
   @Override
   public void periodic() {
-    // boolean enabled = edu.wpi.first.wpilibj.DriverStation.isEnabled();
-    // if (enabled && !wasEnabled) {
-    // double pos = pivotEncoder.getPosition();
-    // pivotProfiler.reset(pos);
-    // setPivotAngle(Degrees.of(pos));
-    // double distToExtended = Math.abs(pos - extendedPivotAngle.in(Degrees));
-    // double distToRetracted = Math.abs(pos - retractedAngleDeg());
-    // wantToExtend = distToExtended < distToRetracted;
-    // if (wantToExtend) {
-    // setState(IntakeState.EXTENDED);
-    // } else {
-    // setState(IntakeState.STOWED);
-    // }
-    // }
-    // wasEnabled = enabled;
-
     double externEncoderPos = externEncoder.get();
     previousProfiledReference.position = externEncoderPos;
 
@@ -220,42 +151,13 @@ public class IntakeSubsystem extends SubsystemBase {
       goal.position = maxPivotPos;
     }
 
-    previousProfiledReference = profile.calculate((System.nanoTime() - t) / 1e9, previousProfiledReference,
+    previousProfiledReference = profile.calculate((System.nanoTime() - profileTime) / 1e9, previousProfiledReference,
         goal);
-    t = System.nanoTime();
+    profileTime = System.nanoTime();
 
     if (externEncoderPos < maxPivotPos) {
       maxPivotPos = externEncoderPos;
     }
-
-    DogLog.log("pivotGoal", goal.position);
-    DogLog.log("intake/state", currentState);
-
-    DogLog.log("intake/externEcoder", externEncoderPos);
-
-    // double epsilon = 10;
-    // if (currentState == IntakeState.STOWED) {
-    // sign = externEncoder.get() + stowStart < stowTune.get() ? 1 : -1;
-    // if (Math.abs(externEncoder.get() + stowStart - stowTune.get()) < epsilon)
-    // sign = 0;
-    // } else if (currentState == IntakeState.EXTENDED) {
-    // sign = externEncoder.get() + stowStart > extendTune.get() ? -1 : 1;
-    // if (Math.abs(-externEncoder.get() + stowStart + extendTune.get()) < epsilon)
-    // sign = 0;
-    // }
-
-    // if (isPivotStalled()) {
-    // // sign = 0;
-
-    // // if (currentState == IntakeState.STOWED) {
-    // // stowStart = externEncoder.get() + stowTune.get();
-    // // }
-    // // if (currentState == IntakeState.EXTENDED) {
-    // // stowStart = externEncoder.get() + extendTune.get();
-    // // }
-    // }
-
-    // DogLog.log("intake/sign",sign);
 
     if (!MathUtil.isNear(goal.position, externEncoderPos, 10)) {
       pivotMotor.set(previousProfiledReference.velocity * speedTune.get() * encoderRatioTunable.get());
@@ -269,10 +171,15 @@ public class IntakeSubsystem extends SubsystemBase {
       pivotMotor.set(0);
     }
 
+    DogLog.log("pivot_goal", goal.position);
+    DogLog.log("intake/state", currentState);
+    DogLog.log("intake/externEcoder", externEncoderPos);
     DogLog.log("pivot_offset", pivotOffset);
     DogLog.log("pivot_max", maxPivotPos);
     DogLog.log("pivot_pos", previousProfiledReference.position);
     DogLog.log("pivot_velocity", previousProfiledReference.velocity);
+
+    telemetry.log();
 
   }
 

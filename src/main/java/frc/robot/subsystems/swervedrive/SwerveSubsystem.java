@@ -383,7 +383,9 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
             speeds.vyMetersPerSecond, -speeds.vxMetersPerSecond, speeds.omegaRadiansPerSecond);
         swerveDrive.driveFieldOrientedAndRobotOriented(new ChassisSpeeds(0, 0, 0), rotated);
       } else {
-        swerveDrive.driveFieldOriented(speeds);
+        ChassisSpeeds rotated = new ChassisSpeeds(
+            -speeds.vyMetersPerSecond, speeds.vxMetersPerSecond, speeds.omegaRadiansPerSecond);
+        swerveDrive.driveFieldOriented(rotated);
       }
     });
   }
