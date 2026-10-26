@@ -37,7 +37,7 @@ public class RobotContainer {
   private final RollerSubsystem roller = Constants.ENABLE_INTAKE ? new RollerSubsystem() : null;
   private final IntakeSubsystem intake = Constants.ENABLE_INTAKE ? new IntakeSubsystem(roller) : null;
   private static final TunableTable driveTunables = new TunableTable("Drive");
-  private final TunableBoolean obstacleClampEnabled = driveTunables.value("ObstacleClampEnabled", true);
+  private final TunableBoolean obstacleClampEnabled = driveTunables.value("ObstacleClampEnabled", false);
   private final TunableBoolean repulsorRumbleEnabled = driveTunables.value("RepulsorRumbleEnabled", true);
   // Repulsor
   private final Repulsor repulsor;
