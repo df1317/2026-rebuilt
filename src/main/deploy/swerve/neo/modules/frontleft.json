@@ -1,17 +1,17 @@
 {
   "drive": {
-    "type": "sparkmax_neo",
-    "id": 13,
+    "type": "talonfx",
+    "id": 27,
     "canbus": null
   },
   "angle": {
-    "type": "sparkmax_neo",
-    "id": 17,
+    "type": "talonfx",
+    "id": 28,
     "canbus": null
   },
   "encoder": {
     "type": "cancoder",
-    "id": 21,
+    "id": 29,
     "canbus": null
   },
   "inverted": {
