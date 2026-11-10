@@ -2,10 +2,10 @@
   "$schema": "https://broncbotz3481.github.io/YAGSL-Example/schemas/swervedrive_schema.json",
   "imu": {
     "type": "canandgyro",
-    "id": 33,
+    "id": 63,
     "canbus": ""
   },
-  "invertedIMU": true,
+  "invertedIMU": false,
   "modules": [
     "frontleft.json",
     "frontright.json",
