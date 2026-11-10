@@ -129,6 +129,7 @@ public class RobotContainer {
               }));
 
       driverXbox.a().onTrue(Commands.runOnce(drivebase::zeroGyro));
+      driverXbox.b().whileTrue(Commands.run(() -> drivebase.lock()));
       driverXbox.rightBumper().onTrue(Commands.runOnce(() -> robotRelative = !robotRelative));
     }
     if (shooter != null) {
