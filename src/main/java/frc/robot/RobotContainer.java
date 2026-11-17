@@ -129,7 +129,14 @@ public class RobotContainer {
               }));
 
       driverXbox.a().onTrue(Commands.runOnce(drivebase::zeroGyro));
-      driverXbox.b().whileTrue(Commands.run(() -> drivebase.lock()));
+      // driverXbox.b().whileTrue(Commands.run(() -> drivebase.lock()));
+
+      driverXbox.b().onTrue(Commands.runOnce( // lower Kp more
+          () -> drivebase.desiredRotationRad = drivebase.getPose().getRotation().getRadians() + (Math.PI / 2)));
+      driverXbox.b()
+          .onTrue(Commands.run(() -> drivebase.drive(drivebase.getSwerveController().getRawTargetSpeeds(0.0, 0.0,
+              drivebase.desiredRotationRad,
+              drivebase.getPose().getRotation().getRadians()))));
       driverXbox.rightBumper().onTrue(Commands.runOnce(() -> robotRelative = !robotRelative));
     }
     if (shooter != null) {
