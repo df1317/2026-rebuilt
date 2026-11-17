@@ -35,14 +35,12 @@ import static edu.wpi.first.units.Units.RPM;
 public class RobotContainer {
 
 	// Music
-	private final Orchestra robo_choir;
-	// output.chrp is 12.75 beats at 120 BPM = 6.375 s; isPlaying() stays true after the song ends
-	private static final double SONG_LENGTH_SECONDS = 6.5;
+	public final Orchestra robo_choir;
 	// HID
 	private final CommandXboxController driverXbox = new CommandXboxController(0);
 	private final OperatorPanel panel = new OperatorPanel(1);
 	// Subsystems
-	private final SwerveSubsystem drivebase = Constants.ENABLE_SWERVE
+	public final SwerveSubsystem drivebase = Constants.ENABLE_SWERVE
 			? new SwerveSubsystem(new File(Filesystem.getDeployDirectory(), "swerve/neo"))
 			: null;
 	private final ClimberSubsystem climber = Constants.ENABLE_CLIMBER ? new ClimberSubsystem() : null;
@@ -64,10 +62,14 @@ public class RobotContainer {
 	public RobotContainer() {
 		assert drivebase != null;
 		List<CommonDevice> instruments = drivebase.getSwerveMotorObjects();
-		// Let the TalonFXs play music while the robot is disabled
+		// Let the TalonFXs play music while the robot is disabled, and skip the boot beep
+		AudioConfigs audio = new AudioConfigs();
+		audio.AllowMusicDurDisable = true;
+		audio.BeepOnBoot = false;
+    audio.BeepOnConfig = false;
 		instruments.forEach(instrument -> {
 			if (instrument instanceof TalonFX talon) {
-				talon.getConfigurator().apply(new AudioConfigs().withAllowMusicDurDisable(true));
+				talon.getConfigurator().apply(audio);
 			}
 		});
 		robo_choir = new Orchestra(instruments, "output.chrp");
@@ -213,7 +215,7 @@ public class RobotContainer {
       Commands.runOnce(
         () -> {
           robo_choir.play();
-          }, drivebase).andThen(Commands.waitSeconds(1)).andThen(Commands.idle(drivebase)).until(()->!robo_choir.isPlaying()).withTimeout(SONG_LENGTH_SECONDS).finallyDo(
+          }, drivebase).andThen(Commands.waitSeconds(1)).andThen(Commands.idle(drivebase)).until(()->!robo_choir.isPlaying()).withTimeout(6.5).finallyDo(
         () -> robo_choir.stop()).ignoringDisable(true)
     );
 		if (intake != null) {

@@ -73,7 +73,7 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 	private Supplier<Distance> targetDistanceSupplier = null;
 	private Supplier<Pose2d> aimTargetSupplier = null;
 
-	private final Canandgyro gyro = new Canandgyro(0);
+	private final Canandgyro gyro = new Canandgyro(63);
 
 	{
 		aimPIDController.enableContinuousInput(-Math.PI, Math.PI);

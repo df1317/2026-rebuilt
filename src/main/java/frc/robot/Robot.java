@@ -6,6 +6,7 @@ import edu.wpi.first.net.WebServer;
 import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.util.DevMode;
 import frc.robot.util.HubTracker;
 
@@ -26,6 +27,12 @@ public class Robot extends TimedRobot {
 		SmartDashboard.putData("Robot/PDH", new PowerDistribution());
 		SmartDashboard.putData("Robot/Scheduler", CommandScheduler.getInstance());
 		disabledTimer = new Timer();
+
+    Commands.runOnce(
+      () -> {
+        m_robotContainer.robo_choir.play();
+      }, m_robotContainer.drivebase).andThen(Commands.waitSeconds(1)).andThen(Commands.idle(m_robotContainer.drivebase)).until(()->!m_robotContainer.robo_choir.isPlaying()).withTimeout(6.5).finallyDo(
+      () -> m_robotContainer.robo_choir.stop()).ignoringDisable(true).schedule();
 
 		if (isSimulation()) {
 			DriverStation.silenceJoystickConnectionWarning(true);
