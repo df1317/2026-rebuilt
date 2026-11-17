@@ -1,5 +1,8 @@
 package frc.robot;
 
+import com.ctre.phoenix6.Orchestra;
+import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.hardware.traits.CommonDevice;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -23,12 +26,15 @@ import frc.robot.util.TunableTable;
 import swervelib.SwerveInputStream;
 
 import java.io.File;
+import java.util.List;
 import java.util.function.Supplier;
 
 import static edu.wpi.first.units.Units.RPM;
 
 public class RobotContainer {
 
+	// Music
+	private final Orchestra robo_choir;
 	// HID
 	private final CommandXboxController driverXbox = new CommandXboxController(0);
 	private final OperatorPanel panel = new OperatorPanel(1);
@@ -53,6 +59,9 @@ public class RobotContainer {
 	public boolean robotRelative = false;
 
 	public RobotContainer() {
+		assert drivebase != null;
+		List<CommonDevice> instruments = drivebase.getSwerveMotorObjects();
+		robo_choir = new Orchestra(instruments, "output.chrp");
 		if (drivebase != null) {
 			// Initialize Repulsor path planner with intake footprint
 			IntakeFootprint stowedFootprint = IntakeFootprint.robotRect(
@@ -191,6 +200,13 @@ public class RobotContainer {
 
 		// ===== Test Mode Controls (Maypad — see docs for layout) =====
 		// Row 0 — Climber / Intake
+    panel.key(0, 2).onTrue(
+      Commands.runOnce(
+        () -> {
+          robo_choir.play();
+          }, drivebase).andThen(Commands.waitSeconds(1)).andThen(Commands.idle(drivebase)).until(()->!robo_choir.isPlaying()).finallyDo(
+        () -> robo_choir.stop())
+    );
 		if (intake != null) {
 			panel.key(0, 0).onTrue(intake.homeCommand()); // intakeHome
 			panel.key(2, 1).and(inTest).onTrue(intake.zeroIntakeCommand());

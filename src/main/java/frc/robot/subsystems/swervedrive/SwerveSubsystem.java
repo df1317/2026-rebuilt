@@ -1,5 +1,7 @@
 package frc.robot.subsystems.swervedrive;
 
+import com.ctre.phoenix6.hardware.traits.CommonDevice;
+import com.reduxrobotics.sensors.canandgyro.Canandgyro;
 import dev.doglog.DogLog;
 import edu.wpi.first.epilogue.NotLogged;
 import edu.wpi.first.math.controller.PIDController;
@@ -29,10 +31,7 @@ import frc.robot.subsystems.swervedrive.Vision.Cameras;
 import frc.robot.util.FieldZones;
 import frc.robot.util.RobotLog;
 import org.photonvision.targeting.PhotonPipelineResult;
-import swervelib.SwerveController;
-import swervelib.SwerveDrive;
-import swervelib.SwerveDriveTest;
-import swervelib.SwerveInputStream;
+import swervelib.*;
 import swervelib.math.SwerveMath;
 import swervelib.parser.SwerveControllerConfiguration;
 import swervelib.parser.SwerveDriveConfiguration;
@@ -40,7 +39,9 @@ import swervelib.parser.SwerveParser;
 import swervelib.telemetry.SwerveDriveTelemetry;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
@@ -72,12 +73,30 @@ public class SwerveSubsystem extends SubsystemBase implements DriveRepulsor {
 	private Supplier<Distance> targetDistanceSupplier = null;
 	private Supplier<Pose2d> aimTargetSupplier = null;
 
+	private final Canandgyro gyro = new Canandgyro(0);
+
 	{
 		aimPIDController.enableContinuousInput(-Math.PI, Math.PI);
 		aimPIDController.setTolerance(AIM_TOLERANCE);
 	}
 
+	public List<CommonDevice> getSwerveMotorObjects() {
+		List<CommonDevice> instruments = new ArrayList<>();
+
+		for (SwerveModule module : swerveDrive.getModules()) {
+			Object driveMotor = module.getDriveMotor().getMotor();
+			instruments.add((CommonDevice) driveMotor);
+			Object angleMotor = module.getAngleMotor().getMotor();
+			instruments.add((CommonDevice) angleMotor);
+		}
+
+		return instruments;
+	}
+
 	public SwerveSubsystem(File directory) {
+
+		gyro.setPartyMode(1);
+
 		SwerveDriveTelemetry.verbosity = Constants.SwerveTelemetryVerbosity;
 		try {
 			swerveDrive = new SwerveParser(directory).createSwerveDrive(Constants.MAX_SPEED,
